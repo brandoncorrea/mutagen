@@ -22,7 +22,15 @@ function shouldSkipLine(line, lineNum, targetLine) {
   return !trimmed
     || trimmed.startsWith('//')
     || trimmed.startsWith('/*')
-    || trimmed.startsWith('import ')
+    || isStaticImport(trimmed)
+}
+
+function isStaticImport(trimmed) {
+  // Skip static import declarations but not lines that merely contain "import"
+  // e.g. skip `import foo from 'bar'` but not `const mod = await import('bar')`
+  return trimmed.startsWith('import ')
+    && !trimmed.includes('await ')
+    && !trimmed.includes('import(')
 }
 
 function isNearGuardBlocked(line, match, mut) {

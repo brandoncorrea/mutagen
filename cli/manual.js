@@ -3,15 +3,15 @@
  * Projects create a runner with their config and call .main() to run.
  *
  * Usage (from project entry script):
- *   createManualRunner({ patterns, targets, createRunner }).main()
+ *   createManualRunner({ patterns, sources, createRunner }).main()
  *
  * CLI:
- *   node mutate.js <source> <test> [--line N] [--json] [--dry-run]
- *   node mutate.js --all [--json] [--dry-run]
+ *   node mutate.js <source> [--line N] [--json] [--dry-run] [--timeout N]
+ *   node mutate.js --all [--json] [--dry-run] [--timeout N]
  */
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
-import { resolve, relative, dirname } from 'node:path'
+import { resolve, relative } from 'node:path'
 
 import { generateMutations, preparePatterns } from '../core/engine.js'
 import { toJsonMutants, printRunReport } from './report.js'
@@ -45,32 +45,47 @@ export function parseArgs() {
   const dryRunMode = args.includes('--dry-run')
 
   if (args.includes('--all'))
-    return { allMode: true, jsonOutput, dryRunMode }
+    return { allMode: true, jsonOutput, dryRunMode, timeout: parseTimeout(args) }
 
   const flags = new Set(['--json', '--dry-run'])
   const filtered = []
   let lineValue = null
+  let timeout = null
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '--line')
       lineValue = parseInt(args[++i], 10)
+    else if (args[i] === '--timeout')
+      timeout = parseInt(args[++i], 10)
     else if (!flags.has(args[i]))
       filtered.push(args[i])
   }
 
-  if (filtered.length < (dryRunMode ? 1 : 2)) {
-    console.error('Usage: <script> <source-file> <test-file> [--line N] [--json]')
-    console.error('       <script> <source-file> --dry-run [--line N]')
-    console.error('       <script> --all [--json] [--dry-run]')
+  if (filtered.length < 1) {
+    console.error('Usage: <script> <source-file> [--line N] [--json] [--dry-run] [--timeout N]')
+    console.error('       <script> --all [--json] [--dry-run] [--timeout N]')
     process.exit(1)
   }
 
   const sourceFile = resolve(filtered[0])
-  const testFile = filtered[1] ? resolve(filtered[1]) : null
 
-  return { sourceFile, testFile, targetLine: lineValue, jsonOutput, dryRunMode }
+  return { sourceFile, targetLine: lineValue, jsonOutput, dryRunMode, timeout }
 }
 
-async function runSingle(sourceFile, testFile, prepared, createRunner, targetLine) {
+function parseTimeout(args) {
+  const idx = args.indexOf('--timeout')
+  return idx >= 0 ? parseInt(args[idx + 1], 10) : null
+}
+
+function withTimeout(fn, ms) {
+  if (!ms) return fn()
+  return Promise.race([
+    fn(),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(`Mutation timed out after ${ms}ms`)), ms)),
+  ])
+}
+
+async function runSingle(sourceFile, prepared, createRunner, targetLine, timeout) {
   const original = readFileSync(sourceFile, 'utf-8')
   const sep = '═'.repeat(60)
 
@@ -78,10 +93,10 @@ async function runSingle(sourceFile, testFile, prepared, createRunner, targetLin
   console.log(`MUTAGEN`)
   console.log(sep)
   console.log(`Source: ${sourceFile}`)
-  console.log(`Tests:  ${testFile}`)
   if (targetLine) console.log(`Target: line ${targetLine}`)
+  if (timeout) console.log(`Timeout: ${timeout}ms per mutation`)
 
-  const runner = await createRunner(testFile, sourceFile)
+  const runner = await createRunner(sourceFile)
 
   try {
     console.log(`\nPre-flight: running tests against original source...`)
@@ -95,7 +110,7 @@ async function runSingle(sourceFile, testFile, prepared, createRunner, targetLin
     const mutations = generateMutations(original, prepared, targetLine)
     console.log(`Found ${mutations.length} mutation(s) to run.\n`)
 
-    const results = { killed: [], survived: [] }
+    const results = { killed: [], survived: [], timedOut: [] }
 
     for (let i = 0; i < mutations.length; i++) {
       const mut = mutations[i]
@@ -103,7 +118,7 @@ async function runSingle(sourceFile, testFile, prepared, createRunner, targetLin
 
       try {
         writeFileSync(sourceFile, mut.source)
-        const result = await runner.run()
+        const result = await withTimeout(() => runner.run(), timeout)
 
         if (result.passed) {
           results.survived.push(mut)
@@ -111,6 +126,14 @@ async function runSingle(sourceFile, testFile, prepared, createRunner, targetLin
         } else {
           results.killed.push(mut)
           console.log('killed')
+        }
+      } catch (err) {
+        if (err.message?.includes('timed out')) {
+          results.timedOut.push(mut)
+          console.log('TIMEOUT (killed)')
+        } else {
+          results.killed.push(mut)
+          console.log('killed (error)')
         }
       } finally {
         writeFileSync(sourceFile, original)
@@ -121,7 +144,8 @@ async function runSingle(sourceFile, testFile, prepared, createRunner, targetLin
 
     return {
       survived: results.survived.length,
-      killed: results.killed.length,
+      killed: results.killed.length + results.timedOut.length,
+      timedOut: results.timedOut.length,
       jsonData: toJsonMutants(sourceFile, results)
     }
   } finally {
@@ -134,15 +158,15 @@ async function runSingle(sourceFile, testFile, prepared, createRunner, targetLin
  *
  * @param {Object} config
  * @param {Array} config.patterns - mutation patterns (combine built-in + custom)
- * @param {Array} config.targets - [{ source, test }] for --all batch mode
- * @param {Function} config.createRunner - async (testFile, sourceFile) => { run, close }
+ * @param {Array<string>} config.sources - source files to mutate (for --all batch mode)
+ * @param {Function} config.createRunner - async (sourceFile) => { run, close }
  * @param {string} [config.reportDir='reports/mutation'] - directory for JSON reports
  * @param {string} [config.reportFile] - JSON report filename (default: manual-report.json)
  */
 export function createManualRunner(config) {
   const {
     patterns,
-    targets = [],
+    sources = [],
     createRunner,
     reportDir = 'reports/mutation',
     reportFile = 'manual-report.json'
@@ -151,27 +175,28 @@ export function createManualRunner(config) {
   const prepared = preparePatterns(patterns)
   const reportPath = `${reportDir}/${reportFile}`
 
-  async function runBatch(jsonOutput) {
+  async function runBatch(jsonOutput, timeout) {
     const sep = '═'.repeat(60)
     console.log(`\n${sep}`)
     console.log(`MUTAGEN — BATCH MODE`)
-    console.log(`   Targets: ${targets.length} file(s)\n`)
+    console.log(`   Sources: ${sources.length} file(s)\n`)
 
     let totalSurvived = 0
     let totalKilled = 0
+    let totalTimedOut = 0
     let failures = 0
     const jsonFiles = {}
 
-    for (const target of targets) {
+    for (const source of sources) {
       const result = await runSingle(
-        resolve(target.source), resolve(target.test),
-        prepared, createRunner, null
+        resolve(source), prepared, createRunner, null, timeout
       )
       if (result.error) {
         failures++
       } else {
         totalSurvived += result.survived
         totalKilled += result.killed
+        totalTimedOut += result.timedOut || 0
         if (result.jsonData) {
           jsonFiles[result.jsonData.path] = { mutants: result.jsonData.mutants }
         }
@@ -188,10 +213,11 @@ export function createManualRunner(config) {
     console.log(`\n${sep}`)
     console.log(`BATCH SUMMARY`)
     console.log(sep)
-    console.log(`Files: ${targets.length}  |  Killed: ${totalKilled}  |  Survived: ${totalSurvived}  |  Errors: ${failures}`)
+    console.log(`Files: ${sources.length}  |  Killed: ${totalKilled}  |  Survived: ${totalSurvived}  |  Errors: ${failures}`)
+    if (totalTimedOut > 0) console.log(`Timed out: ${totalTimedOut} (counted as killed)`)
     console.log(`${sep}\n`)
 
-    return { totalSurvived, totalKilled, failures }
+    return { totalSurvived, totalKilled, totalTimedOut, failures }
   }
 
   return {
@@ -200,8 +226,8 @@ export function createManualRunner(config) {
       const parsed = parseArgs()
       if (parsed.dryRunMode && parsed.allMode) {
         let total = 0
-        for (const target of targets) total += dryRun(resolve(target.source), prepared, null)
-        console.log(`\n  Grand total: ${total} mutations across ${targets.length} files`)
+        for (const source of sources) total += dryRun(resolve(source), prepared, null)
+        console.log(`\n  Grand total: ${total} mutations across ${sources.length} files`)
         return
       }
       if (parsed.dryRunMode) {
@@ -209,12 +235,11 @@ export function createManualRunner(config) {
         return
       }
       if (parsed.allMode) {
-        const { totalSurvived, failures } = await runBatch(parsed.jsonOutput)
+        const { totalSurvived, failures } = await runBatch(parsed.jsonOutput, parsed.timeout)
         process.exit(totalSurvived > 0 || failures > 0 ? 1 : 0)
       }
       const result = await runSingle(
-        parsed.sourceFile, parsed.testFile,
-        prepared, createRunner, parsed.targetLine
+        parsed.sourceFile, prepared, createRunner, parsed.targetLine, parsed.timeout
       )
       process.exit(result.error || result.survived > 0 ? 1 : 0)
     }
