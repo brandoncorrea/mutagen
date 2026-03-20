@@ -38,7 +38,7 @@ export const javascript = [
   { pattern: /\.toLowerCase\(\)/g, replacement: '.toUpperCase()', name: 'toLowerCase → toUpperCase' },
   { pattern: /\.toUpperCase\(\)/g, replacement: '.toLowerCase()', name: 'toUpperCase → toLowerCase' },
   { pattern: /\.trim\(\)/g, replacement: '', name: 'trim() → (removed)' },
-  { pattern: /\.filter\(/g, replacement: '.filter(x => true, ', name: 'filter → pass-all' },
+  { pattern: /\.filter\(/g, replacement: '.filter(x => true, ', name: 'filter(predicate) → filter(true) (ignore predicate)' },
   { pattern: /\.slice\(/g, replacement: '.slice(1,', name: 'slice() → slice(1,' },
 
   // --- StringLiteral ---
