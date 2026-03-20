@@ -1,7 +1,7 @@
 /**
  * Vitest test runner adapter.
  * Creates a warm Vitest instance for fast re-runs during mutation testing.
- * Runner interface: { run: async () => boolean, close: async () => {} }
+ * Runner interface: { run: async () => { passed: boolean }, close: async () => {} }
  */
 
 export async function createVitestRunner(testFile, sourceFile) {
@@ -18,7 +18,7 @@ export async function createVitestRunner(testFile, sourceFile) {
       const files = vitest.state.getFiles()
       await vitest.rerunFiles(files.map(f => f.filepath))
       const results = vitest.state.getFiles()
-      return results.every(f => f.result?.state === 'pass')
+      return { passed: results.every(f => f.result?.state === 'pass') }
     },
     async close() {
       await vitest.close()

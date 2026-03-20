@@ -85,8 +85,8 @@ async function runSingle(sourceFile, testFile, prepared, createRunner, targetLin
 
   try {
     console.log(`\nPre-flight: running tests against original source...`)
-    const passed = await runner.run()
-    if (!passed) {
+    const preflight = await runner.run()
+    if (!preflight.passed) {
       console.error(`\nABORT: Tests already FAILING on original source. Fix the suite first.`)
       return { error: true }
     }
@@ -103,9 +103,9 @@ async function runSingle(sourceFile, testFile, prepared, createRunner, targetLin
 
       try {
         writeFileSync(sourceFile, mut.source)
-        const passed = await runner.run()
+        const result = await runner.run()
 
-        if (passed) {
+        if (result.passed) {
           results.survived.push(mut)
           console.log('SURVIVED')
         } else {
