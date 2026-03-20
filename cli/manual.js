@@ -16,7 +16,7 @@ import { resolve, relative, dirname } from 'node:path'
 import { generateMutations, preparePatterns } from '../core/engine.js'
 import { toJsonMutants, printRunReport } from './report.js'
 
-function dryRun(sourceFile, prepared, targetLine) {
+export function dryRun(sourceFile, prepared, targetLine) {
   const source = readFileSync(sourceFile, 'utf-8')
   const mutations = generateMutations(source, prepared, targetLine)
   const relPath = relative(process.cwd(), sourceFile)
@@ -39,7 +39,7 @@ function dryRun(sourceFile, prepared, targetLine) {
   return mutations.length
 }
 
-function parseArgs() {
+export function parseArgs() {
   const args = process.argv.slice(2)
   const jsonOutput = args.includes('--json')
   const dryRunMode = args.includes('--dry-run')
