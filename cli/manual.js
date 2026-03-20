@@ -191,10 +191,11 @@ export function createManualRunner(config) {
     console.log(`Files: ${targets.length}  |  Killed: ${totalKilled}  |  Survived: ${totalSurvived}  |  Errors: ${failures}`)
     console.log(`${sep}\n`)
 
-    process.exit(totalSurvived > 0 || failures > 0 ? 1 : 0)
+    return { totalSurvived, totalKilled, failures }
   }
 
   return {
+    runBatch,
     async main() {
       const parsed = parseArgs()
       if (parsed.dryRunMode && parsed.allMode) {
@@ -207,7 +208,10 @@ export function createManualRunner(config) {
         dryRun(parsed.sourceFile, prepared, parsed.targetLine)
         return
       }
-      if (parsed.allMode) return runBatch(parsed.jsonOutput)
+      if (parsed.allMode) {
+        const { totalSurvived, failures } = await runBatch(parsed.jsonOutput)
+        process.exit(totalSurvived > 0 || failures > 0 ? 1 : 0)
+      }
       const result = await runSingle(
         parsed.sourceFile, parsed.testFile,
         prepared, createRunner, parsed.targetLine
