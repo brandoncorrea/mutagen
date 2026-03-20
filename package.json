@@ -1,0 +1,21 @@
+{
+  "name": "mutagen",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./patterns": "./core/patterns/index.js",
+    "./patterns/*": "./core/patterns/*.js",
+    "./runners/vitest": "./runners/vitest.js",
+    "./stryker": "./stryker.js"
+  },
+  "peerDependencies": {
+    "js-tokens": ">=4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vitest": {
+      "optional": true
+    }
+  }
+}
