@@ -6,7 +6,7 @@
  *   config  - path to vitest config file (for monorepo workspaces)
  *   root    - project root directory (for monorepo workspaces)
  *   testFile - specific test file to run (optional; runs all tests if omitted)
- *   warm    - attempt warm rerun (default: true). Falls back to cold if rerun fails.
+ *   warm    - attempt warm rerun (default: true). Falls back to cold if warm fails.
  */
 
 export async function createVitestRunner(sourceFile, options = {}) {
@@ -14,7 +14,6 @@ export async function createVitestRunner(sourceFile, options = {}) {
   const { startVitest } = await import('vitest/node')
 
   const vitestOpts = {
-    watch: false,
     reporters: [{ onFinished() {} }],
     ...(config && { config }),
     ...(root && { root }),
@@ -23,25 +22,27 @@ export async function createVitestRunner(sourceFile, options = {}) {
   const testFilter = testFile ? [testFile] : []
 
   if (!warm) {
-    return coldRunner(startVitest, testFilter, vitestOpts, sourceFile)
+    return coldRunner(startVitest, testFilter, vitestOpts)
   }
 
-  // Try warm runner first — reuses a single vitest instance across mutations.
-  // If the initial warm rerun fails (vitest v4 compatibility issue), fall back to cold.
-  const vitest = await startVitest('test', testFilter, vitestOpts)
+  // Warm runner: start vitest in watch mode to keep the worker pool alive
+  // between mutations. watch:true is required — watch:false shuts down the
+  // pool after the initial run, making subsequent runTestSpecifications fail.
+  const vitest = await startVitest('test', testFilter, { ...vitestOpts, watch: true })
+  await vitest.waitForTestRunEnd()
 
-  // Verify warm rerun works by running once and checking results are valid
-  const canWarmRerun = await testWarmRerun(vitest, sourceFile)
+  // Verify warm rerun works by re-running without changes
+  const canWarmRerun = await testWarmRerun(vitest)
   if (!canWarmRerun) {
     await vitest.close()
-    return coldRunner(startVitest, testFilter, vitestOpts, sourceFile)
+    return coldRunner(startVitest, testFilter, vitestOpts)
   }
 
   return {
     async run() {
       if (sourceFile) vitest.invalidateFile(sourceFile)
-      const files = vitest.state.getFiles()
-      await vitest.rerunFiles(files.map(f => f.filepath))
+      const specs = await vitest.globTestSpecifications()
+      await vitest.runTestSpecifications(specs)
       const results = vitest.state.getFiles()
       return { passed: results.every(f => f.result?.state === 'pass') }
     },
@@ -51,13 +52,10 @@ export async function createVitestRunner(sourceFile, options = {}) {
   }
 }
 
-async function testWarmRerun(vitest, sourceFile) {
+async function testWarmRerun(vitest) {
   try {
-    // The initial startVitest already ran tests and they passed.
-    // Try a rerun without any source changes — if it reports failure, warm mode is broken.
-    if (sourceFile) vitest.invalidateFile(sourceFile)
-    const files = vitest.state.getFiles()
-    await vitest.rerunFiles(files.map(f => f.filepath))
+    const specs = await vitest.globTestSpecifications()
+    await vitest.runTestSpecifications(specs)
     const results = vitest.state.getFiles()
     return results.every(f => f.result?.state === 'pass')
   } catch {
@@ -65,10 +63,10 @@ async function testWarmRerun(vitest, sourceFile) {
   }
 }
 
-function coldRunner(startVitest, testFilter, vitestOpts, _sourceFile) {
+function coldRunner(startVitest, testFilter, vitestOpts) {
   return {
     async run() {
-      const vitest = await startVitest('test', testFilter, vitestOpts)
+      const vitest = await startVitest('test', testFilter, { ...vitestOpts, watch: false })
       try {
         const results = vitest.state.getFiles()
         return { passed: results.every(f => f.result?.state === 'pass') }
