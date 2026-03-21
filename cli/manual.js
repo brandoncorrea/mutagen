@@ -8,13 +8,14 @@
  * CLI:
  *   node mutate.js <source> [--line N] [--json] [--dry-run] [--timeout N]
  *   node mutate.js --all [--json] [--dry-run] [--timeout N]
+ *   node mutate.js --diff <before.json> <after.json>
  */
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { resolve, relative } from 'node:path'
 
 import { generateMutations, preparePatterns } from '../core/engine.js'
-import { toJsonMutants, printRunReport } from './report.js'
+import { toJsonMutants, printRunReport, diffReports } from './report.js'
 
 export function dryRun(sourceFile, prepared, targetLine) {
   const source = readFileSync(sourceFile, 'utf-8')
@@ -46,6 +47,17 @@ export function parseArgs() {
 
   if (args.includes('--all'))
     return { allMode: true, jsonOutput, dryRunMode, timeout: parseTimeout(args) }
+
+  const diffIdx = args.indexOf('--diff')
+  if (diffIdx >= 0) {
+    const beforeFile = args[diffIdx + 1]
+    const afterFile = args[diffIdx + 2]
+    if (!beforeFile || !afterFile) {
+      console.error('Usage: <script> --diff <before.json> <after.json>')
+      process.exit(1)
+    }
+    return { diffMode: true, beforeFile: resolve(beforeFile), afterFile: resolve(afterFile) }
+  }
 
   const flags = new Set(['--json', '--dry-run'])
   const filtered = []
@@ -224,6 +236,10 @@ export function createManualRunner(config) {
     runBatch,
     async main() {
       const parsed = parseArgs()
+      if (parsed.diffMode) {
+        const result = diffReports(parsed.beforeFile, parsed.afterFile)
+        process.exit(result.regressions > 0 ? 1 : 0)
+      }
       if (parsed.dryRunMode && parsed.allMode) {
         let total = 0
         for (const source of sources) total += dryRun(resolve(source), prepared, null)
