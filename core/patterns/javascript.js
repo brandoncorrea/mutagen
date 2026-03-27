@@ -32,7 +32,7 @@ export const javascript = [
 
   // --- ConditionalExpression ---
   { pattern: / \? /g, replacement: ' ? true || ', name: 'ternary → always truthy', guard: /^\s*\/\// },
-  { pattern: / \? /g, replacement: ' ? false || ', name: 'ternary → always falsy', guard: /^\s*\/\// },
+  { pattern: / \? /g, replacement: ' ? false && ', name: 'ternary → always falsy', guard: /^\s*\/\// },
 
   // --- MethodExpression ---
   { pattern: /\.toLowerCase\(\)/g, replacement: '.toUpperCase()', name: 'toLowerCase → toUpperCase' },
