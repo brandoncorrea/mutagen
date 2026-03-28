@@ -190,6 +190,7 @@ export function createManualRunner(config) {
   const {
     patterns,
     sources = [],
+    testSources = [],
     createRunner,
     reportDir = 'reports/mutation',
     reportFile = 'manual-report.json'
@@ -249,11 +250,45 @@ export function createManualRunner(config) {
     // Load previous report if it exists
     let previousReport = null
     let previousHashes = {}
+    let previousTestHashes = {}
     if (existsSync(reportPath)) {
       try {
         previousReport = JSON.parse(readFileSync(reportPath, 'utf-8'))
         previousHashes = previousReport.sourceHashes || {}
+        previousTestHashes = previousReport.testHashes || {}
       } catch {}
+    }
+
+    // Hash test files and find which changed
+    const currentTestHashes = {}
+    const changedTestFiles = []
+    for (const testFile of testSources) {
+      const absPath = resolve(testFile)
+      const relPath = relative(process.cwd(), absPath)
+      const hash = hashFile(absPath)
+      currentTestHashes[relPath] = hash
+      if (previousTestHashes[relPath] !== hash) {
+        changedTestFiles.push(relPath)
+      }
+    }
+
+    // Find source files invalidated by changed tests via killedBy attribution
+    const testInvalidated = new Set()
+    if (changedTestFiles.length > 0 && previousReport) {
+      const changedTestAbs = new Set(changedTestFiles.map(t => resolve(t)))
+      for (const [sourcePath, fileData] of Object.entries(previousReport.files)) {
+        for (const m of fileData.mutants) {
+          if (m.killedBy?.some(t => changedTestAbs.has(t))) {
+            testInvalidated.add(sourcePath)
+            break
+          }
+          // Also invalidate sources with surviving mutations — changed tests might now kill them
+          if (m.status === 'Survived') {
+            testInvalidated.add(sourcePath)
+            break
+          }
+        }
+      }
     }
 
     // Hash current sources and find changed files
@@ -267,10 +302,10 @@ export function createManualRunner(config) {
       const hash = hashFile(absPath)
       currentHashes[relPath] = hash
 
-      if (previousHashes[relPath] === hash) {
-        unchangedSources.push(relPath)
-      } else {
+      if (previousHashes[relPath] !== hash || testInvalidated.has(relPath)) {
         changedSources.push(source)
+      } else {
+        unchangedSources.push(relPath)
       }
     }
 
@@ -278,8 +313,10 @@ export function createManualRunner(config) {
     console.log(`MUTAGEN — INCREMENTAL MODE`)
     console.log(sep)
     console.log(`Total sources: ${sources.length}`)
-    console.log(`Changed/new:   ${changedSources.length}`)
+    console.log(`Changed/new:   ${changedSources.length}${testInvalidated.size > 0 ? ` (${testInvalidated.size} from test changes)` : ''}`)
     console.log(`Cached:        ${unchangedSources.length}`)
+    if (changedTestFiles.length > 0)
+      console.log(`Changed tests: ${changedTestFiles.length}`)
 
     if (changedSources.length === 0) {
       console.log(`\nNo files changed since last report. Nothing to do.`)
@@ -287,6 +324,7 @@ export function createManualRunner(config) {
       // Still write report with updated hashes
       if (jsonOutput && previousReport) {
         previousReport.sourceHashes = currentHashes
+        previousReport.testHashes = currentTestHashes
         writeFileSync(reportPath, JSON.stringify(previousReport, null, 2))
       }
 
@@ -327,7 +365,8 @@ export function createManualRunner(config) {
         schemaVersion: '1',
         thresholds: { high: 80, low: 60 },
         files: mergedFiles,
-        sourceHashes: currentHashes
+        sourceHashes: currentHashes,
+        testHashes: currentTestHashes
       }
       writeFileSync(reportPath, JSON.stringify(report, null, 2))
       console.log(`JSON report: ${reportPath}`)
