@@ -255,30 +255,31 @@ export function toJsonMutants(sourceFile, results) {
   }
 }
 
-export function printRunReport(mutations, results) {
+export function printRunReport(mutations, results, log) {
+  const out = log || console.log
   const sep = '─'.repeat(60)
   const total = mutations.length
 
-  console.log(`\n${sep}`)
-  console.log(`MUTATION REPORT`)
-  console.log(sep)
-  console.log(`Total: ${total}  |  Killed: ${results.killed.length}  |  Survived: ${results.survived.length}`)
+  out(`\n${sep}`)
+  out(`MUTATION REPORT`)
+  out(sep)
+  out(`Total: ${total}  |  Killed: ${results.killed.length}  |  Survived: ${results.survived.length}`)
 
   const score = total > 0
     ? ((results.killed.length / total) * 100).toFixed(1)
     : '100.0'
-  console.log(`Mutation score: ${score}%`)
+  out(`Mutation score: ${score}%`)
 
   if (results.survived.length > 0) {
-    console.log(`\nSURVIVING MUTATIONS:`)
+    out(`\nSURVIVING MUTATIONS:`)
     for (const mut of results.survived) {
-      console.log(`\n  Line ${mut.line}: ${mut.name}`)
-      console.log(`  Original: ${mut.original}`)
-      console.log(`  Mutated:  ${mut.mutated}`)
+      out(`\n  Line ${mut.line}: ${mut.name}`)
+      out(`  Original: ${mut.original}`)
+      out(`  Mutated:  ${mut.mutated}`)
     }
   } else {
-    console.log(`\nALL mutations killed. Tests are strong.`)
+    out(`\nALL mutations killed. Tests are strong.`)
   }
 
-  console.log(`\n${sep}\n`)
+  out(`\n${sep}\n`)
 }

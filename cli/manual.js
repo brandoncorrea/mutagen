@@ -98,6 +98,8 @@ function parseTimeout(args) {
   return idx >= 0 ? parseInt(args[idx + 1], 10) : null
 }
 
+
+
 function withTimeout(fn, ms) {
   if (!ms) return fn()
   return Promise.race([
@@ -107,36 +109,36 @@ function withTimeout(fn, ms) {
   ])
 }
 
-async function runSingle(sourceFile, prepared, createRunner, targetLine, timeout) {
+async function runSingle(sourceFile, prepared, createRunner, targetLine, timeout, log) {
+  const out = log || console.log
   const original = readFileSync(sourceFile, 'utf-8')
   const sep = '═'.repeat(60)
 
-  console.log(`\n${sep}`)
-  console.log(`MUTAGEN`)
-  console.log(sep)
-  console.log(`Source: ${sourceFile}`)
-  if (targetLine) console.log(`Target: line ${targetLine}`)
-  if (timeout) console.log(`Timeout: ${timeout}ms per mutation`)
+  out(`\n${sep}`)
+  out(`MUTAGEN`)
+  out(sep)
+  out(`Source: ${sourceFile}`)
+  if (targetLine) out(`Target: line ${targetLine}`)
+  if (timeout) out(`Timeout: ${timeout}ms per mutation`)
 
   const runner = await createRunner(sourceFile)
 
   try {
-    console.log(`\nPre-flight: running tests against original source...`)
+    out(`\nPre-flight: running tests against original source...`)
     const preflight = await runner.run()
     if (!preflight.passed) {
-      console.error(`\nABORT: Tests already FAILING on original source. Fix the suite first.`)
+      out(`\nABORT: Tests already FAILING on original source. Fix the suite first.`)
       return { error: true }
     }
-    console.log(`Tests pass on original source. Beginning mutations.\n`)
+    out(`Tests pass on original source. Beginning mutations.\n`)
 
     const mutations = generateMutations(original, prepared, targetLine)
-    console.log(`Found ${mutations.length} mutation(s) to run.\n`)
+    out(`Found ${mutations.length} mutation(s) to run.\n`)
 
     const results = { killed: [], survived: [], timedOut: [] }
 
     for (let i = 0; i < mutations.length; i++) {
       const mut = mutations[i]
-      process.stdout.write(`[${i + 1}/${mutations.length}] Line ${mut.line}: ${mut.name} ... `)
 
       try {
         writeFileSync(sourceFile, mut.source)
@@ -144,26 +146,26 @@ async function runSingle(sourceFile, prepared, createRunner, targetLine, timeout
 
         if (result.passed) {
           results.survived.push(mut)
-          console.log('SURVIVED')
+          out(`[${i + 1}/${mutations.length}] Line ${mut.line}: ${mut.name} ... SURVIVED`)
         } else {
           mut.killedBy = result.killedBy || []
           results.killed.push(mut)
-          console.log('killed')
+          out(`[${i + 1}/${mutations.length}] Line ${mut.line}: ${mut.name} ... killed`)
         }
       } catch (err) {
         if (err.message?.includes('timed out')) {
           results.timedOut.push(mut)
-          console.log('TIMEOUT (killed)')
+          out(`[${i + 1}/${mutations.length}] Line ${mut.line}: ${mut.name} ... TIMEOUT (killed)`)
         } else {
           results.killed.push(mut)
-          console.log('killed (error)')
+          out(`[${i + 1}/${mutations.length}] Line ${mut.line}: ${mut.name} ... killed (error)`)
         }
       } finally {
         writeFileSync(sourceFile, original)
       }
     }
 
-    printRunReport(mutations, results)
+    printRunReport(mutations, results, out)
 
     return {
       survived: results.survived.length,
@@ -211,10 +213,7 @@ export function createManualRunner(config) {
     let failures = 0
     const jsonFiles = {}
 
-    for (const source of sourcesToRun) {
-      const result = await runSingle(
-        resolve(source), prepared, createRunner, null, timeout
-      )
+    function collectResult(result) {
       if (result.error) {
         failures++
       } else {
@@ -225,6 +224,12 @@ export function createManualRunner(config) {
           jsonFiles[result.jsonData.path] = { mutants: result.jsonData.mutants }
         }
       }
+    }
+
+    for (const source of sourcesToRun) {
+      collectResult(await runSingle(
+        resolve(source), prepared, createRunner, null, timeout
+      ))
     }
 
     if (jsonOutput) {
