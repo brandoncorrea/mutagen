@@ -49,6 +49,9 @@ export const javascript = [
   { pattern: /return \{/g, replacement: 'return Object.freeze({', name: 'return {} → Object.freeze (syntax break)' },
   { pattern: /^(\s*)return\b/g, replacement: '$1void', name: 'return → void', guard: /return [{}[\]]/ },
 
+  // --- Async ---
+  { pattern: /\bawait /g, replacement: '', name: 'await → (removed)', guard: /^\s*\/\// },
+
   // --- Remove || fallback ---
   { pattern: / \|\| \[\]/g, replacement: '', name: '|| [] → (removed)' },
   { pattern: / \|\| ''/g, replacement: '', name: "|| '' → (removed)" },
