@@ -15,6 +15,7 @@ export async function createVitestRunner(sourceFile, options = {}) {
 
   const vitestOpts = {
     reporters: [{ onFinished() {} }],
+    bail: 1,
     ...(config && { config }),
     ...(root && { root }),
   }
@@ -38,10 +39,14 @@ export async function createVitestRunner(sourceFile, options = {}) {
     return coldRunner(startVitest, testFilter, vitestOpts)
   }
 
+  // Build related-test specs by walking the vite module graph.
+  // Only test files that transitively import the source file need to run.
+  const relatedSpecs = await findRelatedSpecs(vitest, sourceFile)
+
   return {
     async run() {
       if (sourceFile) vitest.invalidateFile(sourceFile)
-      const specs = await vitest.globTestSpecifications()
+      const specs = relatedSpecs || await vitest.globTestSpecifications()
       await vitest.runTestSpecifications(specs)
       const results = vitest.state.getFiles()
       return { passed: results.every(f => f.result?.state === 'pass') }
@@ -50,6 +55,41 @@ export async function createVitestRunner(sourceFile, options = {}) {
       await vitest.close()
     },
   }
+}
+
+async function findRelatedSpecs(vitest, sourceFile) {
+  if (!sourceFile) return null
+
+  const graph = vitest.projects[0]?._vite?.moduleGraph
+  if (!graph) return null
+
+  // Walk importers recursively to find all test files
+  const testFiles = new Set()
+  const allSpecs = await vitest.globTestSpecifications()
+  const testPaths = new Set(allSpecs.map(s => s.moduleId))
+
+  const visited = new Set()
+  const queue = [sourceFile]
+
+  while (queue.length > 0) {
+    const id = queue.pop()
+    if (visited.has(id)) continue
+    visited.add(id)
+
+    if (testPaths.has(id)) {
+      testFiles.add(id)
+      continue
+    }
+
+    const mod = graph.getModuleById(id)
+    if (!mod) continue
+    for (const importer of mod.importers) {
+      if (importer.id) queue.push(importer.id)
+    }
+  }
+
+  if (testFiles.size === 0) return null
+  return allSpecs.filter(s => testFiles.has(s.moduleId))
 }
 
 async function testWarmRerun(vitest) {
