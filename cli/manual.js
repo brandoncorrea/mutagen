@@ -146,6 +146,7 @@ async function runSingle(sourceFile, prepared, createRunner, targetLine, timeout
           results.survived.push(mut)
           console.log('SURVIVED')
         } else {
+          mut.killedBy = result.killedBy || []
           results.killed.push(mut)
           console.log('killed')
         }

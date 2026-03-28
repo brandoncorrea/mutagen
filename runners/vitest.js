@@ -49,12 +49,20 @@ export async function createVitestRunner(sourceFile, options = {}) {
       const specs = relatedSpecs || await vitest.globTestSpecifications()
       await vitest.runTestSpecifications(specs)
       const results = vitest.state.getFiles()
-      return { passed: results.every(f => f.result?.state === 'pass') }
+      const passed = results.every(f => f.result?.state === 'pass')
+      const killedBy = passed ? [] : failedTestFiles(results)
+      return { passed, killedBy }
     },
     async close() {
       await vitest.close()
     },
   }
+}
+
+function failedTestFiles(results) {
+  return results
+    .filter(f => f.result?.state === 'fail')
+    .map(f => f.filepath)
 }
 
 async function findRelatedSpecs(vitest, sourceFile) {
@@ -109,7 +117,9 @@ function coldRunner(startVitest, testFilter, vitestOpts) {
       const vitest = await startVitest('test', testFilter, { ...vitestOpts, watch: false })
       try {
         const results = vitest.state.getFiles()
-        return { passed: results.every(f => f.result?.state === 'pass') }
+        const passed = results.every(f => f.result?.state === 'pass')
+        const killedBy = passed ? [] : failedTestFiles(results)
+        return { passed, killedBy }
       } finally {
         await vitest.close()
       }

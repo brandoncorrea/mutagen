@@ -242,7 +242,8 @@ export function toJsonMutants(sourceFile, results) {
     mutatorName: mut.name,
     status,
     location: { start: { line: mut.line, column: 0 }, end: { line: mut.line, column: 0 } },
-    description: `${mut.original} → ${mut.mutated}`
+    description: `${mut.original} → ${mut.mutated}`,
+    ...(mut.killedBy?.length > 0 && { killedBy: mut.killedBy })
   })
 
   return {
