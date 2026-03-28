@@ -107,8 +107,8 @@ export const javascript = [
   { pattern: /\.splice\(/g, replacement: '.slice(', name: 'splice → slice' },
 
   // --- Object method swaps ---
-  { pattern: /Object\.keys\(/g, replacement: 'Object.values(', name: 'Object.keys → Object.values' },
-  { pattern: /Object\.values\(/g, replacement: 'Object.keys(', name: 'Object.values → Object.keys' },
+  { pattern: /Object\.keys\(/g, replacement: 'Object.values(', name: 'Object.keys → Object.values', guard: /\)\.length/ },
+  { pattern: /Object\.values\(/g, replacement: 'Object.keys(', name: 'Object.values → Object.keys', guard: /\)\.length/ },
   { pattern: /Object\.entries\(/g, replacement: 'Object.keys(', name: 'Object.entries → Object.keys' },
 
   // --- String method mutations ---
