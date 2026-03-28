@@ -8,14 +8,20 @@
  * CLI:
  *   node mutate.js <source> [--line N] [--json] [--dry-run] [--timeout N]
  *   node mutate.js --all [--json] [--dry-run] [--timeout N]
+ *   node mutate.js --incremental [--json] [--timeout N]
  *   node mutate.js --diff <before.json> <after.json>
  */
 
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 import { resolve, relative } from 'node:path'
 
 import { generateMutations, preparePatterns } from '../core/engine.js'
 import { toJsonMutants, printRunReport, diffReports } from './report.js'
+
+function hashFile(filePath) {
+  return createHash('sha256').update(readFileSync(filePath)).digest('hex').slice(0, 16)
+}
 
 export function dryRun(sourceFile, prepared, targetLine) {
   const source = readFileSync(sourceFile, 'utf-8')
@@ -44,6 +50,9 @@ export function parseArgs() {
   const args = process.argv.slice(2)
   const jsonOutput = args.includes('--json')
   const dryRunMode = args.includes('--dry-run')
+
+  if (args.includes('--incremental'))
+    return { incrementalMode: true, jsonOutput, timeout: parseTimeout(args) }
 
   if (args.includes('--all'))
     return { allMode: true, jsonOutput, dryRunMode, timeout: parseTimeout(args) }
@@ -75,6 +84,7 @@ export function parseArgs() {
   if (filtered.length < 1) {
     console.error('Usage: <script> <source-file> [--line N] [--json] [--dry-run] [--timeout N]')
     console.error('       <script> --all [--json] [--dry-run] [--timeout N]')
+    console.error('       <script> --incremental [--json] [--timeout N]')
     process.exit(1)
   }
 
@@ -187,11 +197,11 @@ export function createManualRunner(config) {
   const prepared = preparePatterns(patterns)
   const reportPath = `${reportDir}/${reportFile}`
 
-  async function runBatch(jsonOutput, timeout) {
+  async function runBatch(jsonOutput, timeout, sourcesToRun = sources) {
     const sep = '═'.repeat(60)
     console.log(`\n${sep}`)
     console.log(`MUTAGEN — BATCH MODE`)
-    console.log(`   Sources: ${sources.length} file(s)\n`)
+    console.log(`   Sources: ${sourcesToRun.length} file(s)\n`)
 
     let totalSurvived = 0
     let totalKilled = 0
@@ -199,7 +209,7 @@ export function createManualRunner(config) {
     let failures = 0
     const jsonFiles = {}
 
-    for (const source of sources) {
+    for (const source of sourcesToRun) {
       const result = await runSingle(
         resolve(source), prepared, createRunner, null, timeout
       )
@@ -225,15 +235,123 @@ export function createManualRunner(config) {
     console.log(`\n${sep}`)
     console.log(`BATCH SUMMARY`)
     console.log(sep)
-    console.log(`Files: ${sources.length}  |  Killed: ${totalKilled}  |  Survived: ${totalSurvived}  |  Errors: ${failures}`)
+    console.log(`Files: ${sourcesToRun.length}  |  Killed: ${totalKilled}  |  Survived: ${totalSurvived}  |  Errors: ${failures}`)
     if (totalTimedOut > 0) console.log(`Timed out: ${totalTimedOut} (counted as killed)`)
     console.log(`${sep}\n`)
 
-    return { totalSurvived, totalKilled, totalTimedOut, failures }
+    return { totalSurvived, totalKilled, totalTimedOut, failures, jsonFiles }
+  }
+
+  async function runIncremental(jsonOutput, timeout) {
+    const sep = '═'.repeat(60)
+
+    // Load previous report if it exists
+    let previousReport = null
+    let previousHashes = {}
+    if (existsSync(reportPath)) {
+      try {
+        previousReport = JSON.parse(readFileSync(reportPath, 'utf-8'))
+        previousHashes = previousReport.sourceHashes || {}
+      } catch {}
+    }
+
+    // Hash current sources and find changed files
+    const currentHashes = {}
+    const changedSources = []
+    const unchangedSources = []
+
+    for (const source of sources) {
+      const absPath = resolve(source)
+      const relPath = relative(process.cwd(), absPath)
+      const hash = hashFile(absPath)
+      currentHashes[relPath] = hash
+
+      if (previousHashes[relPath] === hash) {
+        unchangedSources.push(relPath)
+      } else {
+        changedSources.push(source)
+      }
+    }
+
+    console.log(`\n${sep}`)
+    console.log(`MUTAGEN — INCREMENTAL MODE`)
+    console.log(sep)
+    console.log(`Total sources: ${sources.length}`)
+    console.log(`Changed/new:   ${changedSources.length}`)
+    console.log(`Cached:        ${unchangedSources.length}`)
+
+    if (changedSources.length === 0) {
+      console.log(`\nNo files changed since last report. Nothing to do.`)
+
+      // Still write report with updated hashes
+      if (jsonOutput && previousReport) {
+        previousReport.sourceHashes = currentHashes
+        writeFileSync(reportPath, JSON.stringify(previousReport, null, 2))
+      }
+
+      const cachedCounts = countCachedResults(previousReport, unchangedSources)
+      console.log(`\n${sep}`)
+      console.log(`INCREMENTAL SUMMARY (all cached)`)
+      console.log(sep)
+      console.log(`Files: ${sources.length}  |  Killed: ${cachedCounts.killed}  |  Survived: ${cachedCounts.survived}  |  Rerun: 0`)
+      console.log(`${sep}\n`)
+      return { totalSurvived: cachedCounts.survived, totalKilled: cachedCounts.killed, failures: 0 }
+    }
+
+    // Run mutations only on changed files
+    const { totalSurvived, totalKilled, totalTimedOut, failures, jsonFiles } =
+      await runBatch(false, timeout, changedSources)
+
+    // Merge with cached results from unchanged files
+    if (jsonOutput) {
+      const mergedFiles = { ...jsonFiles }
+
+      // Carry forward results from unchanged files
+      if (previousReport) {
+        for (const relPath of unchangedSources) {
+          if (previousReport.files[relPath]) {
+            mergedFiles[relPath] = previousReport.files[relPath]
+          }
+        }
+      }
+
+      // Remove files that no longer exist in sources
+      const currentRelPaths = new Set(sources.map(s => relative(process.cwd(), resolve(s))))
+      for (const key of Object.keys(mergedFiles)) {
+        if (!currentRelPaths.has(key)) delete mergedFiles[key]
+      }
+
+      mkdirSync(reportDir, { recursive: true })
+      const report = {
+        schemaVersion: '1',
+        thresholds: { high: 80, low: 60 },
+        files: mergedFiles,
+        sourceHashes: currentHashes
+      }
+      writeFileSync(reportPath, JSON.stringify(report, null, 2))
+      console.log(`JSON report: ${reportPath}`)
+    }
+
+    // Count cached results for summary
+    const cachedCounts = countCachedResults(previousReport, unchangedSources)
+
+    const grandKilled = totalKilled + cachedCounts.killed
+    const grandSurvived = totalSurvived + cachedCounts.survived
+
+    console.log(`\n${sep}`)
+    console.log(`INCREMENTAL SUMMARY`)
+    console.log(sep)
+    console.log(`Rerun: ${changedSources.length} files  |  Killed: ${totalKilled}  |  Survived: ${totalSurvived}  |  Errors: ${failures}`)
+    console.log(`Cached: ${unchangedSources.length} files  |  Killed: ${cachedCounts.killed}  |  Survived: ${cachedCounts.survived}`)
+    console.log(`Total: ${sources.length} files  |  Killed: ${grandKilled}  |  Survived: ${grandSurvived}`)
+    console.log(`${sep}\n`)
+
+    return { totalSurvived: grandSurvived, totalKilled: grandKilled, failures }
   }
 
   return {
     runBatch,
+    runIncremental,
     async main() {
       const parsed = parseArgs()
       if (parsed.diffMode) {
@@ -250,6 +368,10 @@ export function createManualRunner(config) {
         dryRun(parsed.sourceFile, prepared, parsed.targetLine)
         return
       }
+      if (parsed.incrementalMode) {
+        const { totalSurvived, failures } = await runIncremental(parsed.jsonOutput, parsed.timeout)
+        process.exit(totalSurvived > 0 || failures > 0 ? 1 : 0)
+      }
       if (parsed.allMode) {
         const { totalSurvived, failures } = await runBatch(parsed.jsonOutput, parsed.timeout)
         process.exit(totalSurvived > 0 || failures > 0 ? 1 : 0)
@@ -260,4 +382,18 @@ export function createManualRunner(config) {
       process.exit(result.error || result.survived > 0 ? 1 : 0)
     }
   }
+}
+
+function countCachedResults(report, relPaths) {
+  let killed = 0, survived = 0
+  if (!report) return { killed, survived }
+  for (const relPath of relPaths) {
+    const fileData = report.files[relPath]
+    if (!fileData) continue
+    for (const m of fileData.mutants) {
+      if (m.status === 'Killed' || m.status === 'Timeout') killed++
+      else if (m.status === 'Survived') survived++
+    }
+  }
+  return { killed, survived }
 }
