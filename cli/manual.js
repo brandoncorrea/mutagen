@@ -187,6 +187,7 @@ async function runSingle(sourceFile, prepared, createRunner, targetLine, timeout
  * @param {Function} config.createRunner - async (sourceFile) => { run, close }
  * @param {string} [config.reportDir='reports/mutation'] - directory for JSON reports
  * @param {string} [config.reportFile] - JSON report filename (default: manual-report.json)
+ * @param {number} [config.timeout=null] - default per-mutation timeout in ms (CLI --timeout overrides)
  */
 export function createManualRunner(config) {
   const {
@@ -195,7 +196,8 @@ export function createManualRunner(config) {
     testSources = [],
     createRunner,
     reportDir = 'reports/mutation',
-    reportFile = 'manual-report.json'
+    reportFile = 'manual-report.json',
+    timeout: configTimeout = null
   } = config
 
   const prepared = preparePatterns(patterns)
@@ -399,6 +401,7 @@ export function createManualRunner(config) {
     runIncremental,
     async main() {
       const parsed = parseArgs()
+      const timeout = parsed.timeout || configTimeout
       if (parsed.diffMode) {
         const result = diffReports(parsed.beforeFile, parsed.afterFile)
         process.exit(result.regressions > 0 ? 1 : 0)
@@ -414,15 +417,15 @@ export function createManualRunner(config) {
         return
       }
       if (parsed.incrementalMode) {
-        const { totalSurvived, failures } = await runIncremental(parsed.jsonOutput, parsed.timeout)
+        const { totalSurvived, failures } = await runIncremental(parsed.jsonOutput, timeout)
         process.exit(totalSurvived > 0 || failures > 0 ? 1 : 0)
       }
       if (parsed.allMode) {
-        const { totalSurvived, failures } = await runBatch(parsed.jsonOutput, parsed.timeout)
+        const { totalSurvived, failures } = await runBatch(parsed.jsonOutput, timeout)
         process.exit(totalSurvived > 0 || failures > 0 ? 1 : 0)
       }
       const result = await runSingle(
-        parsed.sourceFile, prepared, createRunner, parsed.targetLine, parsed.timeout
+        parsed.sourceFile, prepared, createRunner, parsed.targetLine, timeout
       )
       process.exit(result.error || result.survived > 0 ? 1 : 0)
     }
