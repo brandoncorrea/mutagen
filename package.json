@@ -13,9 +13,17 @@
   "peerDependencies": {
     "js-tokens": ">=4.0.0"
   },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
   "peerDependenciesMeta": {
     "vitest": {
       "optional": true
     }
+  },
+  "devDependencies": {
+    "js-tokens": "^4.0.0",
+    "vitest": "^4.1.2"
   }
 }
