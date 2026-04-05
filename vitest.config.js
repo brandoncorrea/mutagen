@@ -5,8 +5,7 @@ export default defineConfig({
     fileParallelism: false,
     coverage: {
       provider: 'v8',
-      include: ['core/**/*.js', 'cli/**/*.js'],
-      exclude: ['runners/**', 'stryker.js'],
-    },
-  },
+      include: ['core/**/*.js', 'cli/**/*.js', 'runners/**/*.js', 'stryker.js']
+    }
+  }
 })
