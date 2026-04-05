@@ -13,24 +13,30 @@ const matchToToken = jsTokens.matchToToken
 
 const STRING_TYPES = new Set(['string', 'template'])
 const COMMENT_TYPES = new Set(['comment'])
+const WHITESPACE_TYPES = new Set(['whitespace'])
 
 const pattern = new RegExp(regex.source, regex.flags)
+
+function spanType(type) {
+  if (STRING_TYPES.has(type))
+    return 'string'
+  else if (COMMENT_TYPES.has(type))
+    return 'comment'
+  else if (WHITESPACE_TYPES.has(type))
+    return 'whitespace'
+  return 'code'
+}
 
 export function tokenizeLine(line) {
   pattern.lastIndex = 0
   const spans = []
   let match
 
-  while ((match = pattern.exec(line)) !== null) {
+  while (match = pattern.exec(line)) {
     const token = matchToToken(match)
     const start = match.index
     const end = start + token.value.length
-
-    let type = 'code'
-    if (STRING_TYPES.has(token.type)) type = 'string'
-    else if (COMMENT_TYPES.has(token.type)) type = 'comment'
-    else if (token.type === 'whitespace') type = 'whitespace'
-
+    const type = spanType(token.type)
     spans.push({ type, start, end, value: token.value, tokenType: token.type })
   }
 
