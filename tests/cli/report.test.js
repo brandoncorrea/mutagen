@@ -113,8 +113,8 @@ describe('printSummary', () => {
     const merged = {
       files: {
         'a.js': { mutants: [{ status: 'Killed' }, { status: 'Survived' }] },
-        'b.js': { mutants: [{ status: 'Killed' }] },
-      },
+        'b.js': { mutants: [{ status: 'Killed' }] }
+      }
     }
     const counts = { killed: 2, survived: 1, noCov: 0, timeout: 0 }
 
@@ -142,7 +142,7 @@ describe('printSummary', () => {
   it('includes timeout in score calculation', () => {
     const spy = vi.spyOn(console, 'log').mockImplementation(() => {})
     const merged = {
-      files: { 'a.js': { mutants: [{ status: 'Timeout' }, { status: 'Survived' }] } },
+      files: { 'a.js': { mutants: [{ status: 'Timeout' }, { status: 'Survived' }] } }
     }
     const counts = { killed: 0, survived: 1, noCov: 0, timeout: 1 }
 
@@ -400,14 +400,14 @@ describe('diffReports', () => {
     const before = makeReport({
       'a.js': { mutants: [
         makeMutant('m1', 'x', 'Killed'),
-        makeMutant('m2', 'y', 'Survived'),
-      ] },
+        makeMutant('m2', 'y', 'Survived')
+      ] }
     })
     const after = makeReport({
       'a.js': { mutants: [
         makeMutant('m1', 'x', 'Killed'),
-        makeMutant('m2', 'y', 'Killed'),
-      ] },
+        makeMutant('m2', 'y', 'Killed')
+      ] }
     })
     readFileSync
       .mockReturnValueOnce(JSON.stringify(before))

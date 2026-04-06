@@ -3,7 +3,7 @@ import {
   tokenizeLine,
   getTokenContextAt,
   isInJsxTag,
-  isArrowOperator,
+  isArrowOperator
 } from '../../core/tokenContext.js'
 
 describe('tokenizeLine', () => {
