@@ -17,7 +17,8 @@ import { createHash } from 'node:crypto'
 import { resolve, relative } from 'node:path'
 
 import { generateMutations, preparePatterns } from '../core/engine.js'
-import { toJsonMutants, printRunReport, diffReports, SEPARATOR } from './report.js'
+import { toJsonMutants, printRunReport, SEPARATOR } from './report.js'
+import { diffReports } from './diff.js'
 
 export const HASH_PREFIX_LENGTH = 16
 
