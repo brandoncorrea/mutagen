@@ -32,18 +32,34 @@ function dryRun(sourceFile, prepared, targetLine) {
   console.log(`   Found ${mutations.length} mutation(s)\n`)
 
   const byLine = {}
-  for (const m of mutations) {
-    const arr = byLine[m.line] || []
-    arr.push(m.name)
-    byLine[m.line] = arr
+  for (const { name, line } of mutations) {
+    const arr = byLine[line] || []
+    arr.push(name)
+    byLine[line] = arr
   }
 
-  for (const [line, names] of Object.entries(byLine).sort((a, b) => Number(a[0]) - Number(b[0]))) {
+  const mutationLines = Object.entries(byLine).sort((a, b) => Number(a[0]) - Number(b[0]))
+  for (const [line, names] of mutationLines)
     console.log(`  L${line}: ${names.join(', ')}`)
-  }
 
   console.log(`\n  Total: ${mutations.length} mutations`)
   return mutations.length
+}
+
+function argsToOptions(args) {
+  const flags = new Set(['--json', '--dry-run'])
+  const filtered = []
+  let targetLine = null
+  let timeout = null
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--line')
+      targetLine = parseInt(args[++i], 10)
+    else if (args[i] === '--timeout')
+      timeout = parseInt(args[++i], 10)
+    else if (!flags.has(args[i]))
+      filtered.push(args[i])
+  }
+  return { targetLine, timeout, filtered }
 }
 
 function parseArgs() {
@@ -65,21 +81,14 @@ function parseArgs() {
       console.error('Usage: <script> --diff <before.json> <after.json>')
       process.exit(1)
     }
-    return { diffMode: true, beforeFile: resolve(beforeFile), afterFile: resolve(afterFile) }
+    return {
+      diffMode: true,
+      beforeFile: resolve(beforeFile),
+      afterFile: resolve(afterFile)
+    }
   }
 
-  const flags = new Set(['--json', '--dry-run'])
-  const filtered = []
-  let lineValue = null
-  let timeout = null
-  for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--line')
-      lineValue = parseInt(args[++i], 10)
-    else if (args[i] === '--timeout')
-      timeout = parseInt(args[++i], 10)
-    else if (!flags.has(args[i]))
-      filtered.push(args[i])
-  }
+  const { targetLine, timeout, filtered } = argsToOptions(args)
 
   if (filtered.length < 1) {
     console.error('Usage: <script> <source-file> [--line N] [--json] [--dry-run] [--timeout N]')
@@ -90,7 +99,7 @@ function parseArgs() {
 
   const sourceFile = resolve(filtered[0])
 
-  return { sourceFile, targetLine: lineValue, jsonOutput, dryRunMode, timeout }
+  return { sourceFile, targetLine, jsonOutput, dryRunMode, timeout }
 }
 
 function parseTimeout(args) {
@@ -98,14 +107,12 @@ function parseTimeout(args) {
   return idx >= 0 ? parseInt(args[idx + 1], 10) : null
 }
 
-
-
 function withTimeout(fn, ms) {
   if (!ms) return fn()
   return Promise.race([
     fn(),
     new Promise((_, reject) =>
-      setTimeout(() => reject(new Error(`Mutation timed out after ${ms}ms`)), ms)),
+      setTimeout(() => reject(new Error(`Mutation timed out after ${ms}ms`)), ms))
   ])
 }
 
@@ -222,21 +229,23 @@ export function createManualRunner(config) {
         totalSurvived += result.survived
         totalKilled += result.killed
         totalTimedOut += result.timedOut || 0
-        if (result.jsonData) {
+        if (result.jsonData)
           jsonFiles[result.jsonData.path] = { mutants: result.jsonData.mutants }
-        }
       }
     }
 
-    for (const source of sourcesToRun) {
+    for (const source of sourcesToRun)
       collectResult(await runSingle(
         resolve(source), prepared, createRunner, null, timeout
       ))
-    }
 
     if (jsonOutput) {
       mkdirSync(reportDir, { recursive: true })
-      const report = { schemaVersion: '1', thresholds: { high: 80, low: 60 }, files: jsonFiles }
+      const report = {
+        schemaVersion: '1',
+        thresholds: { high: 80, low: 60 },
+        files: jsonFiles
+      }
       writeFileSync(reportPath, JSON.stringify(report, null, 2))
       console.log(`JSON report: ${reportPath}`)
     }
@@ -245,7 +254,8 @@ export function createManualRunner(config) {
     console.log(`BATCH SUMMARY`)
     console.log(sep)
     console.log(`Files: ${sourcesToRun.length}  |  Killed: ${totalKilled}  |  Survived: ${totalSurvived}  |  Errors: ${failures}`)
-    if (totalTimedOut > 0) console.log(`Timed out: ${totalTimedOut} (counted as killed)`)
+    if (totalTimedOut > 0)
+      console.log(`Timed out: ${totalTimedOut} (counted as killed)`)
     console.log(`${sep}\n`)
 
     return { totalSurvived, totalKilled, totalTimedOut, failures, jsonFiles }
@@ -274,9 +284,8 @@ export function createManualRunner(config) {
       const relPath = relative(process.cwd(), absPath)
       const hash = hashFile(absPath)
       currentTestHashes[relPath] = hash
-      if (previousTestHashes[relPath] !== hash) {
+      if (previousTestHashes[relPath] !== hash)
         changedTestFiles.push(relPath)
-      }
     }
 
     // Find source files invalidated by changed tests via killedBy attribution
@@ -345,7 +354,7 @@ export function createManualRunner(config) {
     }
 
     // Run mutations only on changed files
-    const { totalSurvived, totalKilled, totalTimedOut, failures, jsonFiles } =
+    const { totalSurvived, totalKilled, failures, jsonFiles } =
       await runBatch(false, timeout, changedSources)
 
     // Merge with cached results from unchanged files
@@ -353,19 +362,17 @@ export function createManualRunner(config) {
       const mergedFiles = { ...jsonFiles }
 
       // Carry forward results from unchanged files
-      if (previousReport) {
-        for (const relPath of unchangedSources) {
-          if (previousReport.files[relPath]) {
+      
+      if (previousReport)
+        for (const relPath of unchangedSources)
+          if (previousReport.files[relPath])
             mergedFiles[relPath] = previousReport.files[relPath]
-          }
-        }
-      }
 
       // Remove files that no longer exist in sources
       const currentRelPaths = new Set(sources.map(s => relative(process.cwd(), resolve(s))))
-      for (const key of Object.keys(mergedFiles)) {
-        if (!currentRelPaths.has(key)) delete mergedFiles[key]
-      }
+      for (const key of Object.keys(mergedFiles))
+        if (!currentRelPaths.has(key))
+          delete mergedFiles[key]
 
       mkdirSync(reportDir, { recursive: true })
       const report = {
