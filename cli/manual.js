@@ -100,7 +100,7 @@ function parseTimeout(args) {
 
 
 
-function withTimeout(fn, ms) {
+export function withTimeout(fn, ms) {
   if (!ms) return fn()
   return Promise.race([
     fn(),
@@ -432,7 +432,7 @@ export function createManualRunner(config) {
   }
 }
 
-function countCachedResults(report, relPaths) {
+export function countCachedResults(report, relPaths) {
   let killed = 0, survived = 0
   if (!report) return { killed, survived }
   for (const relPath of relPaths) {
