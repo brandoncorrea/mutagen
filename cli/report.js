@@ -6,6 +6,8 @@
 import { readFileSync } from 'node:fs'
 import { relative } from 'node:path'
 
+export const SEPARATOR = '═'.repeat(60)
+
 export function mutantKey(path, m) {
   const line = m.location?.start?.line || 0
   return `${path}:${line}:${m.mutatorName || ''}:${m.replacement || ''}`
@@ -28,7 +30,7 @@ export function printSummary(merged, counts, reportPath) {
   const { killed, survived, noCov, timeout } = counts
   const total = killed + survived + noCov + timeout
   const score = total > 0 ? ((killed + timeout) / total * 100).toFixed(1) : '100.0'
-  const sep = '═'.repeat(60)
+  const sep = SEPARATOR
 
   console.log(`\n${sep}`)
   console.log(`MUTATION REPORT`)
@@ -118,7 +120,7 @@ export function diffReports(beforeFile, afterFile) {
   const afterScores = fileScores(after)
   const allFiles = new Set([...Object.keys(beforeScores), ...Object.keys(afterScores)])
 
-  const sep = '═'.repeat(60)
+  const sep = SEPARATOR
   console.log(`\n${sep}`)
   console.log(`MUTATION DIFF`)
   console.log(`${sep}`)

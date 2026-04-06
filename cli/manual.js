@@ -17,7 +17,7 @@ import { createHash } from 'node:crypto'
 import { resolve, relative } from 'node:path'
 
 import { generateMutations, preparePatterns } from '../core/engine.js'
-import { toJsonMutants, printRunReport, diffReports } from './report.js'
+import { toJsonMutants, printRunReport, diffReports, SEPARATOR } from './report.js'
 
 function hashFile(filePath) {
   return createHash('sha256').update(readFileSync(filePath)).digest('hex').slice(0, 16)
@@ -115,7 +115,7 @@ function withTimeout(fn, ms) {
 async function runSingle(sourceFile, prepared, createRunner, targetLine, timeout, log) {
   const out = log || console.log
   const original = readFileSync(sourceFile, 'utf-8')
-  const sep = '═'.repeat(60)
+  const sep = SEPARATOR
 
   out(`\n${sep}`)
   out(`MUTAGEN`)
@@ -207,7 +207,7 @@ export function createManualRunner(config) {
   const reportPath = `${reportDir}/${reportFile}`
 
   async function runBatch(jsonOutput, timeout, sourcesToRun = sources) {
-    const sep = '═'.repeat(60)
+    const sep = SEPARATOR
     console.log(`\n${sep}`)
     console.log(`MUTAGEN — BATCH MODE`)
     console.log(`   Sources: ${sourcesToRun.length} file(s)\n`)
@@ -258,7 +258,7 @@ export function createManualRunner(config) {
   }
 
   async function runIncremental(jsonOutput, timeout) {
-    const sep = '═'.repeat(60)
+    const sep = SEPARATOR
 
     // Load previous report if it exists
     let previousReport = null

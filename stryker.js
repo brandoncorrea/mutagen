@@ -6,7 +6,7 @@
 import { execSync } from 'node:child_process'
 import { existsSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 
-import { combineReportData, countStatuses, printSummary } from './cli/report.js'
+import { combineReportData, countStatuses, printSummary, SEPARATOR } from './cli/report.js'
 
 function isUnexpectedError(err) {
   return err.status === null || err.status === undefined || err.status > 1
@@ -31,7 +31,7 @@ export function runStrykerScope(name, scope, { reportDir = 'reports/mutation', s
   const outputJson = strykerJson || `${reportDir}/report.json`
   const mutateArg = scope.join(',')
   const targetFile = `${reportDir}/${name}-report.json`
-  const sep = '═'.repeat(60)
+  const sep = SEPARATOR
 
   console.log(`\n${sep}`)
   console.log(`STRYKER — ${name.toUpperCase()}`)
