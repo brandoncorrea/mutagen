@@ -35,9 +35,9 @@ function dryRun(sourceFile, prepared, targetLine) {
 
   const byLine = {}
   for (const { name, line } of mutations) {
-    const arr = byLine[line] || []
-    arr.push(name)
-    byLine[line] = arr
+    const names = byLine[line] || []
+    names.push(name)
+    byLine[line] = names
   }
 
   const mutationLines = Object.entries(byLine).sort((a, b) => Number(a[0]) - Number(b[0]))
@@ -140,7 +140,7 @@ async function runSingle(sourceFile, prepared, createRunner, targetLine, timeout
     const mutations = generateMutations(original, prepared, targetLine)
     out(`Found ${mutations.length} mutation(s) to run.\n`)
 
-    const results = { killed: [], survived: [], timedOut: [] }
+    const outcomes = { killed: [], survived: [], timedOut: [] }
 
     for (let i = 0; i < mutations.length; i++) {
       const mut = mutations[i]
@@ -150,19 +150,19 @@ async function runSingle(sourceFile, prepared, createRunner, targetLine, timeout
         const result = await withTimeout(() => runner.run(), timeout)
 
         if (result.passed) {
-          results.survived.push(mut)
+          outcomes.survived.push(mut)
           out(`[${i + 1}/${mutations.length}] Line ${mut.line}: ${mut.name} ... SURVIVED`)
         } else {
           mut.killedBy = result.killedBy || []
-          results.killed.push(mut)
+          outcomes.killed.push(mut)
           out(`[${i + 1}/${mutations.length}] Line ${mut.line}: ${mut.name} ... killed`)
         }
       } catch (err) {
         if (err.message?.includes('timed out')) {
-          results.timedOut.push(mut)
+          outcomes.timedOut.push(mut)
           out(`[${i + 1}/${mutations.length}] Line ${mut.line}: ${mut.name} ... TIMEOUT (killed)`)
         } else {
-          results.killed.push(mut)
+          outcomes.killed.push(mut)
           out(`[${i + 1}/${mutations.length}] Line ${mut.line}: ${mut.name} ... killed (error)`)
         }
       } finally {
@@ -170,13 +170,13 @@ async function runSingle(sourceFile, prepared, createRunner, targetLine, timeout
       }
     }
 
-    printRunReport(mutations, results, out)
+    printRunReport(mutations, outcomes, out)
 
     return {
-      survived: results.survived.length,
-      killed: results.killed.length + results.timedOut.length,
-      timedOut: results.timedOut.length,
-      jsonData: toJsonMutants(sourceFile, results)
+      survived: outcomes.survived.length,
+      killed: outcomes.killed.length + outcomes.timedOut.length,
+      timedOut: outcomes.timedOut.length,
+      jsonData: toJsonMutants(sourceFile, outcomes)
     }
   } finally {
     await runner.close()
@@ -218,7 +218,7 @@ export function createManualRunner(config) {
     let totalKilled = 0
     let totalTimedOut = 0
     let failures = 0
-    const jsonFiles = {}
+    const fileResults = {}
 
     function collectResult(result) {
       if (result.error) {
@@ -228,7 +228,7 @@ export function createManualRunner(config) {
         totalKilled += result.killed
         totalTimedOut += result.timedOut || 0
         if (result.jsonData)
-          jsonFiles[result.jsonData.path] = { mutants: result.jsonData.mutants }
+          fileResults[result.jsonData.path] = { mutants: result.jsonData.mutants }
       }
     }
 
@@ -242,7 +242,7 @@ export function createManualRunner(config) {
       const report = {
         schemaVersion: '1',
         thresholds: { high: 80, low: 60 },
-        files: jsonFiles
+        files: fileResults
       }
       writeFileSync(reportPath, JSON.stringify(report, null, 2))
       console.log(`JSON report: ${reportPath}`)
@@ -256,7 +256,7 @@ export function createManualRunner(config) {
       console.log(`Timed out: ${totalTimedOut} (counted as killed)`)
     console.log(`${sep}\n`)
 
-    return { totalSurvived, totalKilled, totalTimedOut, failures, jsonFiles }
+    return { totalSurvived, totalKilled, totalTimedOut, failures, fileResults }
   }
 
   async function runIncremental(jsonOutput, timeout) {
@@ -352,12 +352,12 @@ export function createManualRunner(config) {
     }
 
     // Run mutations only on changed files
-    const { totalSurvived, totalKilled, failures, jsonFiles } =
+    const { totalSurvived, totalKilled, failures, fileResults } =
       await runBatch(false, timeout, changedSources)
 
     // Merge with cached results from unchanged files
     if (jsonOutput) {
-      const mergedFiles = { ...jsonFiles }
+      const mergedFiles = { ...fileResults }
 
       // Carry forward results from unchanged files
       
