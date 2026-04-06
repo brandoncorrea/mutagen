@@ -19,8 +19,10 @@ import { resolve, relative } from 'node:path'
 import { generateMutations, preparePatterns } from '../core/engine.js'
 import { toJsonMutants, printRunReport, diffReports, SEPARATOR } from './report.js'
 
+export const HASH_PREFIX_LENGTH = 16
+
 function hashFile(filePath) {
-  return createHash('sha256').update(readFileSync(filePath)).digest('hex').slice(0, 16)
+  return createHash('sha256').update(readFileSync(filePath)).digest('hex').slice(0, HASH_PREFIX_LENGTH)
 }
 
 function dryRun(sourceFile, prepared, targetLine) {
