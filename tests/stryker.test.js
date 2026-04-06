@@ -150,6 +150,17 @@ describe('runStrykerScope', () => {
     expect(console.error).toHaveBeenCalled()
   })
 
+  it('logs error when stryker exits with undefined status', () => {
+    existsSync.mockReturnValue(false)
+    execSync.mockImplementation(() => {
+      throw Object.assign(new Error('killed'), { status: undefined })
+    })
+
+    runStrykerScope('core', ['src/a.js'])
+
+    expect(console.error).toHaveBeenCalled()
+  })
+
   it('does not log error when stryker exits with status 1 (surviving mutants)', () => {
     existsSync.mockReturnValue(false)
     execSync.mockImplementation(() => {

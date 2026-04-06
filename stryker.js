@@ -9,7 +9,7 @@ import { existsSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { combineReportData, countStatuses, printSummary } from './cli/report.js'
 
 function isUnexpectedError(err) {
-  return err.status == null || err.status > 1
+  return err.status === null || err.status === undefined || err.status > 1
 }
 
 export function cleanStaleSandboxes() {
