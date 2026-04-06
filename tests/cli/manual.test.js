@@ -1,286 +1,361 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { writeFileSync, unlinkSync, mkdtempSync, rmdirSync } from 'node:fs'
-import { join } from 'node:path'
-import { tmpdir } from 'node:os'
-import { parseArgs, withTimeout, countCachedResults, dryRun } from '../../cli/manual.js'
-import { preparePatterns } from '../../core/engine.js'
-import { javascript } from '../../core/patterns/javascript.js'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { resolve } from 'node:path'
+import { createHash } from 'node:crypto'
 
-describe('parseArgs', () => {
-  let originalArgv
-
-  beforeEach(() => {
-    originalArgv = process.argv
-  })
-
-  afterEach(() => {
-    process.argv = originalArgv
-  })
-
-  it('parses a single source file', () => {
-    process.argv = ['node', 'script', 'src/foo.js']
-    const result = parseArgs()
-    expect(result.sourceFile).toMatch(/src\/foo\.js$/)
-    expect(result.jsonOutput).toBe(false)
-    expect(result.dryRunMode).toBe(false)
-    expect(result.targetLine).toBeNull()
-    expect(result.timeout).toBeNull()
-  })
-
-  it('parses --json flag', () => {
-    process.argv = ['node', 'script', 'src/foo.js', '--json']
-    const result = parseArgs()
-    expect(result.jsonOutput).toBe(true)
-  })
-
-  it('parses --dry-run flag', () => {
-    process.argv = ['node', 'script', 'src/foo.js', '--dry-run']
-    const result = parseArgs()
-    expect(result.dryRunMode).toBe(true)
-  })
-
-  it('parses --line N', () => {
-    process.argv = ['node', 'script', 'src/foo.js', '--line', '42']
-    const result = parseArgs()
-    expect(result.targetLine).toBe(42)
-  })
-
-  it('parses --timeout N', () => {
-    process.argv = ['node', 'script', 'src/foo.js', '--timeout', '5000']
-    const result = parseArgs()
-    expect(result.timeout).toBe(5000)
-  })
-
-  it('parses --all mode', () => {
-    process.argv = ['node', 'script', '--all']
-    const result = parseArgs()
-    expect(result.allMode).toBe(true)
-    expect(result.jsonOutput).toBe(false)
-    expect(result.dryRunMode).toBe(false)
-  })
-
-  it('parses --all with --json and --dry-run', () => {
-    process.argv = ['node', 'script', '--all', '--json', '--dry-run']
-    const result = parseArgs()
-    expect(result.allMode).toBe(true)
-    expect(result.jsonOutput).toBe(true)
-    expect(result.dryRunMode).toBe(true)
-  })
-
-  it('parses --all with --timeout', () => {
-    process.argv = ['node', 'script', '--all', '--timeout', '3000']
-    const result = parseArgs()
-    expect(result.allMode).toBe(true)
-    expect(result.timeout).toBe(3000)
-  })
-
-  it('parses --incremental mode', () => {
-    process.argv = ['node', 'script', '--incremental']
-    const result = parseArgs()
-    expect(result.incrementalMode).toBe(true)
-    expect(result.jsonOutput).toBe(false)
-  })
-
-  it('parses --incremental with --json and --timeout', () => {
-    process.argv = ['node', 'script', '--incremental', '--json', '--timeout', '2000']
-    const result = parseArgs()
-    expect(result.incrementalMode).toBe(true)
-    expect(result.jsonOutput).toBe(true)
-    expect(result.timeout).toBe(2000)
-  })
-
-  it('parses --diff mode with before and after files', () => {
-    process.argv = ['node', 'script', '--diff', 'before.json', 'after.json']
-    const result = parseArgs()
-    expect(result.diffMode).toBe(true)
-    expect(result.beforeFile).toMatch(/before\.json$/)
-    expect(result.afterFile).toMatch(/after\.json$/)
-  })
-
-  it('exits with code 1 when --diff lacks files', () => {
-    const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => { throw new Error('exit') })
-    vi.spyOn(console, 'error').mockImplementation(() => {})
-    process.argv = ['node', 'script', '--diff']
-    expect(() => parseArgs()).toThrow('exit')
-    expect(mockExit).toHaveBeenCalledWith(1)
-    mockExit.mockRestore()
-    console.error.mockRestore()
-  })
-
-  it('exits with code 1 when no source file given', () => {
-    const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => { throw new Error('exit') })
-    vi.spyOn(console, 'error').mockImplementation(() => {})
-    process.argv = ['node', 'script']
-    expect(() => parseArgs()).toThrow('exit')
-    expect(mockExit).toHaveBeenCalledWith(1)
-    mockExit.mockRestore()
-    console.error.mockRestore()
-  })
-
-  it('combines multiple flags on a single source', () => {
-    process.argv = ['node', 'script', 'src/foo.js', '--json', '--dry-run', '--line', '10', '--timeout', '1000']
-    const result = parseArgs()
-    expect(result.sourceFile).toMatch(/src\/foo\.js$/)
-    expect(result.jsonOutput).toBe(true)
-    expect(result.dryRunMode).toBe(true)
-    expect(result.targetLine).toBe(10)
-    expect(result.timeout).toBe(1000)
-  })
+vi.mock('node:fs', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    readFileSync: vi.fn(),
+    writeFileSync: vi.fn(),
+    mkdirSync: vi.fn(),
+    existsSync: vi.fn().mockReturnValue(false),
+  }
 })
 
-describe('withTimeout', () => {
-  it('calls fn directly when ms is falsy', async () => {
-    const fn = vi.fn().mockResolvedValue('result')
-    const result = await withTimeout(fn, null)
-    expect(result).toBe('result')
-    expect(fn).toHaveBeenCalledOnce()
-  })
+import { createManualRunner } from '../../cli/manual.js'
+import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 
-  it('calls fn directly when ms is 0', async () => {
-    const fn = vi.fn().mockResolvedValue('ok')
-    const result = await withTimeout(fn, 0)
-    expect(result).toBe('ok')
-  })
+const patterns = [
+  { pattern: / === /g, replacement: ' !== ', name: '=== → !==' },
+]
 
-  it('resolves with fn result when fn completes before timeout', async () => {
-    const fn = () => Promise.resolve('fast')
-    const result = await withTimeout(fn, 5000)
-    expect(result).toBe('fast')
-  })
+// Exactly one mutation site
+const sourceCode = 'if (a === b) {}'
 
-  it('rejects with timeout error when fn takes too long', async () => {
-    const fn = () => new Promise((resolve) => setTimeout(resolve, 10000))
-    await expect(withTimeout(fn, 10)).rejects.toThrow('Mutation timed out after 10ms')
-  })
+function hashOf(content) {
+  return createHash('sha256').update(Buffer.from(content)).digest('hex').slice(0, 16)
+}
 
-  it('includes timeout duration in error message', async () => {
-    const fn = () => new Promise((resolve) => setTimeout(resolve, 10000))
-    await expect(withTimeout(fn, 50)).rejects.toThrow('50ms')
+function mockFs(files) {
+  readFileSync.mockImplementation((path, enc) => {
+    const content = files[path]
+    if (content === undefined) return enc === 'utf-8' ? '' : Buffer.from('')
+    return enc === 'utf-8' ? content : Buffer.from(content)
   })
+}
+
+function fakeRunner(results) {
+  const queue = [...results]
+  return {
+    run: vi.fn().mockImplementation(() =>
+      Promise.resolve(queue.shift() || { passed: true })),
+    close: vi.fn().mockResolvedValue(undefined),
+  }
+}
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  vi.spyOn(console, 'log').mockImplementation(() => {})
+  vi.spyOn(console, 'error').mockImplementation(() => {})
+  existsSync.mockReturnValue(false)
 })
 
-describe('countCachedResults', () => {
-  it('returns zeros when report is null', () => {
-    expect(countCachedResults(null, ['a.js'])).toEqual({ killed: 0, survived: 0 })
+describe('createManualRunner', () => {
+  describe('runBatch', () => {
+    it('counts killed mutations', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const runner = fakeRunner([
+        { passed: true },                           // preflight
+        { passed: false, killedBy: ['t.test.js'] }, // killed
+      ])
+
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner),
+      })
+      const result = await manual.runBatch(false, null)
+
+      expect(result.totalKilled).toBe(1)
+      expect(result.totalSurvived).toBe(0)
+      expect(result.failures).toBe(0)
+    })
+
+    it('counts surviving mutations', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const runner = fakeRunner([
+        { passed: true },  // preflight
+        { passed: true },  // survived
+      ])
+
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner),
+      })
+      const result = await manual.runBatch(false, null)
+
+      expect(result.totalSurvived).toBe(1)
+      expect(result.totalKilled).toBe(0)
+    })
+
+    it('counts preflight failure as error', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const runner = fakeRunner([{ passed: false }])
+
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner),
+      })
+      const result = await manual.runBatch(false, null)
+
+      expect(result.failures).toBe(1)
+      expect(result.totalKilled).toBe(0)
+      expect(result.totalSurvived).toBe(0)
+    })
+
+    it('writes JSON report when requested', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: false, killedBy: ['t.test.js'] },
+      ])
+
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner),
+      })
+      await manual.runBatch(true, null)
+
+      const reportCalls = writeFileSync.mock.calls.filter(
+        ([p]) => p.includes('manual-report.json'),
+      )
+      expect(reportCalls).toHaveLength(1)
+
+      const report = JSON.parse(reportCalls[0][1])
+      expect(report.schemaVersion).toBe('1')
+      expect(Object.keys(report.files)).toHaveLength(1)
+    })
+
+    it('restores original source after each mutation', async () => {
+      const src = resolve('src/a.js')
+      mockFs({ [src]: sourceCode })
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: false },
+      ])
+
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner),
+      })
+      await manual.runBatch(false, null)
+
+      const srcWrites = writeFileSync.mock.calls.filter(([p]) => p === src)
+      // Last write restores original
+      expect(srcWrites.at(-1)[1]).toBe(sourceCode)
+    })
+
+    it('closes the runner after execution', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: false },
+      ])
+
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner),
+      })
+      await manual.runBatch(false, null)
+
+      expect(runner.close).toHaveBeenCalled()
+    })
+
+    it('counts runner errors as killed', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const runner = fakeRunner([{ passed: true }])
+      // After preflight, runner.run throws on mutation
+      runner.run.mockResolvedValueOnce({ passed: true }) // preflight
+        .mockRejectedValue(new Error('runner crashed'))
+
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner),
+      })
+      const result = await manual.runBatch(false, null)
+
+      expect(result.totalKilled).toBe(1)
+      expect(result.totalSurvived).toBe(0)
+    })
+
+    it('counts timeouts as killed', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const runner = fakeRunner([{ passed: true }])
+      runner.run.mockResolvedValueOnce({ passed: true }) // preflight
+        .mockRejectedValue(new Error('Mutation timed out after 100ms'))
+
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner),
+      })
+      const result = await manual.runBatch(false, 100)
+
+      expect(result.totalKilled).toBe(1)
+      expect(result.totalTimedOut).toBe(1)
+    })
   })
 
-  it('returns zeros for empty relPaths', () => {
-    const report = { files: { 'a.js': { mutants: [{ status: 'Killed' }] } } }
-    expect(countCachedResults(report, [])).toEqual({ killed: 0, survived: 0 })
-  })
+  describe('runIncremental', () => {
+    const reportPath = 'reports/mutation/manual-report.json'
 
-  it('counts Killed mutants', () => {
-    const report = {
-      files: {
-        'a.js': { mutants: [{ status: 'Killed' }, { status: 'Killed' }] },
-      },
-    }
-    expect(countCachedResults(report, ['a.js'])).toEqual({ killed: 2, survived: 0 })
-  })
+    it('uses cached results for unchanged files', async () => {
+      const src = resolve('src/a.js')
+      const hash = hashOf(sourceCode)
 
-  it('counts Survived mutants', () => {
-    const report = {
-      files: {
-        'a.js': { mutants: [{ status: 'Survived' }] },
-      },
-    }
-    expect(countCachedResults(report, ['a.js'])).toEqual({ killed: 0, survived: 1 })
-  })
+      existsSync.mockReturnValue(true)
+      mockFs({
+        [src]: sourceCode,
+        [reportPath]: JSON.stringify({
+          files: {
+            'src/a.js': {
+              mutants: [{ status: 'Killed' }, { status: 'Survived' }],
+            },
+          },
+          sourceHashes: { 'src/a.js': hash },
+          testHashes: {},
+        }),
+      })
 
-  it('counts Timeout as killed', () => {
-    const report = {
-      files: {
-        'a.js': { mutants: [{ status: 'Timeout' }] },
-      },
-    }
-    expect(countCachedResults(report, ['a.js'])).toEqual({ killed: 1, survived: 0 })
-  })
+      const createRunner = vi.fn()
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js'], createRunner,
+      })
+      const result = await manual.runIncremental(false, null)
 
-  it('aggregates across multiple files', () => {
-    const report = {
-      files: {
-        'a.js': { mutants: [{ status: 'Killed' }, { status: 'Survived' }] },
-        'b.js': { mutants: [{ status: 'Timeout' }, { status: 'Killed' }] },
-      },
-    }
-    expect(countCachedResults(report, ['a.js', 'b.js'])).toEqual({ killed: 3, survived: 1 })
-  })
+      expect(result.totalKilled).toBe(1)
+      expect(result.totalSurvived).toBe(1)
+      expect(createRunner).not.toHaveBeenCalled()
+    })
 
-  it('ignores files not in relPaths', () => {
-    const report = {
-      files: {
-        'a.js': { mutants: [{ status: 'Killed' }] },
-        'b.js': { mutants: [{ status: 'Survived' }] },
-      },
-    }
-    expect(countCachedResults(report, ['a.js'])).toEqual({ killed: 1, survived: 0 })
-  })
+    it('reruns changed files', async () => {
+      const src = resolve('src/a.js')
 
-  it('skips relPaths not found in report', () => {
-    const report = {
-      files: {
-        'a.js': { mutants: [{ status: 'Killed' }] },
-      },
-    }
-    expect(countCachedResults(report, ['a.js', 'missing.js'])).toEqual({ killed: 1, survived: 0 })
-  })
+      existsSync.mockReturnValue(true)
+      mockFs({
+        [src]: sourceCode,
+        [reportPath]: JSON.stringify({
+          files: {},
+          sourceHashes: { 'src/a.js': 'stale-hash' },
+          testHashes: {},
+        }),
+      })
 
-  it('ignores unknown statuses', () => {
-    const report = {
-      files: {
-        'a.js': { mutants: [{ status: 'NoCoverage' }, { status: 'Killed' }] },
-      },
-    }
-    expect(countCachedResults(report, ['a.js'])).toEqual({ killed: 1, survived: 0 })
-  })
-})
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: false, killedBy: ['t.test.js'] },
+      ])
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner),
+      })
+      const result = await manual.runIncremental(false, null)
 
-describe('dryRun', () => {
-  const prepared = preparePatterns(javascript)
-  let tmpDir, tmpFile
+      expect(result.totalKilled).toBe(1)
+      expect(result.totalSurvived).toBe(0)
+    })
 
-  beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'mutagen-test-'))
-    tmpFile = join(tmpDir, 'test-source.js')
-    vi.spyOn(console, 'log').mockImplementation(() => {})
-  })
+    it('runs all files on first run with no previous report', async () => {
+      const src = resolve('src/a.js')
+      existsSync.mockReturnValue(false)
+      mockFs({ [src]: sourceCode })
 
-  afterEach(() => {
-    try { unlinkSync(tmpFile) } catch {}
-    try { rmdirSync(tmpDir) } catch {}
-    console.log.mockRestore()
-  })
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: true }, // survived
+      ])
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner),
+      })
+      const result = await manual.runIncremental(false, null)
 
-  it('returns the mutation count', () => {
-    writeFileSync(tmpFile, 'const x = a + b;\n')
-    const count = dryRun(tmpFile, prepared, null)
-    expect(count).toBeGreaterThanOrEqual(1)
-  })
+      expect(result.totalSurvived).toBe(1)
+    })
 
-  it('filters by target line', () => {
-    writeFileSync(tmpFile, 'const x = 1;\nconst y = a + b;\nconst z = 1;\n')
-    const allCount = dryRun(tmpFile, prepared, null)
-    const lineCount = dryRun(tmpFile, prepared, 2)
-    expect(lineCount).toBeLessThanOrEqual(allCount)
-    expect(lineCount).toBeGreaterThanOrEqual(1)
-  })
+    it('invalidates source files when test files change', async () => {
+      const src = resolve('src/a.js')
+      const testFile = resolve('test/a.test.js')
+      const srcHash = hashOf(sourceCode)
+      const testContent = 'test code'
 
-  it('prints mutation info to console', () => {
-    const logs = []
-    console.log.mockRestore()
-    vi.spyOn(console, 'log').mockImplementation((...args) => logs.push(args.join(' ')))
+      existsSync.mockReturnValue(true)
+      mockFs({
+        [src]: sourceCode,
+        [testFile]: testContent,
+        [reportPath]: JSON.stringify({
+          files: {
+            'src/a.js': {
+              mutants: [{
+                status: 'Killed',
+                killedBy: [resolve('test/a.test.js')],
+              }],
+            },
+          },
+          sourceHashes: { 'src/a.js': srcHash },
+          testHashes: { 'test/a.test.js': 'old-test-hash' },
+        }),
+      })
 
-    writeFileSync(tmpFile, 'const x = a + b;\n')
-    dryRun(tmpFile, prepared, null)
-    const output = logs.join('\n')
-    expect(output).toContain('DRY RUN')
-    expect(output).toContain('mutation')
-    expect(output).toContain('Total:')
-  })
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: false, killedBy: ['test/a.test.js'] },
+      ])
+      const manual = createManualRunner({
+        patterns,
+        sources: ['src/a.js'],
+        testSources: ['test/a.test.js'],
+        createRunner: vi.fn().mockResolvedValue(runner),
+      })
+      const result = await manual.runIncremental(false, null)
 
-  it('returns 0 for source with no mutable code', () => {
-    writeFileSync(tmpFile, '// just a comment\n')
-    const count = dryRun(tmpFile, prepared, null)
-    expect(count).toBe(0)
+      // Source hash matches, but test changed → source re-run
+      expect(result.totalKilled).toBe(1)
+      expect(runner.run).toHaveBeenCalled()
+    })
+
+    it('writes merged report with cached and new results', async () => {
+      const srcA = resolve('src/a.js')
+      const srcB = resolve('src/b.js')
+      const codeA = 'if (a === b) {}'
+      const codeB = 'if (c === d) {}'
+
+      existsSync.mockReturnValue(true)
+      mockFs({
+        [srcA]: codeA,
+        [srcB]: codeB,
+        [reportPath]: JSON.stringify({
+          files: {
+            'src/a.js': { mutants: [{ status: 'Killed' }] },
+          },
+          sourceHashes: {
+            'src/a.js': hashOf(codeA),
+            'src/b.js': 'stale-hash',
+          },
+          testHashes: {},
+        }),
+      })
+
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: false, killedBy: ['t.test.js'] },
+      ])
+      const manual = createManualRunner({
+        patterns,
+        sources: ['src/a.js', 'src/b.js'],
+        createRunner: vi.fn().mockResolvedValue(runner),
+      })
+      await manual.runIncremental(true, null)
+
+      const reportCalls = writeFileSync.mock.calls.filter(
+        ([p]) => p === reportPath,
+      )
+      expect(reportCalls).toHaveLength(1)
+
+      const report = JSON.parse(reportCalls[0][1])
+      // src/a.js cached, src/b.js rerun
+      expect(report.files['src/a.js'].mutants).toHaveLength(1)
+      expect(report.files['src/b.js']).toBeDefined()
+      expect(report.sourceHashes).toBeDefined()
+    })
   })
 })

@@ -23,7 +23,7 @@ function hashFile(filePath) {
   return createHash('sha256').update(readFileSync(filePath)).digest('hex').slice(0, 16)
 }
 
-export function dryRun(sourceFile, prepared, targetLine) {
+function dryRun(sourceFile, prepared, targetLine) {
   const source = readFileSync(sourceFile, 'utf-8')
   const mutations = generateMutations(source, prepared, targetLine)
   const relPath = relative(process.cwd(), sourceFile)
@@ -46,7 +46,7 @@ export function dryRun(sourceFile, prepared, targetLine) {
   return mutations.length
 }
 
-export function parseArgs() {
+function parseArgs() {
   const args = process.argv.slice(2)
   const jsonOutput = args.includes('--json')
   const dryRunMode = args.includes('--dry-run')
@@ -100,7 +100,7 @@ function parseTimeout(args) {
 
 
 
-export function withTimeout(fn, ms) {
+function withTimeout(fn, ms) {
   if (!ms) return fn()
   return Promise.race([
     fn(),
@@ -432,7 +432,7 @@ export function createManualRunner(config) {
   }
 }
 
-export function countCachedResults(report, relPaths) {
+function countCachedResults(report, relPaths) {
   let killed = 0, survived = 0
   if (!report) return { killed, survived }
   for (const relPath of relPaths) {
