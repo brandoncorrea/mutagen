@@ -14,21 +14,21 @@ export function mutantKey(path, m) {
 }
 
 export function countStatuses(merged) {
-  let killed = 0, survived = 0, noCov = 0, timeout = 0
+  let killed = 0, survived = 0, noCoverage = 0, timeout = 0
   for (const fileData of Object.values(merged.files)) {
     for (const m of fileData.mutants) {
       if (m.status === 'Killed') killed++
       else if (m.status === 'Survived') survived++
-      else if (m.status === 'NoCoverage') noCov++
+      else if (m.status === 'NoCoverage') noCoverage++
       else if (m.status === 'Timeout') timeout++
     }
   }
-  return { killed, survived, noCov, timeout }
+  return { killed, survived, noCoverage, timeout }
 }
 
 export function printSummary(merged, counts, reportPath) {
-  const { killed, survived, noCov, timeout } = counts
-  const total = killed + survived + noCov + timeout
+  const { killed, survived, noCoverage, timeout } = counts
+  const total = killed + survived + noCoverage + timeout
   const score = total > 0 ? ((killed + timeout) / total * 100).toFixed(1) : '100.0'
   const sep = SEPARATOR
 
@@ -38,7 +38,7 @@ export function printSummary(merged, counts, reportPath) {
   console.log(`Files:    ${Object.keys(merged.files).length}`)
   console.log(`Killed:   ${killed}`)
   console.log(`Survived: ${survived}`)
-  console.log(`No cov:   ${noCov}`)
+  console.log(`No cov:   ${noCoverage}`)
   console.log(`Timeout:  ${timeout}`)
   console.log(`Score:    ${score}%`)
   if (reportPath) console.log(`Report:   ${reportPath}`)
@@ -130,8 +130,8 @@ export function diffReports(beforeFile, afterFile) {
   // Overall
   const bCounts = countStatuses(before)
   const aCounts = countStatuses(after)
-  const bTotal = bCounts.killed + bCounts.survived + bCounts.noCov + bCounts.timeout
-  const aTotal = aCounts.killed + aCounts.survived + aCounts.noCov + aCounts.timeout
+  const bTotal = bCounts.killed + bCounts.survived + bCounts.noCoverage + bCounts.timeout
+  const aTotal = aCounts.killed + aCounts.survived + aCounts.noCoverage + aCounts.timeout
   const bScore = bTotal > 0 ? ((bCounts.killed + bCounts.timeout) / bTotal * 100) : 100
   const aScore = aTotal > 0 ? ((aCounts.killed + aCounts.timeout) / aTotal * 100) : 100
   const delta = aScore - bScore

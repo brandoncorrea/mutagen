@@ -49,7 +49,7 @@ describe('countStatuses', () => {
     expect(countStatuses(report)).toEqual({
       killed: 2,
       survived: 1,
-      noCov: 1,
+      noCoverage: 1,
       timeout: 1
     })
   })
@@ -59,7 +59,7 @@ describe('countStatuses', () => {
     expect(countStatuses(report)).toEqual({
       killed: 0,
       survived: 0,
-      noCov: 0,
+      noCoverage: 0,
       timeout: 0
     })
   })
@@ -116,7 +116,7 @@ describe('printSummary', () => {
         'b.js': { mutants: [{ status: 'Killed' }] }
       }
     }
-    const counts = { killed: 2, survived: 1, noCov: 0, timeout: 0 }
+    const counts = { killed: 2, survived: 1, noCoverage: 0, timeout: 0 }
 
     printSummary(merged, counts, '/tmp/report.json')
 
@@ -131,7 +131,7 @@ describe('printSummary', () => {
 
   it('shows 100.0% when no mutants', () => {
     const spy = vi.spyOn(console, 'log').mockImplementation(() => {})
-    const counts = { killed: 0, survived: 0, noCov: 0, timeout: 0 }
+    const counts = { killed: 0, survived: 0, noCoverage: 0, timeout: 0 }
     printSummary({ files: {} }, counts, null)
     const output = spy.mock.calls.map(c => c[0]).join('\n')
     expect(output).toContain('100.0%')
@@ -144,7 +144,7 @@ describe('printSummary', () => {
     const merged = {
       files: { 'a.js': { mutants: [{ status: 'Timeout' }, { status: 'Survived' }] } }
     }
-    const counts = { killed: 0, survived: 1, noCov: 0, timeout: 1 }
+    const counts = { killed: 0, survived: 1, noCoverage: 0, timeout: 1 }
 
     printSummary(merged, counts, null)
 
