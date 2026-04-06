@@ -313,6 +313,105 @@ describe('createManualRunner', () => {
       expect(runner.run).toHaveBeenCalled()
     })
 
+    it('updates hashes in report when nothing changed and jsonOutput is true', async () => {
+      const src = resolve('src/a.js')
+      const hash = hashOf(sourceCode)
+
+      existsSync.mockReturnValue(true)
+      mockFs({
+        [src]: sourceCode,
+        [reportPath]: JSON.stringify({
+          files: {
+            'src/a.js': { mutants: [{ status: 'Killed' }] },
+          },
+          sourceHashes: { 'src/a.js': hash },
+          testHashes: {},
+        }),
+      })
+
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js'], createRunner: vi.fn(),
+      })
+      await manual.runIncremental(true, null)
+
+      const reportCalls = writeFileSync.mock.calls.filter(([p]) => p === reportPath)
+      expect(reportCalls).toHaveLength(1)
+
+      const report = JSON.parse(reportCalls[0][1])
+      expect(report.sourceHashes['src/a.js']).toBe(hash)
+    })
+
+    it('invalidates sources with surviving mutations when test files change', async () => {
+      const src = resolve('src/a.js')
+      const testFile = resolve('test/a.test.js')
+      const srcHash = hashOf(sourceCode)
+
+      existsSync.mockReturnValue(true)
+      mockFs({
+        [src]: sourceCode,
+        [testFile]: 'new test code',
+        [reportPath]: JSON.stringify({
+          files: {
+            'src/a.js': {
+              mutants: [{ status: 'Survived' }],
+            },
+          },
+          sourceHashes: { 'src/a.js': srcHash },
+          testHashes: { 'test/a.test.js': 'old-hash' },
+        }),
+      })
+
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: false, killedBy: ['test/a.test.js'] },
+      ])
+      const manual = createManualRunner({
+        patterns,
+        sources: ['src/a.js'],
+        testSources: ['test/a.test.js'],
+        createRunner: vi.fn().mockResolvedValue(runner),
+      })
+      const result = await manual.runIncremental(false, null)
+
+      // Source hash matches, but surviving mutation + changed test → re-run
+      expect(result.totalKilled).toBe(1)
+      expect(runner.run).toHaveBeenCalled()
+    })
+
+    it('removes stale files from merged report', async () => {
+      const src = resolve('src/a.js')
+
+      existsSync.mockReturnValue(true)
+      mockFs({
+        [src]: sourceCode,
+        [reportPath]: JSON.stringify({
+          files: {
+            'src/a.js': { mutants: [{ status: 'Killed' }] },
+            'src/removed.js': { mutants: [{ status: 'Survived' }] },
+          },
+          sourceHashes: { 'src/a.js': 'stale-hash', 'src/removed.js': 'x' },
+          testHashes: {},
+        }),
+      })
+
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: false },
+      ])
+      const manual = createManualRunner({
+        patterns,
+        sources: ['src/a.js'], // src/removed.js no longer in sources
+        createRunner: vi.fn().mockResolvedValue(runner),
+      })
+      await manual.runIncremental(true, null)
+
+      const reportCalls = writeFileSync.mock.calls.filter(([p]) => p === reportPath)
+      const report = JSON.parse(reportCalls[0][1])
+
+      expect(report.files['src/a.js']).toBeDefined()
+      expect(report.files['src/removed.js']).toBeUndefined()
+    })
+
     it('writes merged report with cached and new results', async () => {
       const srcA = resolve('src/a.js')
       const srcB = resolve('src/b.js')
