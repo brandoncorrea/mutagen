@@ -185,19 +185,14 @@ describe('javascript mutation patterns', () => {
       expectMutation('return → void', '  return x', 'void x')
     })
 
-    // BUG mu-cyo: guard /return [{}[\]]/ is broken because the match consumes
-    // 'return', so the guard never sees it in before+after. These tests document
-    // the ACTUAL behavior (guard does not block). Fix the guard, then flip these.
-    it('return → void does NOT block return {} (guard broken, see mu-cyo)', () => {
+    it('return → void guard blocks return {} (mu-cyo)', () => {
       const mutations = mutate('return → void', '  return {}')
-      expect(mutations).toHaveLength(1)
-      expect(mutations[0].mutated).toBe('void {}')
+      expect(mutations).toHaveLength(0)
     })
 
-    it('return → void does NOT block return [] (guard broken, see mu-cyo)', () => {
+    it('return → void guard blocks return [] (mu-cyo)', () => {
       const mutations = mutate('return → void', '  return []')
-      expect(mutations).toHaveLength(1)
-      expect(mutations[0].mutated).toBe('void []')
+      expect(mutations).toHaveLength(0)
     })
   })
 

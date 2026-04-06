@@ -47,7 +47,7 @@ export const javascript = [
 
   // --- BlockStatement ---
   { pattern: /return \{/g, replacement: 'return Object.freeze({', name: 'return {} → Object.freeze (syntax break)' },
-  { pattern: /^(\s*)return\b/g, replacement: '$1void', name: 'return → void', guard: /return [{}[\]]/ },
+  { pattern: /^(\s*)return\b/g, replacement: '$1void', name: 'return → void', guard: /^\s*[{[]/ },
 
   // --- Async ---
   { pattern: /\bawait /g, replacement: '', name: 'await → (removed)', guard: /^\s*\/\// },
