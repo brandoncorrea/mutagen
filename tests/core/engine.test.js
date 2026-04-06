@@ -8,21 +8,21 @@ const simplePatterns = [
 const prepared = preparePatterns(simplePatterns)
 
 describe('preparePatterns', () => {
-  it('adds globalPattern with g flag', () => {
+  it('ensures each pattern can find all occurrences in a line', () => {
     const result = preparePatterns([
       { pattern: / === /g, replacement: ' !== ', name: 'test' }
     ])
     expect(result[0].globalPattern.flags).toContain('g')
   })
 
-  it('adds singlePattern without g flag', () => {
+  it('ensures each pattern can replace a single occurrence', () => {
     const result = preparePatterns([
       { pattern: / === /g, replacement: ' !== ', name: 'test' }
     ])
     expect(result[0].singlePattern.flags).not.toContain('g')
   })
 
-  it('preserves original pattern properties', () => {
+  it('retains name, replacement, and guard from the input', () => {
     const result = preparePatterns([
       { pattern: / === /g, replacement: ' !== ', name: 'test', guard: /foo/ }
     ])
@@ -31,7 +31,7 @@ describe('preparePatterns', () => {
     expect(result[0].guard).toEqual(/foo/)
   })
 
-  it('handles patterns that already lack g flag', () => {
+  it('normalizes patterns regardless of input global flag', () => {
     const result = preparePatterns([
       { pattern: / === /, replacement: ' !== ', name: 'test' }
     ])
