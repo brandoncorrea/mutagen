@@ -17,14 +17,13 @@ export async function createVitestRunner(sourceFile, options = {}) {
     reporters: [{ onFinished() {} }],
     bail: 1,
     ...(config && { config }),
-    ...(root && { root }),
+    ...(root && { root })
   }
 
   const testFilter = testFile ? [testFile] : []
 
-  if (!warm) {
+  if (!warm)
     return coldRunner(startVitest, testFilter, vitestOpts)
-  }
 
   // Warm runner: start vitest in watch mode to keep the worker pool alive
   // between mutations. watch:true is required — watch:false shuts down the
@@ -33,8 +32,7 @@ export async function createVitestRunner(sourceFile, options = {}) {
   await vitest.waitForTestRunEnd()
 
   // Verify warm rerun works by re-running without changes
-  const canWarmRerun = await testWarmRerun(vitest)
-  if (!canWarmRerun) {
+  if (await noWarmRerun(vitest)) {
     await vitest.close()
     return coldRunner(startVitest, testFilter, vitestOpts)
   }
@@ -48,28 +46,25 @@ export async function createVitestRunner(sourceFile, options = {}) {
       if (sourceFile) vitest.invalidateFile(sourceFile)
       const specs = relatedSpecs || await vitest.globTestSpecifications()
       await vitest.runTestSpecifications(specs)
-      const results = vitest.state.getFiles()
-      const passed = results.every(f => f.result?.state === 'pass')
-      const killedBy = passed ? [] : failedTestFiles(results)
-      return { passed, killedBy }
+      return compileResults(vitest)
     },
     async close() {
       await vitest.close()
-    },
+    }
   }
 }
 
 function failedTestFiles(results) {
   return results
-    .filter(f => f.result?.state === 'fail')
+    .filter(isFailing)
     .map(f => f.filepath)
 }
 
 async function findRelatedSpecs(vitest, sourceFile) {
-  if (!sourceFile) return null
+  if (!sourceFile) return
 
   const graph = vitest.projects[0]?._vite?.moduleGraph
-  if (!graph) return null
+  if (!graph) return
 
   // Walk importers recursively to find all test files
   const testFiles = new Set()
@@ -79,35 +74,39 @@ async function findRelatedSpecs(vitest, sourceFile) {
   const visited = new Set()
   const queue = [sourceFile]
 
-  while (queue.length > 0) {
-    const id = queue.pop()
-    if (visited.has(id)) continue
-    visited.add(id)
+  const state = { testFiles, testPaths, visited, queue, graph }
 
-    if (testPaths.has(id)) {
-      testFiles.add(id)
-      continue
-    }
+  while (queue.length > 0)
+    visitSourceFile(state, queue.pop())
 
-    const mod = graph.getModuleById(id)
-    if (!mod) continue
-    for (const importer of mod.importers) {
-      if (importer.id) queue.push(importer.id)
-    }
-  }
-
-  if (testFiles.size === 0) return null
-  return allSpecs.filter(s => testFiles.has(s.moduleId))
+  if (testFiles.size > 0)
+    return allSpecs.filter(s => testFiles.has(s.moduleId))
 }
 
-async function testWarmRerun(vitest) {
+function visitSourceFile(state, id) {
+  state.visited.add(id)
+  if (state.testPaths.has(id))
+    state.testFiles.add(id)
+  else
+    enqueueModule(state, id)
+}
+
+function enqueueModule({ graph, queue }, id) {
+  const mod = graph.getModuleById(id)
+  if (mod)
+    for (const { id } of mod.importers)
+      if (id)
+        queue.push(id)
+}
+
+async function noWarmRerun(vitest) {
   try {
     const specs = await vitest.globTestSpecifications()
     await vitest.runTestSpecifications(specs)
     const results = vitest.state.getFiles()
-    return results.every(f => f.result?.state === 'pass')
+    return !results.every(isPassing)
   } catch {
-    return false
+    return true
   }
 }
 
@@ -116,14 +115,26 @@ function coldRunner(startVitest, testFilter, vitestOpts) {
     async run() {
       const vitest = await startVitest('test', testFilter, { ...vitestOpts, watch: false })
       try {
-        const results = vitest.state.getFiles()
-        const passed = results.every(f => f.result?.state === 'pass')
-        const killedBy = passed ? [] : failedTestFiles(results)
-        return { passed, killedBy }
+        return compileResults(vitest)
       } finally {
         await vitest.close()
       }
     },
-    async close() {},
+    async close() {}
   }
+}
+
+function compileResults(vitest) {
+  const results = vitest.state.getFiles()
+  const passed = results.every(isPassing)
+  const killedBy = passed ? [] : failedTestFiles(results)
+  return { passed, killedBy }
+}
+
+function isPassing(file) {
+  return file.result?.state === 'pass'
+}
+
+function isFailing(file) {
+  return file.result?.state === 'fail'
 }

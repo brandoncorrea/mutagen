@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('node:child_process', () => ({
-  execSync: vi.fn(),
+  execSync: vi.fn()
 }))
 
 vi.mock('node:fs', async (importOriginal) => {
@@ -12,7 +12,7 @@ vi.mock('node:fs', async (importOriginal) => {
     renameSync: vi.fn(),
     rmSync: vi.fn(),
     readFileSync: vi.fn(),
-    writeFileSync: vi.fn(),
+    writeFileSync: vi.fn()
   }
 })
 
@@ -83,7 +83,7 @@ describe('runStrykerScope', () => {
 
     expect(execSync).toHaveBeenCalledWith(
       "npx stryker run --mutate 'src/a.js,src/b.js'",
-      { stdio: 'inherit', timeout: 600000 },
+      { stdio: 'inherit', timeout: 600000 }
     )
   })
 
@@ -94,7 +94,7 @@ describe('runStrykerScope', () => {
 
     expect(renameSync).toHaveBeenCalledWith(
       'reports/mutation/report.json',
-      'reports/mutation/core-report.json',
+      'reports/mutation/core-report.json'
     )
   })
 
@@ -111,7 +111,7 @@ describe('runStrykerScope', () => {
 
     const result = runStrykerScope('core', ['src/a.js'], {
       reportDir: 'out',
-      strykerJson: 'out/stryker.json',
+      strykerJson: 'out/stryker.json'
     })
 
     expect(renameSync).toHaveBeenCalledWith('out/stryker.json', 'out/core-report.json')
@@ -135,7 +135,7 @@ describe('runStrykerScope', () => {
     runStrykerScope('core', ['src/a.js'])
 
     expect(console.error).toHaveBeenCalledWith(
-      expect.stringContaining('Stryker core crashed'),
+      expect.stringContaining('Stryker core crashed')
     )
   })
 
@@ -168,11 +168,21 @@ describe('mergeReports', () => {
       files: {
         'src/a.js': {
           mutants: [
-            { status: 'Killed', mutatorName: 'x', location: { start: { line: 1 } }, replacement: 'r' },
-            { status: 'Survived', mutatorName: 'y', location: { start: { line: 2 } }, replacement: 's' },
-          ],
-        },
-      },
+            {
+              status: 'Killed',
+              mutatorName: 'x',
+              location: { start: { line: 1 } },
+              replacement: 'r'
+            },
+            {
+              status: 'Survived',
+              mutatorName: 'y',
+              location: { start: { line: 2 } },
+              replacement: 's'
+            }
+          ]
+        }
+      }
     }
     readFileSync.mockReturnValue(JSON.stringify(report))
 
@@ -181,7 +191,7 @@ describe('mergeReports', () => {
     expect(survived).toBe(1)
     expect(writeFileSync).toHaveBeenCalledWith(
       'reports/mutation/report.json',
-      expect.any(String),
+      expect.any(String)
     )
 
     const written = JSON.parse(writeFileSync.mock.calls[0][1])
@@ -201,10 +211,15 @@ describe('mergeReports', () => {
       files: {
         'src/a.js': {
           mutants: [
-            { status: 'Killed', mutatorName: 'x', location: { start: { line: 1 } }, replacement: 'r' },
-          ],
-        },
-      },
+            {
+              status: 'Killed',
+              mutatorName: 'x',
+              location: { start: { line: 1 } },
+              replacement: 'r'
+            }
+          ]
+        }
+      }
     }
     readFileSync.mockReturnValue(JSON.stringify(report))
 

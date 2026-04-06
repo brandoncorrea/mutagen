@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('vitest/node', () => ({
-  startVitest: vi.fn(),
+  startVitest: vi.fn()
 }))
 
 import { createVitestRunner } from '../../runners/vitest.js'
@@ -15,7 +15,7 @@ function createMockVitest() {
     globTestSpecifications: vi.fn().mockResolvedValue([]),
     runTestSpecifications: vi.fn().mockResolvedValue(undefined),
     state: { getFiles: vi.fn().mockReturnValue([]) },
-    projects: [],
+    projects: []
   }
 }
 
@@ -26,7 +26,7 @@ describe('createVitestRunner', () => {
     it('returns passed when all tests pass', async () => {
       const mock = createMockVitest()
       mock.state.getFiles.mockReturnValue([
-        { result: { state: 'pass' }, filepath: 'a.test.js' },
+        { result: { state: 'pass' }, filepath: 'a.test.js' }
       ])
       startVitest.mockResolvedValue(mock)
 
@@ -40,7 +40,7 @@ describe('createVitestRunner', () => {
       const mock = createMockVitest()
       mock.state.getFiles.mockReturnValue([
         { result: { state: 'fail' }, filepath: 'test/x.test.js' },
-        { result: { state: 'pass' }, filepath: 'test/y.test.js' },
+        { result: { state: 'pass' }, filepath: 'test/y.test.js' }
       ])
       startVitest.mockResolvedValue(mock)
 
@@ -58,7 +58,7 @@ describe('createVitestRunner', () => {
       await runner.run()
 
       expect(startVitest).toHaveBeenCalledWith(
-        'test', [], expect.objectContaining({ watch: false }),
+        'test', [], expect.objectContaining({ watch: false })
       )
       expect(mock.close).toHaveBeenCalled()
     })
@@ -83,7 +83,7 @@ describe('createVitestRunner', () => {
       await createVitestRunner('src/a.js')
 
       expect(startVitest).toHaveBeenCalledWith(
-        'test', [], expect.objectContaining({ watch: true }),
+        'test', [], expect.objectContaining({ watch: true })
       )
     })
 
@@ -104,7 +104,7 @@ describe('createVitestRunner', () => {
       mock.state.getFiles = vi.fn()
         .mockReturnValueOnce([]) // testWarmRerun
         .mockReturnValue([
-          { result: { state: 'fail' }, filepath: 'test/b.test.js' },
+          { result: { state: 'fail' }, filepath: 'test/b.test.js' }
         ])
       startVitest.mockResolvedValue(mock)
 
@@ -117,12 +117,12 @@ describe('createVitestRunner', () => {
     it('falls back to cold when warm rerun produces failures', async () => {
       const warmMock = createMockVitest()
       warmMock.state.getFiles.mockReturnValue([
-        { result: { state: 'fail' }, filepath: 'a.test.js' },
+        { result: { state: 'fail' }, filepath: 'a.test.js' }
       ])
 
       const coldMock = createMockVitest()
       coldMock.state.getFiles.mockReturnValue([
-        { result: { state: 'pass' }, filepath: 'a.test.js' },
+        { result: { state: 'pass' }, filepath: 'a.test.js' }
       ])
 
       startVitest
@@ -136,7 +136,7 @@ describe('createVitestRunner', () => {
       const result = await runner.run()
       expect(result.passed).toBe(true)
       expect(startVitest).toHaveBeenLastCalledWith(
-        'test', [], expect.objectContaining({ watch: false }),
+        'test', [], expect.objectContaining({ watch: false })
       )
     })
 
@@ -146,7 +146,7 @@ describe('createVitestRunner', () => {
 
       const coldMock = createMockVitest()
       coldMock.state.getFiles.mockReturnValue([
-        { result: { state: 'pass' }, filepath: 'a.test.js' },
+        { result: { state: 'pass' }, filepath: 'a.test.js' }
       ])
 
       startVitest
@@ -177,13 +177,13 @@ describe('createVitestRunner', () => {
       startVitest.mockResolvedValue(mock)
 
       const runner = await createVitestRunner('src/a.js', {
-        warm: false, config: 'vitest.config.ts', root: '/app',
+        warm: false, config: 'vitest.config.ts', root: '/app'
       })
       await runner.run()
 
       expect(startVitest).toHaveBeenCalledWith(
         'test', [],
-        expect.objectContaining({ config: 'vitest.config.ts', root: '/app' }),
+        expect.objectContaining({ config: 'vitest.config.ts', root: '/app' })
       )
     })
 
@@ -192,12 +192,13 @@ describe('createVitestRunner', () => {
       startVitest.mockResolvedValue(mock)
 
       const runner = await createVitestRunner('src/a.js', {
-        warm: false, testFile: 'test/a.test.js',
+        warm: false,
+        testFile: 'test/a.test.js'
       })
       await runner.run()
 
       expect(startVitest).toHaveBeenCalledWith(
-        'test', ['test/a.test.js'], expect.any(Object),
+        'test', ['test/a.test.js'], expect.any(Object)
       )
     })
   })
@@ -206,7 +207,7 @@ describe('createVitestRunner', () => {
     it('narrows tests to those that transitively import the source', async () => {
       const specs = [
         { moduleId: 'test/related.test.js' },
-        { moduleId: 'test/unrelated.test.js' },
+        { moduleId: 'test/unrelated.test.js' }
       ]
       const mock = createMockVitest()
       mock.globTestSpecifications.mockResolvedValue(specs)
@@ -217,9 +218,9 @@ describe('createVitestRunner', () => {
               if (id === 'src/a.js')
                 return { importers: new Set([{ id: 'test/related.test.js' }]) }
               return null
-            }),
-          },
-        },
+            })
+          }
+        }
       }]
       startVitest.mockResolvedValue(mock)
 
@@ -227,14 +228,14 @@ describe('createVitestRunner', () => {
       await runner.run()
 
       expect(mock.runTestSpecifications).toHaveBeenLastCalledWith([
-        { moduleId: 'test/related.test.js' },
+        { moduleId: 'test/related.test.js' }
       ])
     })
 
     it('walks transitive importers to find test files', async () => {
       const specs = [
         { moduleId: 'test/indirect.test.js' },
-        { moduleId: 'test/other.test.js' },
+        { moduleId: 'test/other.test.js' }
       ]
       const mock = createMockVitest()
       mock.globTestSpecifications.mockResolvedValue(specs)
@@ -247,9 +248,9 @@ describe('createVitestRunner', () => {
               if (id === 'src/b.js')
                 return { importers: new Set([{ id: 'test/indirect.test.js' }]) }
               return null
-            }),
-          },
-        },
+            })
+          }
+        }
       }]
       startVitest.mockResolvedValue(mock)
 
@@ -257,14 +258,14 @@ describe('createVitestRunner', () => {
       await runner.run()
 
       expect(mock.runTestSpecifications).toHaveBeenLastCalledWith([
-        { moduleId: 'test/indirect.test.js' },
+        { moduleId: 'test/indirect.test.js' }
       ])
     })
 
     it('runs all specs when no module graph is available', async () => {
       const specs = [
         { moduleId: 'test/a.test.js' },
-        { moduleId: 'test/b.test.js' },
+        { moduleId: 'test/b.test.js' }
       ]
       const mock = createMockVitest()
       mock.globTestSpecifications.mockResolvedValue(specs)
@@ -278,7 +279,7 @@ describe('createVitestRunner', () => {
 
     it('runs all specs when no test files found in graph', async () => {
       const specs = [
-        { moduleId: 'test/a.test.js' },
+        { moduleId: 'test/a.test.js' }
       ]
       const mock = createMockVitest()
       mock.globTestSpecifications.mockResolvedValue(specs)
@@ -286,8 +287,8 @@ describe('createVitestRunner', () => {
         _vite: {
           moduleGraph: {
             getModuleById: vi.fn(() => null), // source not in graph
-          },
-        },
+          }
+        }
       }]
       startVitest.mockResolvedValue(mock)
 

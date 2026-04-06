@@ -3,7 +3,7 @@ import { mutantKey, countStatuses, toJsonMutants, printRunReport, printSummary, 
 import { readFileSync } from 'node:fs'
 
 vi.mock('node:fs', () => ({
-  readFileSync: vi.fn(),
+  readFileSync: vi.fn()
 }))
 
 describe('mutantKey', () => {
@@ -11,7 +11,7 @@ describe('mutantKey', () => {
     const m = {
       location: { start: { line: 10 } },
       mutatorName: '=== → !==',
-      replacement: ' !== ',
+      replacement: ' !== '
     }
     expect(mutantKey('src/foo.js', m)).toBe('src/foo.js:10:=== → !==: !== ')
   })
@@ -34,23 +34,23 @@ describe('countStatuses', () => {
         'a.js': {
           mutants: [
             { status: 'Killed' },
-            { status: 'Survived' },
-          ],
+            { status: 'Survived' }
+          ]
         },
         'b.js': {
           mutants: [
             { status: 'NoCoverage' },
             { status: 'Timeout' },
-            { status: 'Killed' },
-          ],
-        },
-      },
+            { status: 'Killed' }
+          ]
+        }
+      }
     }
     expect(countStatuses(report)).toEqual({
       killed: 2,
       survived: 1,
       noCov: 1,
-      timeout: 1,
+      timeout: 1
     })
   })
 
@@ -60,7 +60,7 @@ describe('countStatuses', () => {
       killed: 0,
       survived: 0,
       noCov: 0,
-      timeout: 0,
+      timeout: 0
     })
   })
 })
@@ -69,11 +69,22 @@ describe('toJsonMutants', () => {
   it('converts killed and survived results to Stryker-compatible format', () => {
     const results = {
       killed: [
-        { line: 5, name: '=== → !==', original: 'a === b', mutated: 'a !== b', killedBy: ['/tests/a.test.js'] },
+        {
+          line: 5,
+          name: '=== → !==',
+          original: 'a === b',
+          mutated: 'a !== b',
+          killedBy: ['/tests/a.test.js']
+        }
       ],
       survived: [
-        { line: 10, name: '+ → -', original: 'a + b', mutated: 'a - b' },
-      ],
+        {
+          line: 10,
+          name: '+ → -',
+          original: 'a + b',
+          mutated: 'a - b'
+        }
+      ]
     }
 
     const output = toJsonMutants('/project/src/foo.js', results)
@@ -120,7 +131,8 @@ describe('printSummary', () => {
 
   it('shows 100.0% when no mutants', () => {
     const spy = vi.spyOn(console, 'log').mockImplementation(() => {})
-    printSummary({ files: {} }, { killed: 0, survived: 0, noCov: 0, timeout: 0 }, null)
+    const counts = { killed: 0, survived: 0, noCov: 0, timeout: 0 }
+    printSummary({ files: {} }, counts, null)
     const output = spy.mock.calls.map(c => c[0]).join('\n')
     expect(output).toContain('100.0%')
     expect(output).not.toContain('Report:')
@@ -153,20 +165,30 @@ describe('combineReportData', () => {
         'a.js': {
           language: 'javascript',
           mutants: [
-            { location: { start: { line: 1 } }, mutatorName: 'x', replacement: 'y', status: 'Killed' },
-          ],
-        },
-      },
+            {
+              location: { start: { line: 1 } },
+              mutatorName: 'x',
+              replacement: 'y',
+              status: 'Killed'
+            }
+          ]
+        }
+      }
     }
     const report2 = {
       files: {
         'b.js': {
           language: 'javascript',
           mutants: [
-            { location: { start: { line: 5 } }, mutatorName: 'z', replacement: 'w', status: 'Survived' },
-          ],
-        },
-      },
+            {
+              location: { start: { line: 5 } },
+              mutatorName: 'z',
+              replacement: 'w',
+              status: 'Survived'
+            }
+          ]
+        }
+      }
     }
     readFileSync
       .mockReturnValueOnce(JSON.stringify(report1))
@@ -183,11 +205,16 @@ describe('combineReportData', () => {
 
   it('deduplicates mutants with the same key', () => {
     const spy = vi.spyOn(console, 'log').mockImplementation(() => {})
-    const mutant = { location: { start: { line: 1 } }, mutatorName: 'x', replacement: 'y', status: 'Killed' }
+    const mutant = {
+      location: { start: { line: 1 } },
+      mutatorName: 'x',
+      replacement: 'y',
+      status: 'Killed'
+    }
     const report = {
       files: {
-        'a.js': { language: 'javascript', mutants: [mutant] },
-      },
+        'a.js': { language: 'javascript', mutants: [mutant] }
+      }
     }
     readFileSync
       .mockReturnValueOnce(JSON.stringify(report))
@@ -217,20 +244,30 @@ describe('combineReportData', () => {
         'a.js': {
           language: 'javascript',
           mutants: [
-            { location: { start: { line: 1 } }, mutatorName: 'x', replacement: 'y', status: 'Killed' },
-          ],
-        },
-      },
+            {
+              location: { start: { line: 1 } },
+              mutatorName: 'x',
+              replacement: 'y',
+              status: 'Killed'
+            }
+          ]
+        }
+      }
     }
     const report2 = {
       files: {
         'a.js': {
           language: 'javascript',
           mutants: [
-            { location: { start: { line: 2 } }, mutatorName: 'z', replacement: 'w', status: 'Survived' },
-          ],
-        },
-      },
+            {
+              location: { start: { line: 2 } },
+              mutatorName: 'z',
+              replacement: 'w',
+              status: 'Survived'
+            }
+          ]
+        }
+      }
     }
     readFileSync
       .mockReturnValueOnce(JSON.stringify(report1))
@@ -258,7 +295,11 @@ describe('diffReports', () => {
   })
 
   function makeReport(files) {
-    return { files, schemaVersion: '1', thresholds: { high: 80, low: 60 } }
+    return {
+      files,
+      schemaVersion: '1',
+      thresholds: { high: 80, low: 60 }
+    }
   }
 
   function makeMutant(id, mutatorName, status, line = 1) {
@@ -267,16 +308,16 @@ describe('diffReports', () => {
       mutatorName,
       status,
       location: { start: { line }, column: 0 },
-      replacement: '',
+      replacement: ''
     }
   }
 
   it('detects newly killed mutants (Survived → Killed)', () => {
     const before = makeReport({
-      'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Survived', 5)] },
+      'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Survived', 5)] }
     })
     const after = makeReport({
-      'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Killed', 5)] },
+      'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Killed', 5)] }
     })
     readFileSync
       .mockReturnValueOnce(JSON.stringify(before))
@@ -292,10 +333,10 @@ describe('diffReports', () => {
 
   it('detects regressions (Killed → Survived)', () => {
     const before = makeReport({
-      'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Killed', 5)] },
+      'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Killed', 5)] }
     })
     const after = makeReport({
-      'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Survived', 5)] },
+      'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Survived', 5)] }
     })
     readFileSync
       .mockReturnValueOnce(JSON.stringify(before))
@@ -311,13 +352,15 @@ describe('diffReports', () => {
 
   it('detects new mutants (present only in after)', () => {
     const before = makeReport({
-      'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Killed', 5)] },
+      'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Killed', 5)] }
     })
     const after = makeReport({
-      'a.js': { mutants: [
-        makeMutant('m1', 'EqualityOperator', 'Killed', 5),
-        makeMutant('m2', 'ArithmeticOperator', 'Survived', 10),
-      ] },
+      'a.js': {
+        mutants: [
+          makeMutant('m1', 'EqualityOperator', 'Killed', 5),
+          makeMutant('m2', 'ArithmeticOperator', 'Survived', 10)
+        ]
+      }
     })
     readFileSync
       .mockReturnValueOnce(JSON.stringify(before))
@@ -332,13 +375,15 @@ describe('diffReports', () => {
 
   it('detects removed mutants (present only in before)', () => {
     const before = makeReport({
-      'a.js': { mutants: [
-        makeMutant('m1', 'EqualityOperator', 'Killed', 5),
-        makeMutant('m2', 'ArithmeticOperator', 'Survived', 10),
-      ] },
+      'a.js': {
+        mutants: [
+          makeMutant('m1', 'EqualityOperator', 'Killed', 5),
+          makeMutant('m2', 'ArithmeticOperator', 'Survived', 10)
+        ]
+      }
     })
     const after = makeReport({
-      'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Killed', 5)] },
+      'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Killed', 5)] }
     })
     readFileSync
       .mockReturnValueOnce(JSON.stringify(before))
@@ -378,10 +423,10 @@ describe('diffReports', () => {
 
   it('shows per-file score changes', () => {
     const before = makeReport({
-      'a.js': { mutants: [makeMutant('m1', 'x', 'Survived')] },
+      'a.js': { mutants: [makeMutant('m1', 'x', 'Survived')] }
     })
     const after = makeReport({
-      'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] },
+      'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] }
     })
     readFileSync
       .mockReturnValueOnce(JSON.stringify(before))
@@ -396,7 +441,7 @@ describe('diffReports', () => {
 
   it('reports identical reports with no changes', () => {
     const report = makeReport({
-      'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] },
+      'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] }
     })
     readFileSync
       .mockReturnValueOnce(JSON.stringify(report))
@@ -412,11 +457,11 @@ describe('diffReports', () => {
 
   it('handles new files in after report', () => {
     const before = makeReport({
-      'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] },
+      'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] }
     })
     const after = makeReport({
       'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] },
-      'b.js': { mutants: [makeMutant('m2', 'y', 'Survived')] },
+      'b.js': { mutants: [makeMutant('m2', 'y', 'Survived')] }
     })
     readFileSync
       .mockReturnValueOnce(JSON.stringify(before))
@@ -433,10 +478,10 @@ describe('diffReports', () => {
   it('handles removed files in after report', () => {
     const before = makeReport({
       'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] },
-      'b.js': { mutants: [makeMutant('m2', 'y', 'Survived')] },
+      'b.js': { mutants: [makeMutant('m2', 'y', 'Survived')] }
     })
     const after = makeReport({
-      'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] },
+      'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] }
     })
     readFileSync
       .mockReturnValueOnce(JSON.stringify(before))
@@ -451,10 +496,10 @@ describe('diffReports', () => {
 
   it('treats NoCoverage as alive for regression detection', () => {
     const before = makeReport({
-      'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] },
+      'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] }
     })
     const after = makeReport({
-      'a.js': { mutants: [makeMutant('m1', 'x', 'NoCoverage')] },
+      'a.js': { mutants: [makeMutant('m1', 'x', 'NoCoverage')] }
     })
     readFileSync
       .mockReturnValueOnce(JSON.stringify(before))
@@ -470,13 +515,13 @@ describe('diffReports', () => {
       mutatorName: 'EqualityOperator',
       status: 'Survived',
       location: { start: { line: 5 } },
-      replacement: '!==',
+      replacement: '!=='
     }
     const before = makeReport({
-      'a.js': { mutants: [mutantNoId] },
+      'a.js': { mutants: [mutantNoId] }
     })
     const after = makeReport({
-      'a.js': { mutants: [{ ...mutantNoId, status: 'Killed' }] },
+      'a.js': { mutants: [{ ...mutantNoId, status: 'Killed' }] }
     })
     readFileSync
       .mockReturnValueOnce(JSON.stringify(before))
@@ -507,11 +552,11 @@ describe('printRunReport', () => {
     const log = (msg) => lines.push(msg)
     const mutations = [
       { line: 1, name: 'a' },
-      { line: 2, name: 'b' },
+      { line: 2, name: 'b' }
     ]
     const results = {
       killed: [{ line: 1, name: 'a' }],
-      survived: [{ line: 2, name: 'b', original: 'x + y', mutated: 'x - y' }],
+      survived: [{ line: 2, name: 'b', original: 'x + y', mutated: 'x - y' }]
     }
 
     printRunReport(mutations, results, log)
