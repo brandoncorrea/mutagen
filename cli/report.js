@@ -15,11 +15,11 @@ export function mutantKey(path, m) {
 export function countStatuses(merged) {
   let killed = 0, survived = 0, noCoverage = 0, timeout = 0
   for (const fileData of Object.values(merged.files)) {
-    for (const m of fileData.mutants) {
-      if (m.status === 'Killed') killed++
-      else if (m.status === 'Survived') survived++
-      else if (m.status === 'NoCoverage') noCoverage++
-      else if (m.status === 'Timeout') timeout++
+    for (const { status } of fileData.mutants) {
+      if (status === 'Killed') killed++
+      else if (status === 'Survived') survived++
+      else if (status === 'NoCoverage') noCoverage++
+      else if (status === 'Timeout') timeout++
     }
   }
   return { killed, survived, noCoverage, timeout }
@@ -51,7 +51,10 @@ export function toJsonMutants(sourceFile, results) {
     id: `mutagen-${relPath}-${mut.line}-${mut.name}`,
     mutatorName: mut.name,
     status,
-    location: { start: { line: mut.line, column: 0 }, end: { line: mut.line, column: 0 } },
+    location: {
+      start: { line: mut.line, column: 0 },
+      end: { line: mut.line, column: 0 }
+    },
     description: `${mut.original} → ${mut.mutated}`,
     ...(mut.killedBy?.length > 0 && { killedBy: mut.killedBy })
   })

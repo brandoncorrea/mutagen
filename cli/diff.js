@@ -8,7 +8,11 @@ import { readFileSync } from 'node:fs'
 import { mutantKey, countStatuses, SEPARATOR } from './report.js'
 
 export function combineReportData(files) {
-  const merged = { files: {}, schemaVersion: '1', thresholds: { high: 80, low: 60 } }
+  const merged = {
+    files: {},
+    schemaVersion: '1',
+    thresholds: { high: 80, low: 60 }
+  }
   const seen = new Set()
   let duplicates = 0
 
@@ -33,7 +37,8 @@ export function combineReportData(files) {
     }
   }
 
-  if (duplicates > 0) console.log(`  Deduplicated: ${duplicates} duplicate mutant(s) removed`)
+  if (duplicates > 0)
+    console.log(`  Deduplicated: ${duplicates} duplicate mutant(s) removed`)
 
   return merged
 }
@@ -63,7 +68,7 @@ export function diffReports(beforeFile, afterFile) {
 function classifyChanges(before, after) {
   const beforeMap = buildMutantMap(before)
   const afterMap = buildMutantMap(after)
-  const allKeys = new Set([...beforeMap.keys(), ...afterMap.keys()])
+  const allKeys = new Set([...Object.keys(beforeMap), ...Object.keys(afterMap)])
 
   const newlyKilled = []
   const regressions = []
@@ -71,8 +76,8 @@ function classifyChanges(before, after) {
   const removedMutants = []
 
   for (const key of allKeys) {
-    const b = beforeMap.get(key)
-    const a = afterMap.get(key)
+    const b = beforeMap[key]
+    const a = afterMap[key]
 
     if (!b && a) {
       newMutants.push(a)
@@ -103,8 +108,8 @@ function computeFileDeltas(before, after) {
     } else if (bs && !as) {
       deltas.push({ file, before: bs.score, after: null, delta: null, label: 'REMOVED' })
     } else if (bs && as && Math.abs(as.score - bs.score) > 0.05) {
-      const d = as.score - bs.score
-      deltas.push({ file, before: bs.score, after: as.score, delta: d, label: null })
+      const delta = as.score - bs.score
+      deltas.push({ file, before: bs.score, after: as.score, delta, label: null })
     }
   }
 
@@ -180,11 +185,11 @@ function isAlive(status) {
 }
 
 function buildMutantMap(report) {
-  const map = new Map()
+  const map = {}
   for (const [path, fileData] of Object.entries(report.files)) {
     for (const m of fileData.mutants) {
       const key = m.id || mutantKey(path, m)
-      map.set(key, { ...m, file: path, line: m.location?.start?.line || 0 })
+      map[key] = { ...m, file: path, line: m.location?.start?.line || 0 }
     }
   }
   return map
@@ -192,13 +197,15 @@ function buildMutantMap(report) {
 
 function fileScores(report) {
   const scores = {}
-  for (const [path, fileData] of Object.entries(report.files)) {
-    let killed = 0, total = 0
-    for (const m of fileData.mutants) {
-      total++
-      if (m.status === 'Killed' || m.status === 'Timeout') killed++
-    }
-    scores[path] = { killed, total, score: total > 0 ? (killed / total * 100) : 100 }
+  for (const [path, { mutants }] of Object.entries(report.files)) {
+    const total = mutants.length
+    const killed = mutants.filter(isKilled).length
+    const score = total > 0 ? (killed / total * 100) : 100
+    scores[path] = { killed, total, score }
   }
   return scores
+}
+
+function isKilled(mutation) {
+  return mutation.status === 'Killed' || mutation.status === 'Timeout'
 }

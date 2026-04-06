@@ -23,7 +23,10 @@ import { diffReports } from './diff.js'
 export const HASH_PREFIX_LENGTH = 16
 
 function hashFile(filePath) {
-  return createHash('sha256').update(readFileSync(filePath)).digest('hex').slice(0, HASH_PREFIX_LENGTH)
+  return createHash('sha256')
+    .update(readFileSync(filePath))
+    .digest('hex')
+    .slice(0, HASH_PREFIX_LENGTH)
 }
 
 function dryRun(sourceFile, prepared, targetLine) {
