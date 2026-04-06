@@ -457,4 +457,153 @@ describe('createManualRunner', () => {
       expect(report.sourceHashes).toBeDefined()
     })
   })
+
+  describe('run (CLI dispatch)', () => {
+    const reportPath = 'reports/mutation/manual-report.json'
+
+    it('returns 0 when single-file mutation kills all mutants', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: false, killedBy: ['t.test.js'] },
+      ])
+
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner),
+      })
+      const code = await manual.run(['src/a.js'])
+
+      expect(code).toBe(0)
+    })
+
+    it('returns 1 when mutations survive', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: true }, // survived
+      ])
+
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner),
+      })
+      const code = await manual.run(['src/a.js'])
+
+      expect(code).toBe(1)
+    })
+
+    it('returns 1 for missing arguments', async () => {
+      const manual = createManualRunner({
+        patterns, sources: [], createRunner: vi.fn(),
+      })
+      const code = await manual.run([])
+
+      expect(code).toBe(1)
+    })
+
+    it('returns 1 for --diff without file args', async () => {
+      const manual = createManualRunner({
+        patterns, sources: [], createRunner: vi.fn(),
+      })
+      const code = await manual.run(['--diff'])
+
+      expect(code).toBe(1)
+    })
+
+    it('runs dry-run mode without executing tests', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const createRunner = vi.fn()
+
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js'], createRunner,
+      })
+      const code = await manual.run(['src/a.js', '--dry-run'])
+
+      expect(code).toBe(0)
+      expect(createRunner).not.toHaveBeenCalled()
+    })
+
+    it('runs batch dry-run across all sources', async () => {
+      mockFs({
+        [resolve('src/a.js')]: sourceCode,
+        [resolve('src/b.js')]: 'if (x === y) {}',
+      })
+      const createRunner = vi.fn()
+
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js', 'src/b.js'], createRunner,
+      })
+      const code = await manual.run(['--all', '--dry-run'])
+
+      expect(code).toBe(0)
+      expect(createRunner).not.toHaveBeenCalled()
+    })
+
+    it('runs --all batch mode and returns exit code', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: false },
+      ])
+
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner),
+      })
+      const code = await manual.run(['--all'])
+
+      expect(code).toBe(0)
+    })
+
+    it('runs --incremental mode and returns exit code', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      existsSync.mockReturnValue(false)
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: false },
+      ])
+
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner),
+      })
+      const code = await manual.run(['--incremental'])
+
+      expect(code).toBe(0)
+    })
+
+    it('parses --line and --timeout flags', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const runner = fakeRunner([
+        { passed: true },
+        // no mutations on line 99, so nothing to kill
+      ])
+
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner),
+      })
+      const code = await manual.run(['src/a.js', '--line', '99', '--timeout', '5000'])
+
+      expect(code).toBe(0)
+    })
+
+    it('uses config timeout when CLI does not specify one', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: false },
+      ])
+
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner),
+        timeout: 3000,
+      })
+      const code = await manual.run(['src/a.js'])
+
+      expect(code).toBe(0)
+    })
+  })
 })

@@ -62,25 +62,22 @@ function argsToOptions(args) {
   return { targetLine, timeout, filtered }
 }
 
-function parseArgs() {
-  const args = process.argv.slice(2)
-  const jsonOutput = args.includes('--json')
-  const dryRunMode = args.includes('--dry-run')
+function parseArgs(argv = process.argv.slice(2)) {
+  const jsonOutput = argv.includes('--json')
+  const dryRunMode = argv.includes('--dry-run')
 
-  if (args.includes('--incremental'))
-    return { incrementalMode: true, jsonOutput, timeout: parseTimeout(args) }
+  if (argv.includes('--incremental'))
+    return { incrementalMode: true, jsonOutput, timeout: parseTimeout(argv) }
 
-  if (args.includes('--all'))
-    return { allMode: true, jsonOutput, dryRunMode, timeout: parseTimeout(args) }
+  if (argv.includes('--all'))
+    return { allMode: true, jsonOutput, dryRunMode, timeout: parseTimeout(argv) }
 
-  const diffIdx = args.indexOf('--diff')
+  const diffIdx = argv.indexOf('--diff')
   if (diffIdx >= 0) {
-    const beforeFile = args[diffIdx + 1]
-    const afterFile = args[diffIdx + 2]
-    if (!beforeFile || !afterFile) {
-      console.error('Usage: <script> --diff <before.json> <after.json>')
-      process.exit(1)
-    }
+    const beforeFile = argv[diffIdx + 1]
+    const afterFile = argv[diffIdx + 2]
+    if (!beforeFile || !afterFile)
+      return { error: 'Usage: <script> --diff <before.json> <after.json>' }
     return {
       diffMode: true,
       beforeFile: resolve(beforeFile),
@@ -88,18 +85,17 @@ function parseArgs() {
     }
   }
 
-  const { targetLine, timeout, filtered } = argsToOptions(args)
+  const { targetLine, timeout, filtered } = argsToOptions(argv)
 
   if (filtered.length < 1) {
-    console.error('Usage: <script> <source-file> [--line N] [--json] [--dry-run] [--timeout N]')
-    console.error('       <script> --all [--json] [--dry-run] [--timeout N]')
-    console.error('       <script> --incremental [--json] [--timeout N]')
-    process.exit(1)
+    return {
+      error: 'Usage: <script> <source-file> [--line N] [--json] [--dry-run] [--timeout N]\n'
+           + '       <script> --all [--json] [--dry-run] [--timeout N]\n'
+           + '       <script> --incremental [--json] [--timeout N]'
+    }
   }
 
-  const sourceFile = resolve(filtered[0])
-
-  return { sourceFile, targetLine, jsonOutput, dryRunMode, timeout }
+  return { sourceFile: resolve(filtered[0]), targetLine, jsonOutput, dryRunMode, timeout }
 }
 
 function parseTimeout(args) {
@@ -403,38 +399,47 @@ export function createManualRunner(config) {
     return { totalSurvived: grandSurvived, totalKilled: grandKilled, failures }
   }
 
+  async function run(argv) {
+    const parsed = parseArgs(argv)
+    if (parsed.error) {
+      console.error(parsed.error)
+      return 1
+    }
+    const timeout = parsed.timeout || configTimeout
+    if (parsed.diffMode) {
+      const result = diffReports(parsed.beforeFile, parsed.afterFile)
+      return result.regressions > 0 ? 1 : 0
+    }
+    if (parsed.dryRunMode && parsed.allMode) {
+      let total = 0
+      for (const source of sources) total += dryRun(resolve(source), prepared, null)
+      console.log(`\n  Grand total: ${total} mutations across ${sources.length} files`)
+      return 0
+    }
+    if (parsed.dryRunMode) {
+      dryRun(parsed.sourceFile, prepared, parsed.targetLine)
+      return 0
+    }
+    if (parsed.incrementalMode) {
+      const { totalSurvived, failures } = await runIncremental(parsed.jsonOutput, timeout)
+      return totalSurvived > 0 || failures > 0 ? 1 : 0
+    }
+    if (parsed.allMode) {
+      const { totalSurvived, failures } = await runBatch(parsed.jsonOutput, timeout)
+      return totalSurvived > 0 || failures > 0 ? 1 : 0
+    }
+    const result = await runSingle(
+      parsed.sourceFile, prepared, createRunner, parsed.targetLine, timeout
+    )
+    return result.error || result.survived > 0 ? 1 : 0
+  }
+
   return {
     runBatch,
     runIncremental,
+    run,
     async main() {
-      const parsed = parseArgs()
-      const timeout = parsed.timeout || configTimeout
-      if (parsed.diffMode) {
-        const result = diffReports(parsed.beforeFile, parsed.afterFile)
-        process.exit(result.regressions > 0 ? 1 : 0)
-      }
-      if (parsed.dryRunMode && parsed.allMode) {
-        let total = 0
-        for (const source of sources) total += dryRun(resolve(source), prepared, null)
-        console.log(`\n  Grand total: ${total} mutations across ${sources.length} files`)
-        return
-      }
-      if (parsed.dryRunMode) {
-        dryRun(parsed.sourceFile, prepared, parsed.targetLine)
-        return
-      }
-      if (parsed.incrementalMode) {
-        const { totalSurvived, failures } = await runIncremental(parsed.jsonOutput, timeout)
-        process.exit(totalSurvived > 0 || failures > 0 ? 1 : 0)
-      }
-      if (parsed.allMode) {
-        const { totalSurvived, failures } = await runBatch(parsed.jsonOutput, timeout)
-        process.exit(totalSurvived > 0 || failures > 0 ? 1 : 0)
-      }
-      const result = await runSingle(
-        parsed.sourceFile, prepared, createRunner, parsed.targetLine, timeout
-      )
-      process.exit(result.error || result.survived > 0 ? 1 : 0)
+      process.exit(await run())
     }
   }
 }
