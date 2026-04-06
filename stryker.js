@@ -8,7 +8,7 @@ import { existsSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 
 import { combineReportData, countStatuses, printSummary } from './cli/report.js'
 
-export function isUnexpectedError(err) {
+function isUnexpectedError(err) {
   return err.status == null || err.status > 1
 }
 
