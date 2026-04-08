@@ -292,6 +292,32 @@ describe('diffReports', () => {
     expect(output).toContain('a.js')
   })
 
+  it('formats per-file delta to one decimal place', () => {
+    const before = makeReport({
+      'a.js': { mutants: [
+        makeMutant('m1', 'x', 'Killed'),
+        makeMutant('m2', 'y', 'Survived'),
+        makeMutant('m3', 'z', 'Survived')
+      ] }
+    })
+    const after = makeReport({
+      'a.js': { mutants: [
+        makeMutant('m1', 'x', 'Killed'),
+        makeMutant('m2', 'y', 'Killed'),
+        makeMutant('m3', 'z', 'Survived')
+      ] }
+    })
+    readFileSync
+      .mockReturnValueOnce(JSON.stringify(before))
+      .mockReturnValueOnce(JSON.stringify(after))
+
+    diffReports('before.json', 'after.json')
+
+    const output = console.log.mock.calls.map(c => c[0]).join('\n')
+    expect(output).toContain('+33.3%')
+    expect(output).not.toMatch(/\+33\.33/)
+  })
+
   it('reports identical reports with no changes', () => {
     const report = makeReport({
       'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] }

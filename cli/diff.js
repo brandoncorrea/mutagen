@@ -214,7 +214,7 @@ function formatTenth(value) {
 
 function formatSigned(value) {
   const sign = value >= 0 ? '+' : ''
-  return `${sign}${value}`
+  return `${sign}${value.toFixed(1)}`
 }
 
 function scoreCounts(counts, total) {
