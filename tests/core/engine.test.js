@@ -1,11 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import { preparePatterns, generateMutations } from '../../core/engine.js'
 
-const simplePatterns = [
+const prepared = preparePatterns([
   { pattern: / === /g, replacement: ' !== ', name: '=== → !==' }
-]
-
-const prepared = preparePatterns(simplePatterns)
+])
 
 describe('preparePatterns', () => {
   it('ensures each pattern can find all occurrences in a line', () => {

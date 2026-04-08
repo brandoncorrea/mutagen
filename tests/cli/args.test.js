@@ -1,17 +1,18 @@
 import { describe, it, expect } from 'vitest'
 import { parseArgs } from '../../cli/args.js'
 
+function expectErrorResult(...args) {
+  const result = parseArgs(args)
+  expect(result).toHaveProperty('error')
+}
+
 describe('parseArgs', () => {
   describe('--diff mode', () => {
-    it('returns error when only one file provided after --diff', () => {
-      const result = parseArgs(['--diff', 'before.json'])
-      expect(result).toHaveProperty('error')
-    })
+    it('returns error when only one file provided after --diff', () =>
+      expectErrorResult('--diff', 'before.json'))
 
-    it('returns error when no files provided after --diff', () => {
-      const result = parseArgs(['--diff'])
-      expect(result).toHaveProperty('error')
-    })
+    it('returns error when no files provided after --diff', () =>
+      expectErrorResult('--diff'))
 
     it('parses both files when two are provided after --diff', () => {
       const result = parseArgs(['--diff', 'before.json', 'after.json'])
@@ -37,24 +38,16 @@ describe('parseArgs', () => {
       expect(result.timeout).toBeUndefined()
     })
 
-    it('returns error when --timeout is last arg with no value (incremental)', () => {
-      const result = parseArgs(['--incremental', '--timeout'])
-      expect(result).toHaveProperty('error')
-    })
+    it('returns error when --timeout is last arg with no value (incremental)', () =>
+      expectErrorResult('--incremental', '--timeout'))
 
-    it('returns error when --timeout is last arg with no value (all)', () => {
-      const result = parseArgs(['--all', '--timeout'])
-      expect(result).toHaveProperty('error')
-    })
+    it('returns error when --timeout is last arg with no value (all)', () =>
+      expectErrorResult('--all', '--timeout'))
 
-    it('returns error when --timeout is last arg with no value (source file)', () => {
-      const result = parseArgs(['source.js', '--timeout'])
-      expect(result).toHaveProperty('error')
-    })
+    it('returns error when --timeout is last arg with no value (source file)', () =>
+      expectErrorResult('source.js', '--timeout'))
 
-    it('returns error when --timeout value is non-numeric', () => {
-      const result = parseArgs(['--incremental', '--timeout', 'abc'])
-      expect(result).toHaveProperty('error')
-    })
+    it('returns error when --timeout value is non-numeric', () =>
+      expectErrorResult('--incremental', '--timeout', 'abc'))
   })
 })

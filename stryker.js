@@ -10,7 +10,7 @@ import { countStatuses, printSummary, SEPARATOR } from './cli/report.js'
 import { combineReportData } from './cli/diff.js'
 
 function isUnexpectedError(err) {
-  return err.status === null || err.status === undefined || err.status > 1
+  return !err.status || err.status > 1
 }
 
 export function cleanStaleSandboxes() {

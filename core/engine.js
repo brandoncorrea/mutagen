@@ -74,29 +74,35 @@ function applyMutation(line, match, mut) {
   return before + replaced + after
 }
 
-function lineMutationsForPattern(lines, line, lineNum, mut) {
-  const matches = [...line.matchAll(mut.globalPattern)]
-  if (matches.length === 0) return []
+function lineMutationsForPattern(lines, line, lineNum, mutation) {
+  const matches = [...line.matchAll(mutation.globalPattern)]
+  const total = matches.length
+  const options = { lines, line, lineNum, mutation }
+  return matches
+    .map((match, matchIdx) => compileMutation(total, matchIdx, match, options))
+    .filter(Boolean)
+}
 
-  const mutations = []
-  for (let matchIdx = 0; matchIdx < matches.length; matchIdx++) {
-    const match = matches[matchIdx]
-    if (shouldSkipMatch(line, match, mut)) continue
+function compileMutation(total, matchIdx, match, options) {
+  const { lines, line, lineNum, mutation } = options
+  if (shouldSkipMatch(line, match, mutation)) return
 
-    const mutatedLine = applyMutation(line, match, mut)
-    if (mutatedLine === line) continue
+  const mutatedLine = applyMutation(line, match, mutation)
+  if (mutatedLine === line) return
 
-    const suffix = matches.length > 1 ? ` (match ${matchIdx + 1}/${matches.length})` : ''
-    const mutatedSource = lines.slice(0, lineNum - 1).concat(mutatedLine, lines.slice(lineNum)).join('\n')
-    mutations.push({
-      line: lineNum,
-      original: line.trim(),
-      mutated: mutatedLine.trim(),
-      name: mut.name + suffix,
-      source: mutatedSource
-    })
+  const suffix = total > 1 ? ` (match ${matchIdx + 1}/${total})` : ''
+  const mutatedSource = lines
+    .slice(0, lineNum - 1)
+    .concat(mutatedLine, lines.slice(lineNum))
+    .join('\n')
+
+  return {
+    line: lineNum,
+    original: line.trim(),
+    mutated: mutatedLine.trim(),
+    name: mutation.name + suffix,
+    source: mutatedSource
   }
-  return mutations
 }
 
 /**

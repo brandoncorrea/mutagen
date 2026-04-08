@@ -23,7 +23,7 @@ export function parseArgs(argv = process.argv.slice(2)) {
 
   if (argv.includes('--all')) {
     const timeout = parseTimeout(argv)
-    if (timeout && timeout.error) return timeout
+    if (timeout?.error) return timeout
     return { allMode: true, timeout, jsonOutput, dryRunMode }
   }
 
@@ -62,16 +62,16 @@ function argsToOptions(args) {
   let targetLine, timeout
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]
-    if (arg === '--line')
+    if (arg === '--line'){
       targetLine = parseInt(args[++i], 10)
+    }
     else if (arg === '--timeout') {
-      const raw = args[++i]
-      const value = Number(raw)
-      if (raw == null || raw.startsWith('-') || Number.isNaN(value))
+      timeout = Number(args[++i])
+      if (isInvalidTimeout(timeout))
         return { error: '--timeout requires a numeric value' }
-      timeout = value
-    } else if (isNotFlag(arg))
+    } else if (isNotFlag(arg)) {
       filtered.push(arg)
+    }
   }
   return { targetLine, timeout, filtered }
 }
@@ -79,11 +79,14 @@ function argsToOptions(args) {
 function parseTimeout(args) {
   const idx = args.indexOf('--timeout')
   if (idx < 0) return
-  const raw = args[idx + 1]
-  const value = Number(raw)
-  if (raw == null || raw.startsWith('-') || Number.isNaN(value))
+  const value = Number(args[idx + 1])
+  if (isInvalidTimeout(value))
     return { error: '--timeout requires a numeric value' }
   return value
+}
+
+function isInvalidTimeout(timeout) {
+  return Number.isNaN(timeout) || timeout < 0
 }
 
 const FLAG_OPTIONS = new Set(['--json', '--dry-run'])

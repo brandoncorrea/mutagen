@@ -162,9 +162,8 @@ function printSummary(before, after) {
   const bScore = scoreCounts(bCounts, bTotal)
   const aScore = scoreCounts(aCounts, aTotal)
   const delta = aScore - bScore
-  const deltaSign = delta >= 0 ? '+' : ''
 
-  console.log(`Overall: ${formatTenth(bScore)}% → ${formatTenth(aScore)}% (${deltaSign}${formatTenth(delta)}%)`)
+  console.log(`Overall: ${formatTenth(bScore)}% → ${formatTenth(aScore)}% (${formatSigned(delta)}%)`)
   console.log(`Mutations: ${bTotal} → ${aTotal}`)
   console.log(`Killed: ${bCounts.killed} → ${aCounts.killed}  |  Survived: ${bCounts.survived} → ${aCounts.survived}`)
 }
@@ -227,10 +226,6 @@ function totalCounts({ killed, survived, noCoverage, timeout }) {
   return killed + survived + noCoverage + timeout
 }
 
-function isAlive(status) {
-  return status === 'Survived' || status === 'NoCoverage'
-}
-
 function buildMutantMap(report) {
   const map = {}
   for (const [path, fileData] of Object.entries(report.files)) {
@@ -255,4 +250,8 @@ function fileScores(report) {
 
 function isKilled(mutation) {
   return mutation.status === 'Killed' || mutation.status === 'Timeout'
+}
+
+function isAlive(status) {
+  return status === 'Survived' || status === 'NoCoverage'
 }

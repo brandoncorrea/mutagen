@@ -25,11 +25,15 @@ export function countCachedResults(report, relPaths) {
     const fileData = report.files[relPath]
     if (!fileData) continue
     for (const m of fileData.mutants) {
-      if (m.status === 'Killed' || m.status === 'Timeout') killed++
+      if (isKilled(m)) killed++
       else if (m.status === 'Survived') survived++
     }
   }
   return { killed, survived }
+}
+
+function isKilled(mutation) {
+  return mutation.status === 'Killed' || mutation.status === 'Timeout'
 }
 
 /**
@@ -46,22 +50,17 @@ export function countCachedResults(report, relPaths) {
  */
 export async function runIncremental(config, jsonOutput, timeout) {
   const { sources, testSources, reportDir, reportPath, runBatch } = config
-  const sep = SEPARATOR
-
   const { previousReport, previousHashes, previousTestHashes } = loadPreviousReport(reportPath)
-
   const { currentTestHashes, changedTestFiles } = hashTestFiles(testSources, previousTestHashes)
-
   const testInvalidated = findTestInvalidatedSources(changedTestFiles, previousReport)
-
   const { currentHashes, changedSources, unchangedSources } =
     classifySources(sources, previousHashes, testInvalidated)
 
-  printIncrementalHeader(sep, sources, changedSources, unchangedSources, changedTestFiles, testInvalidated)
+  printIncrementalHeader(sources, changedSources, unchangedSources, changedTestFiles, testInvalidated)
 
   if (changedSources.length === 0)
     return handleAllCached(
-      sep, sources, previousReport, unchangedSources, currentHashes, currentTestHashes,
+      sources, previousReport, unchangedSources, currentHashes, currentTestHashes,
       jsonOutput, reportPath
     )
 
@@ -78,13 +77,13 @@ export async function runIncremental(config, jsonOutput, timeout) {
   const grandKilled = totalKilled + cachedCounts.killed
   const grandSurvived = totalSurvived + cachedCounts.survived
 
-  console.log(`\n${sep}`)
+  console.log(`\n${SEPARATOR}`)
   console.log(`INCREMENTAL SUMMARY`)
-  console.log(sep)
+  console.log(SEPARATOR)
   console.log(`Rerun: ${changedSources.length} files  |  Killed: ${totalKilled}  |  Survived: ${totalSurvived}  |  Errors: ${failures}`)
   console.log(`Cached: ${unchangedSources.length} files  |  Killed: ${cachedCounts.killed}  |  Survived: ${cachedCounts.survived}`)
   console.log(`Total: ${sources.length} files  |  Killed: ${grandKilled}  |  Survived: ${grandSurvived}`)
-  console.log(`${sep}\n`)
+  console.log(`${SEPARATOR}\n`)
 
   return { totalSurvived: grandSurvived, totalKilled: grandKilled, failures }
 }
@@ -125,12 +124,12 @@ function findTestInvalidatedSources(changedTestFiles, previousReport) {
 
   const changedTestAbs = new Set(changedTestFiles.map(t => resolve(t)))
   for (const [sourcePath, fileData] of Object.entries(previousReport.files)) {
-    for (const m of fileData.mutants) {
-      if (m.killedBy?.some(t => changedTestAbs.has(t))) {
+    for (const { killedBy, status } of fileData.mutants) {
+      if (killedBy?.some(t => changedTestAbs.has(t))) {
         testInvalidated.add(sourcePath)
         break
       }
-      if (m.status === 'Survived') {
+      if (status === 'Survived') {
         testInvalidated.add(sourcePath)
         break
       }
@@ -159,10 +158,10 @@ function classifySources(sources, previousHashes, testInvalidated) {
   return { currentHashes, changedSources, unchangedSources }
 }
 
-function printIncrementalHeader(sep, sources, changedSources, unchangedSources, changedTestFiles, testInvalidated) {
-  console.log(`\n${sep}`)
+function printIncrementalHeader(sources, changedSources, unchangedSources, changedTestFiles, testInvalidated) {
+  console.log(`\n${SEPARATOR}`)
   console.log(`MUTAGEN — INCREMENTAL MODE`)
-  console.log(sep)
+  console.log(SEPARATOR)
   console.log(`Total sources: ${sources.length}`)
   console.log(`Changed/new:   ${changedSources.length}${testInvalidated.size > 0 ? ` (${testInvalidated.size} from test changes)` : ''}`)
   console.log(`Cached:        ${unchangedSources.length}`)
@@ -170,7 +169,7 @@ function printIncrementalHeader(sep, sources, changedSources, unchangedSources, 
     console.log(`Changed tests: ${changedTestFiles.length}`)
 }
 
-function handleAllCached(sep, sources, previousReport, unchangedSources, currentHashes, currentTestHashes, jsonOutput, reportPath) {
+function handleAllCached(sources, previousReport, unchangedSources, currentHashes, currentTestHashes, jsonOutput, reportPath) {
   console.log(`\nNo files changed since last report. Nothing to do.`)
 
   if (jsonOutput && previousReport) {
@@ -180,11 +179,11 @@ function handleAllCached(sep, sources, previousReport, unchangedSources, current
   }
 
   const cachedCounts = countCachedResults(previousReport, unchangedSources)
-  console.log(`\n${sep}`)
+  console.log(`\n${SEPARATOR}`)
   console.log(`INCREMENTAL SUMMARY (all cached)`)
-  console.log(sep)
+  console.log(SEPARATOR)
   console.log(`Files: ${sources.length}  |  Killed: ${cachedCounts.killed}  |  Survived: ${cachedCounts.survived}  |  Rerun: 0`)
-  console.log(`${sep}\n`)
+  console.log(`${SEPARATOR}\n`)
   return { totalSurvived: cachedCounts.survived, totalKilled: cachedCounts.killed, failures: 0 }
 }
 

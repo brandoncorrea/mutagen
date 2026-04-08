@@ -17,19 +17,23 @@ export function dryRun(sourceFile, prepared, targetLine) {
   console.log(`\nDRY RUN — ${relPath}`)
   console.log(`   Found ${mutations.length} mutation(s)\n`)
 
-  const byLine = {}
-  for (const { name, line } of mutations) {
-    const names = byLine[line] || []
-    names.push(name)
-    byLine[line] = names
-  }
-
+  const byLine = mutationsByLine(mutations)
   const mutationLines = Object.entries(byLine).sort((a, b) => Number(a[0]) - Number(b[0]))
   for (const [line, names] of mutationLines)
     console.log(`  L${line}: ${names.join(', ')}`)
 
   console.log(`\n  Total: ${mutations.length} mutations`)
   return mutations.length
+}
+
+function mutationsByLine(mutations) {
+  const byLine = {}
+  for (const { name, line } of mutations) {
+    const names = byLine[line] || []
+    names.push(name)
+    byLine[line] = names
+  }
+  return byLine
 }
 
 export function withTimeout(fn, ms) {
@@ -44,68 +48,88 @@ export function withTimeout(fn, ms) {
 export async function runSingle(sourceFile, prepared, createRunner, targetLine, timeout, log) {
   const out = log || console.log
   const original = readFileSync(sourceFile, 'utf-8')
-  const sep = SEPARATOR
 
-  out(`\n${sep}`)
+  out(`\n${SEPARATOR}`)
   out(`MUTAGEN`)
-  out(sep)
+  out(SEPARATOR)
   out(`Source: ${sourceFile}`)
   if (targetLine) out(`Target: line ${targetLine}`)
   if (timeout) out(`Timeout: ${timeout}ms per mutation`)
 
   const runner = await createRunner(sourceFile)
+  const options = { out, runner, timeout, sourceFile, targetLine, original, prepared }
 
   try {
-    out(`\nPre-flight: running tests against original source...`)
-    const preflight = await runner.run()
-    if (!preflight.passed) {
-      out(`\nABORT: Tests already FAILING on original source. Fix the suite first.`)
-      return { error: true }
-    }
-    out(`Tests pass on original source. Beginning mutations.\n`)
-
-    const mutations = generateMutations(original, prepared, targetLine)
-    out(`Found ${mutations.length} mutation(s) to run.\n`)
-
-    const outcomes = { killed: [], survived: [], timedOut: [] }
-
-    for (let i = 0; i < mutations.length; i++) {
-      const mut = mutations[i]
-
-      try {
-        writeFileSync(sourceFile, mut.source)
-        const result = await withTimeout(() => runner.run(), timeout)
-
-        if (result.passed) {
-          outcomes.survived.push(mut)
-          out(`[${i + 1}/${mutations.length}] Line ${mut.line}: ${mut.name} ... SURVIVED`)
-        } else {
-          mut.killedBy = result.killedBy || []
-          outcomes.killed.push(mut)
-          out(`[${i + 1}/${mutations.length}] Line ${mut.line}: ${mut.name} ... killed`)
-        }
-      } catch (err) {
-        if (err.message?.includes('timed out')) {
-          outcomes.timedOut.push(mut)
-          out(`[${i + 1}/${mutations.length}] Line ${mut.line}: ${mut.name} ... TIMEOUT (killed)`)
-        } else {
-          outcomes.killed.push(mut)
-          out(`[${i + 1}/${mutations.length}] Line ${mut.line}: ${mut.name} ... killed (error)`)
-        }
-      } finally {
-        writeFileSync(sourceFile, original)
-      }
-    }
-
-    printRunReport(mutations, outcomes, out)
-
-    return {
-      survived: outcomes.survived.length,
-      killed: outcomes.killed.length + outcomes.timedOut.length,
-      timedOut: outcomes.timedOut.length,
-      jsonData: toJsonMutants(sourceFile, outcomes)
-    }
+    return await runMutations(options)
   } finally {
     await runner.close()
   }
+}
+
+async function runMutations(opts) {
+  const { out, runner, sourceFile, targetLine, original, prepared } = opts
+  const preflight = await runPreflightTests(out, runner)
+  if (preflight.error) return preflight
+  out(`Tests pass on original source. Beginning mutations.\n`)
+
+  const mutations = generateMutations(original, prepared, targetLine)
+  const total = mutations.length
+  out(`Found ${mutations.length} mutation(s) to run.\n`)
+
+  const outcomes = { killed: [], survived: [], timedOut: [] }
+
+  for (let i = 0; i < mutations.length; i++)
+    await runMutation(opts, total, outcomes, {
+      number: i + 1,
+      ...mutations[i]
+    })
+
+  printRunReport(mutations, outcomes, out)
+
+  return {
+    survived: outcomes.survived.length,
+    killed: outcomes.killed.length + outcomes.timedOut.length,
+    timedOut: outcomes.timedOut.length,
+    jsonData: toJsonMutants(sourceFile, outcomes)
+  }
+}
+
+async function runMutation(opts, total, outcomes, mutation) {
+  const { out, runner, timeout, sourceFile, original } = opts
+  try {
+    writeFileSync(sourceFile, mutation.source)
+    const result = await withTimeout(() => runner.run(), timeout)
+
+    if (result.passed) {
+      outcomes.survived.push(mutation)
+      reportMutation(out, total, mutation, 'SURVIVED')
+    } else {
+      mutation.killedBy = result.killedBy || []
+      outcomes.killed.push(mutation)
+      reportMutation(out, total, mutation, 'killed')
+    }
+  } catch (err) {
+    if (err.message?.includes('timed out')) {
+      outcomes.timedOut.push(mutation)
+      reportMutation(out, total, mutation, 'TIMEOUT (killed)')
+    } else {
+      outcomes.killed.push(mutation)
+      reportMutation(out, total, mutation, 'killed (error)')
+    }
+  } finally {
+    writeFileSync(sourceFile, original)
+  }
+}
+
+async function runPreflightTests(out, runner) {
+  out(`\nPre-flight: running tests against original source...`)
+  const preflight = await runner.run()
+  if (preflight.passed) return {}
+  out(`\nABORT: Tests already FAILING on original source. Fix the suite first.`)
+  return { error: true }
+}
+
+
+function reportMutation(out, total, { number, line, name }, status) {
+  out(`[${number}/${total}] Line ${line}: ${name} ... ${status}`)
 }

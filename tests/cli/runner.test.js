@@ -1,17 +1,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-vi.mock('node:fs', async (importOriginal) => {
+vi.mock('node:fs', async importOriginal => {
   const actual = await importOriginal()
   return {
     ...actual,
     readFileSync: vi.fn(),
-    writeFileSync: vi.fn(),
+    writeFileSync: vi.fn()
   }
 })
 
 import { withTimeout, dryRun } from '../../cli/runner.js'
 import { readFileSync, writeFileSync } from 'node:fs'
-import { generateMutations, preparePatterns } from '../../core/engine.js'
+import { preparePatterns } from '../../core/engine.js'
 
 describe('withTimeout', () => {
   it('calls fn directly when ms is falsy', async () => {
@@ -56,10 +56,9 @@ describe('dryRun', () => {
     consoleSpy.mockRestore()
   })
 
-  const patterns = [
-    { pattern: / === /g, replacement: ' !== ', name: '=== → !==' },
-  ]
-  const prepared = preparePatterns(patterns)
+  const prepared = preparePatterns([
+    { pattern: / === /g, replacement: ' !== ', name: '=== → !==' }
+  ])
 
   it('returns the number of mutations found', () => {
     readFileSync.mockReturnValue('if (a === b) {}')

@@ -7,9 +7,9 @@ import { relative } from 'node:path'
 
 export const SEPARATOR = '═'.repeat(60)
 
-export function mutantKey(path, m) {
-  const line = m.location?.start?.line || 0
-  return `${path}:${line}:${m.mutatorName || ''}:${m.replacement || ''}`
+export function mutantKey(path, { location, mutatorName, replacement }) {
+  const line = location?.start?.line || 0
+  return `${path}:${line}:${mutatorName || ''}:${replacement || ''}`
 }
 
 export function countStatuses(merged) {
@@ -29,11 +29,10 @@ export function printSummary(merged, counts, reportPath) {
   const { killed, survived, noCoverage, timeout } = counts
   const total = killed + survived + noCoverage + timeout
   const score = total > 0 ? ((killed + timeout) / total * 100).toFixed(1) : '100.0'
-  const sep = SEPARATOR
 
-  console.log(`\n${sep}`)
+  console.log(`\n${SEPARATOR}`)
   console.log(`MUTATION REPORT`)
-  console.log(sep)
+  console.log(SEPARATOR)
   console.log(`Files:    ${Object.keys(merged.files).length}`)
   console.log(`Killed:   ${killed}`)
   console.log(`Survived: ${survived}`)
@@ -41,58 +40,74 @@ export function printSummary(merged, counts, reportPath) {
   console.log(`Timeout:  ${timeout}`)
   console.log(`Score:    ${score}%`)
   if (reportPath) console.log(`Report:   ${reportPath}`)
-  console.log(`${sep}\n`)
+  console.log(`${SEPARATOR}\n`)
 }
 
 export function toJsonMutants(sourceFile, results) {
   const relPath = relative(process.cwd(), sourceFile)
 
-  const toMutant = (mut, status) => ({
-    id: `mutagen-${relPath}-${mut.line}-${mut.name}`,
-    mutatorName: mut.name,
-    status,
-    location: {
-      start: { line: mut.line, column: 0 },
-      end: { line: mut.line, column: 0 }
-    },
-    description: `${mut.original} → ${mut.mutated}`,
-    ...(mut.killedBy?.length > 0 && { killedBy: mut.killedBy })
-  })
-
   return {
     path: relPath,
     mutants: [
-      ...results.killed.map(m => toMutant(m, 'Killed')),
-      ...results.survived.map(m => toMutant(m, 'Survived'))
+      ...results.killed.map(m => toMutant(relPath, m, 'Killed')),
+      ...results.survived.map(m => toMutant(relPath, m, 'Survived'))
     ]
   }
 }
 
+function toMutant(relPath, mutation, status) {
+  const { line, name, original, mutated, killedBy } = mutation
+  return {
+    id: `mutagen-${relPath}-${line}-${name}`,
+    mutatorName: name,
+    status,
+    location: {
+      start: { line, column: 0 },
+      end: { line, column: 0 }
+    },
+    description: `${original} → ${mutated}`,
+    ...(killedBy?.length > 0 && { killedBy })
+  }
+}
+
+const HR = '─'.repeat(60)
+
 export function printRunReport(mutations, results, log) {
   const out = log || console.log
-  const sep = '─'.repeat(60)
-  const total = mutations.length
+  const { killed, survived } = results
 
-  out(`\n${sep}`)
-  out(`MUTATION REPORT`)
-  out(sep)
-  out(`Total: ${total}  |  Killed: ${results.killed.length}  |  Survived: ${results.survived.length}`)
-
-  const score = total > 0
-    ? ((results.killed.length / total) * 100).toFixed(1)
-    : '100.0'
-  out(`Mutation score: ${score}%`)
-
-  if (results.survived.length > 0) {
-    out(`\nSURVIVING MUTATIONS:`)
-    for (const mut of results.survived) {
-      out(`\n  Line ${mut.line}: ${mut.name}`)
-      out(`  Original: ${mut.original}`)
-      out(`  Mutated:  ${mut.mutated}`)
-    }
-  } else {
+  writeSummary(out, mutations, killed, survived)
+  writeScore(out, mutations, killed)
+  if (survived.length)
+    writeSurvivors(out, survived)
+  else
     out(`\nALL mutations killed. Tests are strong.`)
-  }
 
-  out(`\n${sep}\n`)
+  out(`\n${HR}\n`)
+}
+
+function writeSummary(out, mutations, killed, survived) {
+  out(`\n${HR}`)
+  out(`MUTATION REPORT`)
+  out(HR)
+  out(`Total: ${mutations.length}  |  Killed: ${killed.length}  |  Survived: ${survived.length}`)
+}
+
+function writeScore(out, mutations, killed) {
+  const score = mutations.length
+    ? (killed.length / mutations.length) * 100
+    : 100
+  out(`Mutation score: ${score.toFixed(1)}%`)
+}
+
+function writeSurvivors(out, mutations) {
+  out(`\nSURVIVING MUTATIONS:`)
+  for (const mut of mutations)
+    writeMutation(out, mut)
+}
+
+function writeMutation(out, mut) {
+  out(`\n  Line ${mut.line}: ${mut.name}`)
+  out(`  Original: ${mut.original}`)
+  out(`  Mutated:  ${mut.mutated}`)
 }

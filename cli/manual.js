@@ -50,8 +50,7 @@ export function createManualRunner(config) {
   const reportPath = `${reportDir}/${reportFile}`
 
   async function runBatch(jsonOutput, timeout, sourcesToRun = sources) {
-    const sep = SEPARATOR
-    console.log(`\n${sep}`)
+    console.log(`\n${SEPARATOR}`)
     console.log(`MUTAGEN — BATCH MODE`)
     console.log(`   Sources: ${sourcesToRun.length} file(s)\n`)
 
@@ -89,13 +88,13 @@ export function createManualRunner(config) {
       console.log(`JSON report: ${reportPath}`)
     }
 
-    console.log(`\n${sep}`)
+    console.log(`\n${SEPARATOR}`)
     console.log(`BATCH SUMMARY`)
-    console.log(sep)
+    console.log(SEPARATOR)
     console.log(`Files: ${sourcesToRun.length}  |  Killed: ${totalKilled}  |  Survived: ${totalSurvived}  |  Errors: ${failures}`)
     if (totalTimedOut > 0)
       console.log(`Timed out: ${totalTimedOut} (counted as killed)`)
-    console.log(`${sep}\n`)
+    console.log(`${SEPARATOR}\n`)
 
     return { totalSurvived, totalKilled, totalTimedOut, failures, fileResults }
   }
@@ -109,7 +108,7 @@ export function createManualRunner(config) {
     const timeout = parsed.timeout || configTimeout
     if (parsed.diffMode) {
       const result = diffReports(parsed.beforeFile, parsed.afterFile)
-      return result.regressions > 0 ? 1 : 0
+      return result.regressions
     }
     if (parsed.dryRunMode && parsed.allMode) {
       let total = 0
@@ -124,16 +123,18 @@ export function createManualRunner(config) {
     if (parsed.incrementalMode) {
       const incrementalConfig = { sources, testSources, reportDir, reportPath, runBatch }
       const { totalSurvived, failures } = await runIncremental(incrementalConfig, parsed.jsonOutput, timeout)
-      return totalSurvived > 0 || failures > 0 ? 1 : 0
+      return totalSurvived + failures
     }
     if (parsed.allMode) {
       const { totalSurvived, failures } = await runBatch(parsed.jsonOutput, timeout)
-      return totalSurvived > 0 || failures > 0 ? 1 : 0
+      return totalSurvived + failures
     }
     const result = await runSingle(
       parsed.sourceFile, prepared, createRunner, parsed.targetLine, timeout
     )
-    return result.error || result.survived > 0 ? 1 : 0
+    if (result.error)
+      return 1
+    return result.survived
   }
 
   return {
