@@ -49,7 +49,7 @@ export function parseArgs(argv = process.argv.slice(2)) {
 
 function diffOptions(argv) {
   const diffIdx = argv.indexOf('--diff')
-  if (argv.length < diffIdx + 2)
+  if (argv.length < diffIdx + 3)
     return { error: diffMessage }
   return {
     diffMode: true,
