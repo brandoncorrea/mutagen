@@ -390,6 +390,19 @@ describe('diffReports', () => {
     expect(result.regressions).toBe(1)
   })
 
+  it('scores 100% when both reports have zero mutations', () => {
+    const before = makeReport({ 'a.js': { mutants: [] } })
+    const after = makeReport({ 'a.js': { mutants: [] } })
+    readFileSync
+      .mockReturnValueOnce(JSON.stringify(before))
+      .mockReturnValueOnce(JSON.stringify(after))
+
+    diffReports('before.json', 'after.json')
+
+    const output = console.log.mock.calls.map(c => c[0]).join('\n')
+    expect(output).toContain('100.0%')
+  })
+
   it('falls back to mutantKey when mutant has no id', () => {
     const mutantNoId = {
       mutatorName: 'EqualityOperator',

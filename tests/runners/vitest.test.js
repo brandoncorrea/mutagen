@@ -262,6 +262,65 @@ describe('createVitestRunner', () => {
       ])
     })
 
+    it('skips findRelatedSpecs when no sourceFile provided', async () => {
+      const specs = [
+        { moduleId: 'test/a.test.js' },
+        { moduleId: 'test/b.test.js' }
+      ]
+      const mock = createMockVitest()
+      mock.globTestSpecifications.mockResolvedValue(specs)
+      mock.projects = [{
+        _vite: {
+          moduleGraph: {
+            getModuleById: vi.fn()
+          }
+        }
+      }]
+      startVitest.mockResolvedValue(mock)
+
+      // null sourceFile — findRelatedSpecs should return early
+      const runner = await createVitestRunner(null)
+      await runner.run()
+
+      // Should run all specs, not narrow via graph
+      expect(mock.runTestSpecifications).toHaveBeenLastCalledWith(specs)
+      // Module graph should never be consulted
+      expect(mock.projects[0]._vite.moduleGraph.getModuleById).not.toHaveBeenCalled()
+    })
+
+    it('skips importers with null id', async () => {
+      const specs = [
+        { moduleId: 'test/a.test.js' }
+      ]
+      const mock = createMockVitest()
+      mock.globTestSpecifications.mockResolvedValue(specs)
+      mock.projects = [{
+        _vite: {
+          moduleGraph: {
+            getModuleById: vi.fn((id) => {
+              if (id === 'src/a.js')
+                return {
+                  importers: new Set([
+                    { id: null },                    // null id — should be skipped
+                    { id: 'test/a.test.js' }         // valid importer
+                  ])
+                }
+              return null
+            })
+          }
+        }
+      }]
+      startVitest.mockResolvedValue(mock)
+
+      const runner = await createVitestRunner('src/a.js')
+      await runner.run()
+
+      // Should still find the valid importer despite the null one
+      expect(mock.runTestSpecifications).toHaveBeenLastCalledWith([
+        { moduleId: 'test/a.test.js' }
+      ])
+    })
+
     it('runs all specs when no module graph is available', async () => {
       const specs = [
         { moduleId: 'test/a.test.js' },

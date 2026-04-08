@@ -589,6 +589,64 @@ describe('createManualRunner', () => {
       expect(code).toBe(0)
     })
 
+    it('runs --diff mode and returns 0 when no regressions', async () => {
+      const report = JSON.stringify({
+        files: {
+          'a.js': {
+            mutants: [{
+              id: 'm1', mutatorName: 'x', status: 'Killed',
+              location: { start: { line: 1 } }, replacement: 'y'
+            }]
+          }
+        }
+      })
+      mockFs({
+        [resolve('before.json')]: report,
+        [resolve('after.json')]: report,
+      })
+
+      const manual = createManualRunner({
+        patterns, sources: [], createRunner: vi.fn(),
+      })
+      const code = await manual.run(['--diff', 'before.json', 'after.json'])
+
+      expect(code).toBe(0)
+    })
+
+    it('runs --diff mode and returns 1 when regressions found', async () => {
+      const before = JSON.stringify({
+        files: {
+          'a.js': {
+            mutants: [{
+              id: 'm1', mutatorName: 'x', status: 'Killed',
+              location: { start: { line: 1 } }, replacement: 'y'
+            }]
+          }
+        }
+      })
+      const after = JSON.stringify({
+        files: {
+          'a.js': {
+            mutants: [{
+              id: 'm1', mutatorName: 'x', status: 'Survived',
+              location: { start: { line: 1 } }, replacement: 'y'
+            }]
+          }
+        }
+      })
+      mockFs({
+        [resolve('before.json')]: before,
+        [resolve('after.json')]: after,
+      })
+
+      const manual = createManualRunner({
+        patterns, sources: [], createRunner: vi.fn(),
+      })
+      const code = await manual.run(['--diff', 'before.json', 'after.json'])
+
+      expect(code).toBe(1)
+    })
+
     it('uses config timeout when CLI does not specify one', async () => {
       mockFs({ [resolve('src/a.js')]: sourceCode })
       const runner = fakeRunner([

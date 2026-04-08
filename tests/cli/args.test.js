@@ -20,4 +20,21 @@ describe('parseArgs', () => {
       expect(result.afterFile).toContain('after.json')
     })
   })
+
+  describe('--timeout flag', () => {
+    it('parses timeout in --incremental mode', () => {
+      const result = parseArgs(['--incremental', '--timeout', '5000'])
+      expect(result.timeout).toBe(5000)
+    })
+
+    it('parses timeout in --all mode', () => {
+      const result = parseArgs(['--all', '--timeout', '3000'])
+      expect(result.timeout).toBe(3000)
+    })
+
+    it('returns undefined timeout when flag is absent', () => {
+      const result = parseArgs(['--incremental'])
+      expect(result.timeout).toBeUndefined()
+    })
+  })
 })
