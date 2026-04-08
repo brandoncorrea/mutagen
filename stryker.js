@@ -3,7 +3,7 @@
  * Import only if your project uses Stryker alongside mutagen.
  */
 
-import { execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import { existsSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 
 import { countStatuses, printSummary, SEPARATOR } from './cli/report.js'
@@ -39,8 +39,9 @@ export function runStrykerScope(name, scope, { reportDir = 'reports/mutation', s
   console.log(`${sep}\n`)
 
   try {
-    execSync(
-      `npx stryker run --mutate '${mutateArg}'`,
+    execFileSync(
+      'npx',
+      ['stryker', 'run', '--mutate', mutateArg],
       { stdio: 'inherit', timeout: 600000 }
     )
   } catch (err) {

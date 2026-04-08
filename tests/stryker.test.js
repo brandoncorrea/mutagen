@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('node:child_process', () => ({
-  execSync: vi.fn()
+  execSync: vi.fn(),
+  execFileSync: vi.fn()
 }))
 
 vi.mock('node:fs', async (importOriginal) => {
@@ -23,7 +24,7 @@ import {
   mergeReports
 } from '../stryker.js'
 import { existsSync, renameSync, rmSync, readFileSync, writeFileSync } from 'node:fs'
-import { execSync } from 'node:child_process'
+import { execSync, execFileSync } from 'node:child_process'
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -76,15 +77,27 @@ describe('clearIncrementalCache', () => {
 })
 
 describe('runStrykerScope', () => {
-  it('runs stryker with scope globs joined as --mutate arg', () => {
+  it('runs stryker with execFileSync to prevent command injection', () => {
     existsSync.mockReturnValue(false)
 
     runStrykerScope('core', ['src/a.js', 'src/b.js'])
 
-    expect(execSync).toHaveBeenCalledWith(
-      "npx stryker run --mutate 'src/a.js,src/b.js'",
+    expect(execFileSync).toHaveBeenCalledWith(
+      'npx',
+      ['stryker', 'run', '--mutate', 'src/a.js,src/b.js'],
       { stdio: 'inherit', timeout: 600000 }
     )
+    expect(execSync).not.toHaveBeenCalled()
+  })
+
+  it('does not pass scope through a shell (prevents injection)', () => {
+    existsSync.mockReturnValue(false)
+
+    runStrykerScope('core', ["src/foo.js'; rm -rf /; '"])
+
+    const args = execFileSync.mock.calls[0][1]
+    expect(args).toContain("src/foo.js'; rm -rf /; '")
+    expect(execSync).not.toHaveBeenCalled()
   })
 
   it('renames output report to scoped target file', () => {
@@ -128,7 +141,7 @@ describe('runStrykerScope', () => {
 
   it('logs error when stryker crashes with unexpected exit status', () => {
     existsSync.mockReturnValue(false)
-    execSync.mockImplementation(() => {
+    execFileSync.mockImplementation(() => {
       throw Object.assign(new Error('boom'), { status: 2 })
     })
 
@@ -141,7 +154,7 @@ describe('runStrykerScope', () => {
 
   it('logs error when stryker exits with null status', () => {
     existsSync.mockReturnValue(false)
-    execSync.mockImplementation(() => {
+    execFileSync.mockImplementation(() => {
       throw Object.assign(new Error('signal'), { status: null })
     })
 
@@ -152,7 +165,7 @@ describe('runStrykerScope', () => {
 
   it('logs error when stryker exits with undefined status', () => {
     existsSync.mockReturnValue(false)
-    execSync.mockImplementation(() => {
+    execFileSync.mockImplementation(() => {
       throw Object.assign(new Error('killed'), { status: undefined })
     })
 
@@ -163,7 +176,7 @@ describe('runStrykerScope', () => {
 
   it('does not log error when stryker exits with status 1 (surviving mutants)', () => {
     existsSync.mockReturnValue(false)
-    execSync.mockImplementation(() => {
+    execFileSync.mockImplementation(() => {
       throw Object.assign(new Error('mutants survived'), { status: 1 })
     })
 
