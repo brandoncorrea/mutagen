@@ -89,7 +89,7 @@ export async function runIncremental(config, jsonOutput, timeout) {
   return { totalSurvived: grandSurvived, totalKilled: grandKilled, failures }
 }
 
-function loadPreviousReport(reportPath) {
+export function loadPreviousReport(reportPath) {
   let previousReport = null
   let previousHashes = {}
   let previousTestHashes = {}
@@ -98,7 +98,9 @@ function loadPreviousReport(reportPath) {
       previousReport = JSON.parse(readFileSync(reportPath, 'utf-8'))
       previousHashes = previousReport.sourceHashes || {}
       previousTestHashes = previousReport.testHashes || {}
-    } catch {}
+    } catch (err) {
+      console.warn(`Warning: could not parse previous report ${reportPath} — discarding cache (${err.message})`)
+    }
   }
   return { previousReport, previousHashes, previousTestHashes }
 }
