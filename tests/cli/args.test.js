@@ -36,5 +36,25 @@ describe('parseArgs', () => {
       const result = parseArgs(['--incremental'])
       expect(result.timeout).toBeUndefined()
     })
+
+    it('returns error when --timeout is last arg with no value (incremental)', () => {
+      const result = parseArgs(['--incremental', '--timeout'])
+      expect(result).toHaveProperty('error')
+    })
+
+    it('returns error when --timeout is last arg with no value (all)', () => {
+      const result = parseArgs(['--all', '--timeout'])
+      expect(result).toHaveProperty('error')
+    })
+
+    it('returns error when --timeout is last arg with no value (source file)', () => {
+      const result = parseArgs(['source.js', '--timeout'])
+      expect(result).toHaveProperty('error')
+    })
+
+    it('returns error when --timeout value is non-numeric', () => {
+      const result = parseArgs(['--incremental', '--timeout', 'abc'])
+      expect(result).toHaveProperty('error')
+    })
   })
 })

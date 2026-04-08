@@ -15,25 +15,24 @@ export function parseArgs(argv = process.argv.slice(2)) {
   const jsonOutput = argv.includes('--json')
   const dryRunMode = argv.includes('--dry-run')
 
-  if (argv.includes('--incremental'))
-    return {
-      incrementalMode: true,
-      timeout: parseTimeout(argv),
-      jsonOutput
-    }
+  if (argv.includes('--incremental')) {
+    const timeout = parseTimeout(argv)
+    if (timeout && timeout.error) return timeout
+    return { incrementalMode: true, timeout, jsonOutput }
+  }
 
-  if (argv.includes('--all'))
-    return {
-      allMode: true,
-      timeout: parseTimeout(argv),
-      jsonOutput,
-      dryRunMode
-    }
+  if (argv.includes('--all')) {
+    const timeout = parseTimeout(argv)
+    if (timeout && timeout.error) return timeout
+    return { allMode: true, timeout, jsonOutput, dryRunMode }
+  }
 
   if (argv.includes('--diff'))
     return diffOptions(argv)
 
-  const { targetLine, timeout, filtered } = argsToOptions(argv)
+  const opts = argsToOptions(argv)
+  if (opts.error) return opts
+  const { targetLine, timeout, filtered } = opts
 
   if (filtered.length)
     return {
@@ -65,9 +64,13 @@ function argsToOptions(args) {
     const arg = args[i]
     if (arg === '--line')
       targetLine = parseInt(args[++i], 10)
-    else if (arg === '--timeout')
-      timeout = parseInt(args[++i], 10)
-    else if (isNotFlag(arg))
+    else if (arg === '--timeout') {
+      const raw = args[++i]
+      const value = Number(raw)
+      if (raw == null || raw.startsWith('-') || Number.isNaN(value))
+        return { error: '--timeout requires a numeric value' }
+      timeout = value
+    } else if (isNotFlag(arg))
       filtered.push(arg)
   }
   return { targetLine, timeout, filtered }
@@ -75,8 +78,12 @@ function argsToOptions(args) {
 
 function parseTimeout(args) {
   const idx = args.indexOf('--timeout')
-  if (idx >= 0)
-    return parseInt(args[idx + 1], 10)
+  if (idx < 0) return
+  const raw = args[idx + 1]
+  const value = Number(raw)
+  if (raw == null || raw.startsWith('-') || Number.isNaN(value))
+    return { error: '--timeout requires a numeric value' }
+  return value
 }
 
 const FLAG_OPTIONS = new Set(['--json', '--dry-run'])
