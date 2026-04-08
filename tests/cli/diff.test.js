@@ -10,6 +10,11 @@ import { combineReportData, diffReports } from '../../cli/diff.js'
 describe('combineReportData', () => {
   beforeEach(() => {
     readFileSync.mockReset()
+    vi.spyOn(console, 'log').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    console.log.mockRestore()
   })
 
   it('merges mutants from multiple report files', () => {
@@ -57,7 +62,6 @@ describe('combineReportData', () => {
   })
 
   it('deduplicates mutants with the same key', () => {
-    const spy = vi.spyOn(console, 'log').mockImplementation(() => {})
     const mutant = {
       location: { start: { line: 1 } },
       mutatorName: 'x',
@@ -76,19 +80,16 @@ describe('combineReportData', () => {
     const merged = combineReportData(['file1.json', 'file2.json'])
 
     expect(merged.files['a.js'].mutants).toHaveLength(1)
-    expect(spy.mock.calls.some(c => c[0].includes('Deduplicated'))).toBe(true)
-    spy.mockRestore()
+    expect(console.log.mock.calls.some(c => c[0].includes('Deduplicated'))).toBe(true)
   })
 
   it('handles unreadable files gracefully', () => {
-    const spy = vi.spyOn(console, 'log').mockImplementation(() => {})
     readFileSync.mockImplementation(() => { throw new Error('ENOENT') })
 
     const merged = combineReportData(['bad.json'])
 
     expect(Object.keys(merged.files)).toHaveLength(0)
-    expect(spy.mock.calls.some(c => c[0].includes('Warning'))).toBe(true)
-    spy.mockRestore()
+    expect(console.log.mock.calls.some(c => c[0].includes('Warning'))).toBe(true)
   })
 
   it('merges mutants into the same file from different reports', () => {
