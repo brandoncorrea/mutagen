@@ -48,102 +48,118 @@ export function createManualRunner(config) {
 
   const prepared = preparePatterns(patterns)
   const reportPath = `${reportDir}/${reportFile}`
-
-  async function runBatch(jsonOutput, timeout, sourcesToRun = sources) {
-    console.log(`\n${SEPARATOR}`)
-    console.log(`MUTAGEN — BATCH MODE`)
-    console.log(`   Sources: ${sourcesToRun.length} file(s)\n`)
-
-    let totalSurvived = 0
-    let totalKilled = 0
-    let totalTimedOut = 0
-    let failures = 0
-    const fileResults = {}
-
-    function collectResult(result) {
-      if (result.error) {
-        failures++
-      } else {
-        totalSurvived += result.survived
-        totalKilled += result.killed
-        totalTimedOut += result.timedOut || 0
-        fileResults[result.jsonData.path] = { mutants: result.jsonData.mutants }
-      }
-    }
-
-    for (const source of sourcesToRun)
-      collectResult(await runSingle(
-        resolve(source), prepared, createRunner, null, timeout
-      ))
-
-    if (jsonOutput) {
-      mkdirSync(reportDir, { recursive: true })
-      const report = {
-        schemaVersion: '1',
-        thresholds: { high: 80, low: 60 },
-        files: fileResults
-      }
-      writeFileSync(reportPath, JSON.stringify(report, null, 2))
-      console.log(`JSON report: ${reportPath}`)
-    }
-
-    console.log(`\n${SEPARATOR}`)
-    console.log(`BATCH SUMMARY`)
-    console.log(SEPARATOR)
-    console.log(`Files: ${sourcesToRun.length}  |  Killed: ${totalKilled}  |  Survived: ${totalSurvived}  |  Errors: ${failures}`)
-    if (totalTimedOut > 0)
-      console.log(`Timed out: ${totalTimedOut} (counted as killed)`)
-    console.log(`${SEPARATOR}\n`)
-
-    return { totalSurvived, totalKilled, totalTimedOut, failures, fileResults }
-  }
-
-  async function run(argv) {
-    const parsed = parseArgs(argv)
-    if (parsed.error) {
-      console.error(parsed.error)
-      return 1
-    }
-    const timeout = parsed.timeout || configTimeout
-    if (parsed.diffMode) {
-      const result = diffReports(parsed.beforeFile, parsed.afterFile)
-      return result.regressions > 0 ? 1 : 0
-    }
-    if (parsed.dryRunMode && parsed.allMode) {
-      let total = 0
-      for (const source of sources) total += dryRun(resolve(source), prepared, null)
-      console.log(`\n  Grand total: ${total} mutations across ${sources.length} files`)
-      return 0
-    }
-    if (parsed.dryRunMode) {
-      dryRun(parsed.sourceFile, prepared, parsed.targetLine)
-      return 0
-    }
-    if (parsed.incrementalMode) {
-      const incrementalConfig = { sources, testSources, reportDir, reportPath, runBatch }
-      const { totalSurvived, failures } = await runIncremental(incrementalConfig, parsed.jsonOutput, timeout)
-      return (totalSurvived + failures) > 0 ? 1 : 0
-    }
-    if (parsed.allMode) {
-      const { totalSurvived, failures } = await runBatch(parsed.jsonOutput, timeout)
-      return (totalSurvived + failures) > 0 ? 1 : 0
-    }
-    const result = await runSingle(
-      parsed.sourceFile, prepared, createRunner, parsed.targetLine, timeout
-    )
-    if (result.error)
-      return 1
-    return result.survived > 0 ? 1 : 0
-  }
+  const ctx = { prepared, sources, testSources, createRunner, reportDir, reportPath, configTimeout }
 
   return {
-    runBatch,
-    runIncremental(jsonOutput, timeout) {
-      return runIncremental({ sources, testSources, reportDir, reportPath, runBatch }, jsonOutput, timeout)
-    },
-    run,
+    runBatch: (jsonOutput, timeout, sourcesToRun) =>
+      runBatch(ctx, jsonOutput, timeout, sourcesToRun),
+    runIncremental: (jsonOutput, timeout) =>
+      runIncremental({ sources, testSources, reportDir, reportPath, runBatch: runBatch.bind(null, ctx) }, jsonOutput, timeout),
+    run: argv => run(ctx, argv),
     async main() {
-      process.exit(await run())
+      process.exit(await run(ctx))
     }
   }
+}
+
+async function runBatch(ctx, jsonOutput, timeout, sourcesToRun) {
+  const { prepared, createRunner, reportDir, reportPath, sources } = ctx
+  const filesToRun = sourcesToRun || sources
+
+  console.log(`\n${SEPARATOR}`)
+  console.log(`MUTAGEN — BATCH MODE`)
+  console.log(`   Sources: ${filesToRun.length} file(s)\n`)
+
+  let totalSurvived = 0
+  let totalKilled = 0
+  let totalTimedOut = 0
+  let failures = 0
+  const fileResults = {}
+
+  for (const source of filesToRun) {
+    const result = await runSingle(resolve(source), prepared, createRunner, null, timeout)
+    if (result.error) {
+      failures++
+    } else {
+      totalSurvived += result.survived
+      totalKilled += result.killed
+      totalTimedOut += result.timedOut || 0
+      fileResults[result.jsonData.path] = { mutants: result.jsonData.mutants }
+    }
+  }
+
+  if (jsonOutput)
+    writeReport(reportDir, reportPath, fileResults)
+
+  printBatchSummary(filesToRun.length, totalKilled, totalSurvived, totalTimedOut, failures)
+
+  return { totalSurvived, totalKilled, totalTimedOut, failures, fileResults }
+}
+
+function writeReport(reportDir, reportPath, fileResults) {
+  mkdirSync(reportDir, { recursive: true })
+  const report = {
+    schemaVersion: '1',
+    thresholds: { high: 80, low: 60 },
+    files: fileResults
+  }
+  writeFileSync(reportPath, JSON.stringify(report, null, 2))
+  console.log(`JSON report: ${reportPath}`)
+}
+
+function printBatchSummary(fileCount, killed, survived, timedOut, failures) {
+  console.log(`\n${SEPARATOR}`)
+  console.log(`BATCH SUMMARY`)
+  console.log(SEPARATOR)
+  console.log(`Files: ${fileCount}  |  Killed: ${killed}  |  Survived: ${survived}  |  Errors: ${failures}`)
+  if (timedOut > 0)
+    console.log(`Timed out: ${timedOut} (counted as killed)`)
+  console.log(`${SEPARATOR}\n`)
+}
+
+async function run(ctx, argv) {
+  const parsed = parseArgs(argv)
+  if (parsed.error) {
+    console.error(parsed.error)
+    return 1
+  }
+
+  const timeout = parsed.timeout || ctx.configTimeout
+
+  if (parsed.diffMode)
+    return diffReports(parsed.beforeFile, parsed.afterFile).regressions > 0 ? 1 : 0
+  if (parsed.dryRunMode && parsed.allMode)
+    return runAllDryRun(ctx)
+  if (parsed.dryRunMode)
+    return dryRun(parsed.sourceFile, ctx.prepared, parsed.targetLine) && 0
+  if (parsed.incrementalMode)
+    return runIncrementalMode(ctx, parsed.jsonOutput, timeout)
+  if (parsed.allMode)
+    return runBatchMode(ctx, parsed.jsonOutput, timeout)
+  return runSingleMode(ctx, parsed, timeout)
+}
+
+function runAllDryRun({ sources, prepared }) {
+  let total = 0
+  for (const source of sources) total += dryRun(resolve(source), prepared, null)
+  console.log(`\n  Grand total: ${total} mutations across ${sources.length} files`)
+  return 0
+}
+
+async function runIncrementalMode(ctx, jsonOutput, timeout) {
+  const { sources, testSources, reportDir, reportPath } = ctx
+  const incrementalConfig = { sources, testSources, reportDir, reportPath, runBatch: runBatch.bind(null, ctx) }
+  const { totalSurvived, failures } = await runIncremental(incrementalConfig, jsonOutput, timeout)
+  return (totalSurvived + failures) > 0 ? 1 : 0
+}
+
+async function runBatchMode(ctx, jsonOutput, timeout) {
+  const { totalSurvived, failures } = await runBatch(ctx, jsonOutput, timeout)
+  return (totalSurvived + failures) > 0 ? 1 : 0
+}
+
+async function runSingleMode(ctx, parsed, timeout) {
+  const result = await runSingle(parsed.sourceFile, ctx.prepared, ctx.createRunner, parsed.targetLine, timeout)
+  if (result.error) return 1
+  return result.survived > 0 ? 1 : 0
 }

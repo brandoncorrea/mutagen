@@ -5,40 +5,37 @@
 
 import { readFileSync } from 'node:fs'
 
-import { mutantKey, countStatuses, SEPARATOR } from './report.js'
+import { mutantKey, countStatuses, isKilled, isAlive, SEPARATOR } from './report.js'
 
 export function combineReportData(files) {
+  const allEntries = files.map(tryLoadJson).filter(Boolean).flatMap(({ files }) => Object.entries(files))
+  const { mergedFiles, duplicates } = deduplicateMutants(allEntries)
+
+  if (duplicates > 0)
+    console.log(`  Deduplicated: ${duplicates} duplicate mutant(s) removed`)
+
+  return { files: mergedFiles, schemaVersion: '1', thresholds: { high: 80, low: 60 } }
+}
+
+function deduplicateMutants(entries) {
   const mergedFiles = {}
   const seen = new Set()
   let duplicates = 0
 
-  const filesFromJson = files
-    .map(tryLoadJson)
-    .filter(Boolean)
-    .flatMap(({ files }) => Object.entries(files))
-
-  for (const [path, fileData] of filesFromJson) {
+  for (const [path, fileData] of entries) {
     if (!mergedFiles[path])
       mergedFiles[path] = { ...fileData, mutants: [] }
     for (const mut of fileData.mutants) {
       const key = mutantKey(path, mut)
-      if (seen.has(key)) {
-        duplicates++
-      } else {
+      if (seen.has(key)) duplicates++
+      else {
         seen.add(key)
         mergedFiles[path].mutants.push(mut)
       }
     }
   }
 
-  if (duplicates > 0)
-    console.log(`  Deduplicated: ${duplicates} duplicate mutant(s) removed`)
-
-  return {
-    files: mergedFiles,
-    schemaVersion: '1',
-    thresholds: { high: 80, low: 60 }
-  }
+  return { mergedFiles, duplicates }
 }
 
 /**
@@ -101,8 +98,8 @@ function classifyChange(changes, beforeMap, afterMap, key) {
   } else if (!after) {
     changes.removedMutants.push(before)
   } else {
-    const bAlive = isAlive(before.status)
-    const aAlive = isAlive(after.status)
+    const bAlive = isAlive(before)
+    const aAlive = isAlive(after)
     if (bAlive && !aAlive)
       changes.newlyKilled.push({ before, after })
     else if (!bAlive && aAlive)
@@ -177,7 +174,7 @@ function printCategory(label, results) {
 
 function printNewMutants(newMutants) {
   if (!newMutants.length) return
-  const newSurvived = newMutants.filter(m => isAlive(m.status))
+  const newSurvived = newMutants.filter(isAlive)
   const newKilled = newMutants.length - newSurvived.length
   console.log(`\n+ NEW MUTANTS: ${newMutants.length} (${newKilled} killed, ${newSurvived.length} survived)`)
   if (newSurvived.length > 0)
@@ -248,10 +245,3 @@ function fileScores(report) {
   return scores
 }
 
-function isKilled(mutation) {
-  return mutation.status === 'Killed' || mutation.status === 'Timeout'
-}
-
-function isAlive(status) {
-  return status === 'Survived' || status === 'NoCoverage'
-}

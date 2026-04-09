@@ -12,38 +12,25 @@ Usage: <script> <source-file> [--line N] [--json] [--dry-run] [--timeout N]
 const diffMessage = 'Usage: <script> --diff <before.json> <after.json>'
 
 export function parseArgs(argv = process.argv.slice(2)) {
-  const jsonOutput = argv.includes('--json')
-  const dryRunMode = argv.includes('--dry-run')
-
-  if (argv.includes('--incremental')) {
-    const timeout = parseTimeout(argv)
-    if (timeout && timeout.error) return timeout
-    return { incrementalMode: true, timeout, jsonOutput }
-  }
-
-  if (argv.includes('--all')) {
-    const timeout = parseTimeout(argv)
-    if (timeout?.error) return timeout
-    return { allMode: true, timeout, jsonOutput, dryRunMode }
-  }
-
+  if (argv.includes('--incremental'))
+    return incrementalOptions(argv)
+  if (argv.includes('--all'))
+    return allOptions(argv)
   if (argv.includes('--diff'))
     return diffOptions(argv)
+  return sourceFileOptions(argv)
+}
 
-  const opts = argsToOptions(argv)
-  if (opts.error) return opts
-  const { targetLine, timeout, filtered } = opts
+function incrementalOptions(argv) {
+  const timeout = parseTimeout(argv)
+  if (timeout?.error) return timeout
+  return { incrementalMode: true, timeout, jsonOutput: hasFlag(argv, '--json') }
+}
 
-  if (filtered.length)
-    return {
-      sourceFile: resolve(filtered[0]),
-      targetLine,
-      jsonOutput,
-      dryRunMode,
-      timeout
-    }
-
-  return { error: usageMessage }
+function allOptions(argv) {
+  const timeout = parseTimeout(argv)
+  if (timeout?.error) return timeout
+  return { allMode: true, timeout, jsonOutput: hasFlag(argv, '--json'), dryRunMode: hasFlag(argv, '--dry-run') }
 }
 
 function diffOptions(argv) {
@@ -54,6 +41,23 @@ function diffOptions(argv) {
     diffMode: true,
     beforeFile: resolve(argv[diffIdx + 1]),
     afterFile: resolve(argv[diffIdx + 2])
+  }
+}
+
+function sourceFileOptions(argv) {
+  const opts = argsToOptions(argv)
+  if (opts.error) return opts
+  const { targetLine, timeout, filtered } = opts
+
+  if (!filtered.length)
+    return { error: usageMessage }
+
+  return {
+    sourceFile: resolve(filtered[0]),
+    targetLine,
+    jsonOutput: hasFlag(argv, '--json'),
+    dryRunMode: hasFlag(argv, '--dry-run'),
+    timeout
   }
 }
 
@@ -85,6 +89,10 @@ function parseTimeout(args) {
   if (isInvalidTimeout(value))
     return { error: '--timeout requires a numeric value' }
   return value
+}
+
+function hasFlag(argv, flag) {
+  return argv.includes(flag)
 }
 
 function isInvalidTimeout(timeout) {

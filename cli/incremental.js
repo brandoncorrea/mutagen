@@ -7,7 +7,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { resolve, relative } from 'node:path'
 
-import { SEPARATOR } from './report.js'
+import { SEPARATOR, isKilled } from './report.js'
 
 export const HASH_PREFIX_LENGTH = 16
 
@@ -30,10 +30,6 @@ export function countCachedResults(report, relPaths) {
     }
   }
   return { killed, survived }
-}
-
-function isKilled(mutation) {
-  return mutation.status === 'Killed' || mutation.status === 'Timeout'
 }
 
 /**
@@ -64,28 +60,15 @@ export async function runIncremental(config, jsonOutput, timeout) {
       jsonOutput, reportPath
     )
 
-  const { totalSurvived, totalKilled, failures, fileResults } =
-    await runBatch(false, timeout, changedSources)
+  const batchResult = await runBatch(false, timeout, changedSources)
 
   if (jsonOutput)
     writeMergedReport(
-      fileResults, previousReport, unchangedSources, sources, currentHashes,
-      currentTestHashes, reportDir, reportPath
+      batchResult.fileResults, previousReport, unchangedSources, sources,
+      currentHashes, currentTestHashes, reportDir, reportPath
     )
 
-  const cachedCounts = countCachedResults(previousReport, unchangedSources)
-  const grandKilled = totalKilled + cachedCounts.killed
-  const grandSurvived = totalSurvived + cachedCounts.survived
-
-  console.log(`\n${SEPARATOR}`)
-  console.log(`INCREMENTAL SUMMARY`)
-  console.log(SEPARATOR)
-  console.log(`Rerun: ${changedSources.length} files  |  Killed: ${totalKilled}  |  Survived: ${totalSurvived}  |  Errors: ${failures}`)
-  console.log(`Cached: ${unchangedSources.length} files  |  Killed: ${cachedCounts.killed}  |  Survived: ${cachedCounts.survived}`)
-  console.log(`Total: ${sources.length} files  |  Killed: ${grandKilled}  |  Survived: ${grandSurvived}`)
-  console.log(`${SEPARATOR}\n`)
-
-  return { totalSurvived: grandSurvived, totalKilled: grandKilled, failures }
+  return printIncrementalSummary(batchResult, previousReport, unchangedSources, changedSources, sources)
 }
 
 export function loadPreviousReport(reportPath) {
@@ -156,6 +139,23 @@ function classifySources(sources, previousHashes, testInvalidated) {
   }
 
   return { currentHashes, changedSources, unchangedSources }
+}
+
+function printIncrementalSummary(batchResult, previousReport, unchangedSources, changedSources, sources) {
+  const { totalSurvived, totalKilled, failures } = batchResult
+  const cachedCounts = countCachedResults(previousReport, unchangedSources)
+  const grandKilled = totalKilled + cachedCounts.killed
+  const grandSurvived = totalSurvived + cachedCounts.survived
+
+  console.log(`\n${SEPARATOR}`)
+  console.log(`INCREMENTAL SUMMARY`)
+  console.log(SEPARATOR)
+  console.log(`Rerun: ${changedSources.length} files  |  Killed: ${totalKilled}  |  Survived: ${totalSurvived}  |  Errors: ${failures}`)
+  console.log(`Cached: ${unchangedSources.length} files  |  Killed: ${cachedCounts.killed}  |  Survived: ${cachedCounts.survived}`)
+  console.log(`Total: ${sources.length} files  |  Killed: ${grandKilled}  |  Survived: ${grandSurvived}`)
+  console.log(`${SEPARATOR}\n`)
+
+  return { totalSurvived: grandSurvived, totalKilled: grandKilled, failures }
 }
 
 function printIncrementalHeader(sources, changedSources, unchangedSources, changedTestFiles, testInvalidated) {

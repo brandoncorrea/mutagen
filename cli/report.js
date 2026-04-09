@@ -12,6 +12,14 @@ export function mutantKey(path, { location, mutatorName, replacement }) {
   return `${path}:${line}:${mutatorName || ''}:${replacement || ''}`
 }
 
+export function isKilled(mutation) {
+  return mutation.status === 'Killed' || mutation.status === 'Timeout'
+}
+
+export function isAlive(mutation) {
+  return mutation.status === 'Survived' || mutation.status === 'NoCoverage'
+}
+
 export function countStatuses(merged) {
   let killed = 0, survived = 0, noCoverage = 0, timeout = 0
   for (const fileData of Object.values(merged.files)) {
