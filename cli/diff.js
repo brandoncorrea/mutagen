@@ -61,7 +61,7 @@ export function diffReports(beforeFile, afterFile) {
   const changes = classifyChanges(before, after)
   const fileDeltas = computeFileDeltas(before, after)
 
-  printDiffReport(beforeFile, afterFile, before, after, changes, fileDeltas)
+  printDiffReport({ beforeFile, afterFile, before, after }, changes, fileDeltas)
 
   return {
     newlyKilled: changes.newlyKilled.length,
@@ -146,7 +146,7 @@ function computeFileDelta(beforeScores, afterScores, file) {
     return { file, before, after, delta }
 }
 
-function printDiffReport(beforeFile, afterFile, before, after, changes, fileDeltas) {
+function printDiffReport({ beforeFile, afterFile, before, after }, changes, fileDeltas) {
   console.log(`\n${SEPARATOR}`)
   console.log(`MUTATION DIFF`)
   console.log(`${SEPARATOR}`)

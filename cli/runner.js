@@ -45,7 +45,8 @@ export function withTimeout(fn, ms) {
   ])
 }
 
-export async function runSingle(sourceFile, prepared, createRunner, targetLine, timeout, log) {
+export async function runSingle(options) {
+  const { sourceFile, prepared, createRunner, targetLine, timeout, log } = options
   const out = log || console.log
   const original = readFileSync(sourceFile, 'utf-8')
 
@@ -57,10 +58,10 @@ export async function runSingle(sourceFile, prepared, createRunner, targetLine, 
   if (timeout) out(`Timeout: ${timeout}ms per mutation`)
 
   const runner = await createRunner(sourceFile)
-  const options = { out, runner, timeout, sourceFile, targetLine, original, prepared }
+  const opts = { out, runner, timeout, sourceFile, targetLine, original, prepared }
 
   try {
-    return await runMutations(options)
+    return await runMutations(opts)
   } finally {
     await runner.close()
   }

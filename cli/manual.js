@@ -77,7 +77,7 @@ async function runBatch(ctx, jsonOutput, timeout, sourcesToRun) {
   const fileResults = {}
 
   for (const source of filesToRun) {
-    const result = await runSingle(resolve(source), prepared, createRunner, null, timeout)
+    const result = await runSingle({ sourceFile: resolve(source), prepared, createRunner, timeout })
     if (result.error) {
       failures++
     } else {
@@ -91,9 +91,10 @@ async function runBatch(ctx, jsonOutput, timeout, sourcesToRun) {
   if (jsonOutput)
     writeReport(reportDir, reportPath, fileResults)
 
-  printBatchSummary(filesToRun.length, totalKilled, totalSurvived, totalTimedOut, failures)
+  const result = { totalSurvived, totalKilled, totalTimedOut, failures, fileResults }
+  printBatchSummary(filesToRun.length, result)
 
-  return { totalSurvived, totalKilled, totalTimedOut, failures, fileResults }
+  return result
 }
 
 function writeReport(reportDir, reportPath, fileResults) {
@@ -107,13 +108,13 @@ function writeReport(reportDir, reportPath, fileResults) {
   console.log(`JSON report: ${reportPath}`)
 }
 
-function printBatchSummary(fileCount, killed, survived, timedOut, failures) {
+function printBatchSummary(fileCount, { totalKilled, totalSurvived, totalTimedOut, failures }) {
   console.log(`\n${SEPARATOR}`)
   console.log(`BATCH SUMMARY`)
   console.log(SEPARATOR)
-  console.log(`Files: ${fileCount}  |  Killed: ${killed}  |  Survived: ${survived}  |  Errors: ${failures}`)
-  if (timedOut)
-    console.log(`Timed out: ${timedOut} (counted as killed)`)
+  console.log(`Files: ${fileCount}  |  Killed: ${totalKilled}  |  Survived: ${totalSurvived}  |  Errors: ${failures}`)
+  if (totalTimedOut)
+    console.log(`Timed out: ${totalTimedOut} (counted as killed)`)
   console.log(`${SEPARATOR}\n`)
 }
 
@@ -159,7 +160,13 @@ async function runBatchMode(ctx, jsonOutput, timeout) {
 }
 
 async function runSingleMode(ctx, parsed, timeout) {
-  const result = await runSingle(parsed.sourceFile, ctx.prepared, ctx.createRunner, parsed.targetLine, timeout)
+  const result = await runSingle({
+    sourceFile: parsed.sourceFile,
+    prepared: ctx.prepared,
+    createRunner: ctx.createRunner,
+    targetLine: parsed.targetLine,
+    timeout
+  })
   if (result.error) return 1
   return result.survived ? 1 : 0
 }

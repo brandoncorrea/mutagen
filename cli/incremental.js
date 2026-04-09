@@ -45,30 +45,29 @@ export function countCachedResults(report, relPaths) {
  * @param {number} timeout - per-mutation timeout in ms
  */
 export async function runIncremental(config, jsonOutput, timeout) {
-  const { sources, testSources, reportDir, reportPath, runBatch } = config
-  const { previousReport, previousHashes, previousTestHashes } = loadPreviousReport(reportPath)
-  const { currentTestHashes, changedTestFiles } = hashTestFiles(testSources, previousTestHashes)
-  const testInvalidated = findTestInvalidatedSources(changedTestFiles, previousReport)
-  const { currentHashes, changedSources, unchangedSources } =
-    classifySources(sources, previousHashes, testInvalidated)
+  const { sources, testSources, reportPath, runBatch } = config
+  const previous = loadPreviousReport(reportPath)
+  const classification = classifyAllSources(sources, testSources, previous)
 
-  printIncrementalHeader(sources, changedSources, unchangedSources, changedTestFiles, testInvalidated)
+  printIncrementalHeader(sources, classification)
 
-  if (!changedSources.length)
-    return handleAllCached(
-      sources, previousReport, unchangedSources, currentHashes, currentTestHashes,
-      jsonOutput, reportPath
-    )
+  if (!classification.changedSources.length)
+    return handleAllCached(config, previous, classification, jsonOutput)
 
-  const batchResult = await runBatch(false, timeout, changedSources)
+  const batchResult = await runBatch(false, timeout, classification.changedSources)
 
   if (jsonOutput)
-    writeMergedReport(
-      batchResult.fileResults, previousReport, unchangedSources, sources,
-      currentHashes, currentTestHashes, reportDir, reportPath
-    )
+    writeMergedReport(config, previous, classification, batchResult.fileResults)
 
-  return printIncrementalSummary(batchResult, previousReport, unchangedSources, changedSources, sources)
+  return printIncrementalSummary(batchResult, sources, previous, classification)
+}
+
+function classifyAllSources(sources, testSources, previous) {
+  const { currentTestHashes, changedTestFiles } = hashTestFiles(testSources, previous.previousTestHashes)
+  const testInvalidated = findTestInvalidatedSources(changedTestFiles, previous.previousReport)
+  const { currentHashes, changedSources, unchangedSources } =
+    classifySources(sources, previous.previousHashes, testInvalidated)
+  return { currentHashes, currentTestHashes, changedSources, unchangedSources, changedTestFiles, testInvalidated }
 }
 
 export function loadPreviousReport(reportPath) {
@@ -141,9 +140,10 @@ function classifySources(sources, previousHashes, testInvalidated) {
   return { currentHashes, changedSources, unchangedSources }
 }
 
-function printIncrementalSummary(batchResult, previousReport, unchangedSources, changedSources, sources) {
+function printIncrementalSummary(batchResult, sources, previous, classification) {
   const { totalSurvived, totalKilled, failures } = batchResult
-  const cachedCounts = countCachedResults(previousReport, unchangedSources)
+  const { unchangedSources, changedSources } = classification
+  const cachedCounts = countCachedResults(previous.previousReport, unchangedSources)
   const grandKilled = totalKilled + cachedCounts.killed
   const grandSurvived = totalSurvived + cachedCounts.survived
 
@@ -158,7 +158,8 @@ function printIncrementalSummary(batchResult, previousReport, unchangedSources, 
   return { totalSurvived: grandSurvived, totalKilled: grandKilled, failures }
 }
 
-function printIncrementalHeader(sources, changedSources, unchangedSources, changedTestFiles, testInvalidated) {
+function printIncrementalHeader(sources, classification) {
+  const { changedSources, unchangedSources, changedTestFiles, testInvalidated } = classification
   console.log(`\n${SEPARATOR}`)
   console.log(`MUTAGEN — INCREMENTAL MODE`)
   console.log(SEPARATOR)
@@ -169,16 +170,19 @@ function printIncrementalHeader(sources, changedSources, unchangedSources, chang
     console.log(`Changed tests: ${changedTestFiles.length}`)
 }
 
-function handleAllCached(sources, previousReport, unchangedSources, currentHashes, currentTestHashes, jsonOutput, reportPath) {
+function handleAllCached(config, previous, classification, jsonOutput) {
+  const { sources, reportPath } = config
+  const { unchangedSources, currentHashes, currentTestHashes } = classification
+
   console.log(`\nNo files changed since last report. Nothing to do.`)
 
-  if (jsonOutput && previousReport) {
-    previousReport.sourceHashes = currentHashes
-    previousReport.testHashes = currentTestHashes
-    writeFileSync(reportPath, JSON.stringify(previousReport, null, 2))
+  if (jsonOutput && previous.previousReport) {
+    previous.previousReport.sourceHashes = currentHashes
+    previous.previousReport.testHashes = currentTestHashes
+    writeFileSync(reportPath, JSON.stringify(previous.previousReport, null, 2))
   }
 
-  const cachedCounts = countCachedResults(previousReport, unchangedSources)
+  const cachedCounts = countCachedResults(previous.previousReport, unchangedSources)
   console.log(`\n${SEPARATOR}`)
   console.log(`INCREMENTAL SUMMARY (all cached)`)
   console.log(SEPARATOR)
@@ -187,13 +191,15 @@ function handleAllCached(sources, previousReport, unchangedSources, currentHashe
   return { totalSurvived: cachedCounts.survived, totalKilled: cachedCounts.killed, failures: 0 }
 }
 
-function writeMergedReport(fileResults, previousReport, unchangedSources, sources, currentHashes, currentTestHashes, reportDir, reportPath) {
+function writeMergedReport(config, previous, classification, fileResults) {
+  const { sources, reportDir, reportPath } = config
+  const { unchangedSources, currentHashes, currentTestHashes } = classification
   const mergedFiles = { ...fileResults }
 
-  if (previousReport)
+  if (previous.previousReport)
     for (const relPath of unchangedSources)
-      if (previousReport.files[relPath])
-        mergedFiles[relPath] = previousReport.files[relPath]
+      if (previous.previousReport.files[relPath])
+        mergedFiles[relPath] = previous.previousReport.files[relPath]
 
   const currentRelPaths = new Set(sources.map(s => relative(process.cwd(), resolve(s))))
   for (const key of Object.keys(mergedFiles))
