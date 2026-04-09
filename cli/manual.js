@@ -67,8 +67,7 @@ export function createManualRunner(config) {
         totalSurvived += result.survived
         totalKilled += result.killed
         totalTimedOut += result.timedOut || 0
-        if (result.jsonData)
-          fileResults[result.jsonData.path] = { mutants: result.jsonData.mutants }
+        fileResults[result.jsonData.path] = { mutants: result.jsonData.mutants }
       }
     }
 
