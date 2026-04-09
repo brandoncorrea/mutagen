@@ -476,6 +476,29 @@ describe('diffReports', () => {
     expect(aIdx).toBeLessThan(bIdx)
   })
 
+  it('sorts NEW files before negative-delta files (delta: 0 vs undefined)', () => {
+    // worsened.js enters Set first (from beforeScores), new.js second (from afterScores).
+    // Sort descending: new.js (delta:0) should appear before worsened.js (delta:-50).
+    // Without delta:0 on NEW, undefined - (-50) = NaN → no swap → worsened stays first (wrong).
+    const before = makeReport({
+      'worsened.js': { mutants: [makeMutant('m1', 'x', 'Killed'), makeMutant('m2', 'y', 'Killed')] }
+    })
+    const after = makeReport({
+      'worsened.js': { mutants: [makeMutant('m1', 'x', 'Survived'), makeMutant('m2', 'y', 'Killed')] },
+      'new.js': { mutants: [makeMutant('m3', 'z', 'Killed')] }
+    })
+    readFileSync
+      .mockReturnValueOnce(JSON.stringify(before))
+      .mockReturnValueOnce(JSON.stringify(after))
+
+    diffReports('before.json', 'after.json')
+
+    const output = console.log.mock.calls.map(c => c[0]).join('\n')
+    const perFileSection = output.slice(output.indexOf('PER-FILE CHANGES'))
+    // new.js (delta: 0) should sort before worsened.js (delta: -50) in descending order
+    expect(perFileSection.indexOf('new.js')).toBeLessThan(perFileSection.indexOf('worsened.js'))
+  })
+
   it('skips per-file section when no file scores changed', () => {
     const report = makeReport({
       'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] }
