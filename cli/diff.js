@@ -141,7 +141,7 @@ function printDiffReport({ beforeFile, afterFile, before, after }, changes, file
   console.log(`Before: ${beforeFile}`)
   console.log(`After:  ${afterFile}\n`)
 
-  printSummary(before, after)
+  printDiffSummary(before, after)
   printCategory('✓ NEWLY KILLED', changes.newlyKilled)
   printCategory('✗ REGRESSIONS', changes.regressions)
   printNewMutants(changes.newMutants)
@@ -150,7 +150,7 @@ function printDiffReport({ beforeFile, afterFile, before, after }, changes, file
   console.log(`\n${SEPARATOR}\n`)
 }
 
-function printSummary(before, after) {
+function printDiffSummary(before, after) {
   const bCounts = countStatuses(before)
   const aCounts = countStatuses(after)
   const bTotal = totalCounts(bCounts)
