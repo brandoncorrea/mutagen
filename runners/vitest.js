@@ -76,8 +76,11 @@ async function findRelatedSpecs(vitest, sourceFile) {
 
   const state = { testFiles, testPaths, visited, queue, graph }
 
-  while (queue.length)
-    visitSourceFile(state, queue.pop())
+  while (queue.length) {
+    const id = queue.pop()
+    if (!visited.has(id))
+      visitSourceFile(state, id)
+  }
 
   if (testFiles.size)
     return allSpecs.filter(s => testFiles.has(s.moduleId))

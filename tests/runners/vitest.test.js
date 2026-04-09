@@ -336,6 +336,35 @@ describe('createVitestRunner', () => {
       expect(mock.runTestSpecifications).toHaveBeenLastCalledWith(specs)
     })
 
+    it('terminates on circular imports without infinite loop', async () => {
+      const specs = [
+        { moduleId: 'test/circular.test.js' }
+      ]
+      const mock = createMockVitest()
+      mock.globTestSpecifications.mockResolvedValue(specs)
+      mock.projects = [{
+        _vite: {
+          moduleGraph: {
+            getModuleById: vi.fn((id) => {
+              if (id === 'src/a.js')
+                return { importers: new Set([{ id: 'src/b.js' }]) }
+              if (id === 'src/b.js')
+                return { importers: new Set([{ id: 'src/a.js' }, { id: 'test/circular.test.js' }]) }
+              return null
+            })
+          }
+        }
+      }]
+      startVitest.mockResolvedValue(mock)
+
+      const runner = await createVitestRunner('src/a.js')
+      await runner.run()
+
+      expect(mock.runTestSpecifications).toHaveBeenLastCalledWith([
+        { moduleId: 'test/circular.test.js' }
+      ])
+    })
+
     it('runs all specs when no test files found in graph', async () => {
       const specs = [
         { moduleId: 'test/a.test.js' }
