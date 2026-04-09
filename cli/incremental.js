@@ -11,25 +11,26 @@ import { SEPARATOR, isKilled } from './report.js'
 
 export const HASH_PREFIX_LENGTH = 16
 
-function hashFile(filePath) {
-  return createHash('sha256')
-    .update(readFileSync(filePath))
-    .digest('hex')
-    .slice(0, HASH_PREFIX_LENGTH)
+export function countCachedResults(report, relPaths) {
+  const results = { killed: 0, survived: 0 }
+  if (report)
+    for (const relPath of relPaths)
+      countCachedResult(results, report, relPath)
+  return results
 }
 
-export function countCachedResults(report, relPaths) {
-  let killed = 0, survived = 0
-  if (!report) return { killed, survived }
-  for (const relPath of relPaths) {
-    const fileData = report.files[relPath]
-    if (!fileData) continue
-    for (const m of fileData.mutants) {
-      if (isKilled(m)) killed++
-      else if (m.status === 'Survived') survived++
-    }
-  }
-  return { killed, survived }
+function countCachedResult(results, report, relPath) {
+  const fileData = report.files[relPath]
+  if (fileData)
+    for (const m of fileData.mutants)
+      countCachedMutation(results, m)
+}
+
+function countCachedMutation(results, mutation) {
+  if (isKilled(mutation))
+    results.killed++
+  else if (mutation.status === 'Survived')
+    results.survived++
 }
 
 /**
@@ -65,59 +66,13 @@ export async function runIncremental(config, jsonOutput, timeout) {
 function classifyAllSources(sources, testSources, previous) {
   const { currentTestHashes, changedTestFiles } = hashTestFiles(testSources, previous.previousTestHashes)
   const testInvalidated = findTestInvalidatedSources(changedTestFiles, previous.previousReport)
-  const { currentHashes, changedSources, unchangedSources } =
-    classifySources(sources, previous.previousHashes, testInvalidated)
-  return { currentHashes, currentTestHashes, changedSources, unchangedSources, changedTestFiles, testInvalidated }
-}
-
-export function loadPreviousReport(reportPath) {
-  let previousReport = null
-  let previousHashes = {}
-  let previousTestHashes = {}
-  if (existsSync(reportPath)) {
-    try {
-      previousReport = JSON.parse(readFileSync(reportPath, 'utf-8'))
-      previousHashes = previousReport.sourceHashes || {}
-      previousTestHashes = previousReport.testHashes || {}
-    } catch (err) {
-      console.warn(`Warning: could not parse previous report ${reportPath} — discarding cache (${err.message})`)
-    }
+  const classification = classifySources(sources, previous.previousHashes, testInvalidated)
+  return {
+    ...classification,
+    currentTestHashes,
+    changedTestFiles,
+    testInvalidated
   }
-  return { previousReport, previousHashes, previousTestHashes }
-}
-
-function hashTestFiles(testSources, previousTestHashes) {
-  const currentTestHashes = {}
-  const changedTestFiles = []
-  for (const testFile of testSources) {
-    const absPath = resolve(testFile)
-    const relPath = relative(process.cwd(), absPath)
-    const hash = hashFile(absPath)
-    currentTestHashes[relPath] = hash
-    if (previousTestHashes[relPath] !== hash)
-      changedTestFiles.push(relPath)
-  }
-  return { currentTestHashes, changedTestFiles }
-}
-
-function findTestInvalidatedSources(changedTestFiles, previousReport) {
-  const testInvalidated = new Set()
-  if (changedTestFiles.length === 0 || !previousReport) return testInvalidated
-
-  const changedTestAbs = new Set(changedTestFiles.map(t => resolve(t)))
-  for (const [sourcePath, fileData] of Object.entries(previousReport.files)) {
-    for (const { killedBy, status } of fileData.mutants) {
-      if (killedBy?.some(t => changedTestAbs.has(t))) {
-        testInvalidated.add(sourcePath)
-        break
-      }
-      if (status === 'Survived') {
-        testInvalidated.add(sourcePath)
-        break
-      }
-    }
-  }
-  return testInvalidated
 }
 
 function classifySources(sources, previousHashes, testInvalidated) {
@@ -138,6 +93,67 @@ function classifySources(sources, previousHashes, testInvalidated) {
   }
 
   return { currentHashes, changedSources, unchangedSources }
+}
+
+export function loadPreviousReport(reportPath) {
+  const previousReport = tryLoadJson(reportPath)
+  return {
+    previousReport,
+    previousHashes: previousReport?.sourceHashes || {},
+    previousTestHashes: previousReport?.testHashes || {}
+  }
+}
+
+function tryLoadJson(path) {
+  if (!existsSync(path)) return
+  try {
+    return JSON.parse(readFileSync(path, 'utf-8'))
+  } catch (err) {
+    console.warn(`Warning: could not parse previous report ${path} — discarding cache (${err.message})`)
+  }
+}
+
+function hashTestFiles(testSources, previousTestHashes) {
+  const currentTestHashes = {}
+  const changedTestFiles = []
+  for (const testFile of testSources) {
+    const absPath = resolve(testFile)
+    const relPath = relative(process.cwd(), absPath)
+    const hash = hashFile(absPath)
+    currentTestHashes[relPath] = hash
+    if (previousTestHashes[relPath] !== hash)
+      changedTestFiles.push(relPath)
+  }
+  return { currentTestHashes, changedTestFiles }
+}
+
+function hashFile(filePath) {
+  return createHash('sha256')
+    .update(readFileSync(filePath))
+    .digest('hex')
+    .slice(0, HASH_PREFIX_LENGTH)
+}
+
+function findTestInvalidatedSources(changedTestFiles, previousReport) {
+  const testInvalidated = new Set()
+  if (!changedTestFiles.length || !previousReport)
+    return testInvalidated
+
+  const changedTestAbs = new Set(changedTestFiles.map(t => resolve(t)))
+  for (const [sourcePath, fileData] of Object.entries(previousReport.files)) {
+    for (const mutant of fileData.mutants) {
+      if (isInvalidatedMutant(mutant, changedTestAbs)) {
+        testInvalidated.add(sourcePath)
+        break
+      }
+    }
+  }
+  return testInvalidated
+}
+
+function isInvalidatedMutant(mutant, changedTestAbs) {
+  return mutant.killedBy?.some(t => changedTestAbs.has(t))
+    || mutant.status === 'Survived'
 }
 
 function printIncrementalSummary(batchResult, sources, previous, classification) {

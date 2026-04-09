@@ -30,7 +30,7 @@ describe('loadPreviousReport', () => {
 
     const result = loadPreviousReport('/tmp/report.json')
 
-    expect(result.previousReport).toBeNull()
+    expect(result.previousReport).toBeFalsy()
     expect(result.previousHashes).toEqual({})
     expect(result.previousTestHashes).toEqual({})
   })
@@ -71,7 +71,7 @@ describe('loadPreviousReport', () => {
 
     const result = loadPreviousReport('/tmp/report.json')
 
-    expect(result.previousReport).toBeNull()
+    expect(result.previousReport).toBeFalsy()
     expect(result.previousHashes).toEqual({})
     expect(result.previousTestHashes).toEqual({})
     expect(console.warn).toHaveBeenCalledWith(
