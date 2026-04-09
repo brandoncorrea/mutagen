@@ -24,13 +24,22 @@ export function parseArgs(argv = process.argv.slice(2)) {
 function incrementalOptions(argv) {
   const timeout = parseTimeout(argv)
   if (timeout?.error) return timeout
-  return { incrementalMode: true, timeout, jsonOutput: hasFlag(argv, '--json') }
+  return {
+    incrementalMode: true,
+    timeout,
+    jsonOutput: hasFlag(argv, '--json')
+  }
 }
 
 function allOptions(argv) {
   const timeout = parseTimeout(argv)
   if (timeout?.error) return timeout
-  return { allMode: true, timeout, jsonOutput: hasFlag(argv, '--json'), dryRunMode: hasFlag(argv, '--dry-run') }
+  return {
+    allMode: true,
+    timeout,
+    jsonOutput: hasFlag(argv, '--json'),
+    dryRunMode: hasFlag(argv, '--dry-run')
+  }
 }
 
 function diffOptions(argv) {

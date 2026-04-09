@@ -112,7 +112,7 @@ function printBatchSummary(fileCount, killed, survived, timedOut, failures) {
   console.log(`BATCH SUMMARY`)
   console.log(SEPARATOR)
   console.log(`Files: ${fileCount}  |  Killed: ${killed}  |  Survived: ${survived}  |  Errors: ${failures}`)
-  if (timedOut > 0)
+  if (timedOut)
     console.log(`Timed out: ${timedOut} (counted as killed)`)
   console.log(`${SEPARATOR}\n`)
 }
@@ -127,7 +127,7 @@ async function run(ctx, argv) {
   const timeout = parsed.timeout || ctx.configTimeout
 
   if (parsed.diffMode)
-    return diffReports(parsed.beforeFile, parsed.afterFile).regressions > 0 ? 1 : 0
+    return diffReports(parsed.beforeFile, parsed.afterFile).regressions ? 1 : 0
   if (parsed.dryRunMode && parsed.allMode)
     return runAllDryRun(ctx)
   if (parsed.dryRunMode)
@@ -150,16 +150,16 @@ async function runIncrementalMode(ctx, jsonOutput, timeout) {
   const { sources, testSources, reportDir, reportPath } = ctx
   const incrementalConfig = { sources, testSources, reportDir, reportPath, runBatch: runBatch.bind(null, ctx) }
   const { totalSurvived, failures } = await runIncremental(incrementalConfig, jsonOutput, timeout)
-  return (totalSurvived + failures) > 0 ? 1 : 0
+  return (totalSurvived + failures) ? 1 : 0
 }
 
 async function runBatchMode(ctx, jsonOutput, timeout) {
   const { totalSurvived, failures } = await runBatch(ctx, jsonOutput, timeout)
-  return (totalSurvived + failures) > 0 ? 1 : 0
+  return (totalSurvived + failures) ? 1 : 0
 }
 
 async function runSingleMode(ctx, parsed, timeout) {
   const result = await runSingle(parsed.sourceFile, ctx.prepared, ctx.createRunner, parsed.targetLine, timeout)
   if (result.error) return 1
-  return result.survived > 0 ? 1 : 0
+  return result.survived ? 1 : 0
 }

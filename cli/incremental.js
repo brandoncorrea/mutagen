@@ -54,7 +54,7 @@ export async function runIncremental(config, jsonOutput, timeout) {
 
   printIncrementalHeader(sources, changedSources, unchangedSources, changedTestFiles, testInvalidated)
 
-  if (changedSources.length === 0)
+  if (!changedSources.length)
     return handleAllCached(
       sources, previousReport, unchangedSources, currentHashes, currentTestHashes,
       jsonOutput, reportPath
@@ -163,9 +163,9 @@ function printIncrementalHeader(sources, changedSources, unchangedSources, chang
   console.log(`MUTAGEN — INCREMENTAL MODE`)
   console.log(SEPARATOR)
   console.log(`Total sources: ${sources.length}`)
-  console.log(`Changed/new:   ${changedSources.length}${testInvalidated.size > 0 ? ` (${testInvalidated.size} from test changes)` : ''}`)
+  console.log(`Changed/new:   ${changedSources.length}${testInvalidated.size ? ` (${testInvalidated.size} from test changes)` : ''}`)
   console.log(`Cached:        ${unchangedSources.length}`)
-  if (changedTestFiles.length > 0)
+  if (changedTestFiles.length)
     console.log(`Changed tests: ${changedTestFiles.length}`)
 }
 

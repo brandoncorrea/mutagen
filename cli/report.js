@@ -36,7 +36,7 @@ export function countStatuses(merged) {
 export function printSummary(merged, counts, reportPath) {
   const { killed, survived, noCoverage, timeout } = counts
   const total = killed + survived + noCoverage + timeout
-  const score = total > 0 ? ((killed + timeout) / total * 100).toFixed(1) : '100.0'
+  const score = total ? ((killed + timeout) / total * 100).toFixed(1) : '100.0'
 
   console.log(`\n${SEPARATOR}`)
   console.log(`MUTATION REPORT`)
@@ -74,7 +74,7 @@ function toMutant(relPath, mutation, status) {
       end: { line, column: 0 }
     },
     description: `${original} → ${mutated}`,
-    ...(killedBy?.length > 0 && { killedBy })
+    ...(killedBy?.length && { killedBy })
   }
 }
 

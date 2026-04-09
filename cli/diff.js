@@ -8,13 +8,23 @@ import { readFileSync } from 'node:fs'
 import { mutantKey, countStatuses, isKilled, isAlive, SEPARATOR } from './report.js'
 
 export function combineReportData(files) {
-  const allEntries = files.map(tryLoadJson).filter(Boolean).flatMap(({ files }) => Object.entries(files))
-  const { mergedFiles, duplicates } = deduplicateMutants(allEntries)
+  const { mergedFiles, duplicates } = deduplicateMutants(loadAllEntries(files))
 
-  if (duplicates > 0)
+  if (duplicates)
     console.log(`  Deduplicated: ${duplicates} duplicate mutant(s) removed`)
 
-  return { files: mergedFiles, schemaVersion: '1', thresholds: { high: 80, low: 60 } }
+  return {
+    files: mergedFiles,
+    schemaVersion: '1',
+    thresholds: { high: 80, low: 60 }
+  }
+}
+
+function loadAllEntries(files) {
+  return files
+    .map(tryLoadJson)
+    .filter(Boolean)
+    .flatMap(({ files }) => Object.entries(files))
 }
 
 function deduplicateMutants(entries) {
@@ -27,8 +37,9 @@ function deduplicateMutants(entries) {
       mergedFiles[path] = { ...fileData, mutants: [] }
     for (const mut of fileData.mutants) {
       const key = mutantKey(path, mut)
-      if (seen.has(key)) duplicates++
-      else {
+      if (seen.has(key)) {
+        duplicates++
+      } else {
         seen.add(key)
         mergedFiles[path].mutants.push(mut)
       }
@@ -177,7 +188,7 @@ function printNewMutants(newMutants) {
   const newSurvived = newMutants.filter(isAlive)
   const newKilled = newMutants.length - newSurvived.length
   console.log(`\n+ NEW MUTANTS: ${newMutants.length} (${newKilled} killed, ${newSurvived.length} survived)`)
-  if (newSurvived.length > 0)
+  if (newSurvived.length)
     for (const { file, line, mutatorName } of newSurvived)
       console.log(`  ${file}:${line} ${mutatorName} — SURVIVED`)
 }
@@ -214,7 +225,7 @@ function formatSigned(value) {
 }
 
 function scoreCounts(counts, total) {
-  if (total > 0)
+  if (total)
     return (counts.killed + counts.timeout) / total * 100
   return 100
 }
@@ -228,7 +239,11 @@ function buildMutantMap(report) {
   for (const [path, fileData] of Object.entries(report.files)) {
     for (const m of fileData.mutants) {
       const key = m.id || mutantKey(path, m)
-      map[key] = { ...m, file: path, line: m.location?.start?.line || 0 }
+      map[key] = {
+        ...m,
+        file: path,
+        line: m.location?.start?.line || 0
+      }
     }
   }
   return map
@@ -239,7 +254,7 @@ function fileScores(report) {
   for (const [path, { mutants }] of Object.entries(report.files)) {
     const total = mutants.length
     const killed = mutants.filter(isKilled).length
-    const score = total > 0 ? (killed / total * 100) : 100
+    const score = total ? (killed / total * 100) : 100
     scores[path] = { killed, total, score }
   }
   return scores
