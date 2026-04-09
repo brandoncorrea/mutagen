@@ -754,6 +754,30 @@ describe('createManualRunner', () => {
       expect(code).toBe(1)
     })
 
+    it('main() calls process.exit with run() result', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: false, killedBy: ['t.test.js'] }
+      ])
+
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner)
+      })
+
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {})
+      const originalArgv = process.argv
+      process.argv = ['node', 'script', 'src/a.js']
+
+      await manual.main()
+
+      expect(exitSpy).toHaveBeenCalledWith(0)
+
+      process.argv = originalArgv
+      exitSpy.mockRestore()
+    })
+
     it('uses config timeout when CLI does not specify one', async () => {
       mockFs({ [resolve('src/a.js')]: sourceCode })
       const runner = fakeRunner([
