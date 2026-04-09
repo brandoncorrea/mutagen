@@ -19,9 +19,7 @@ import { SEPARATOR, createReport, writeReportFile } from '../core/report-data.js
 import { diffReports } from './diff.js'
 import { parseArgs } from './args.js'
 import { runSingle, dryRun } from './runner.js'
-import { runIncremental, HASH_PREFIX_LENGTH } from './incremental.js'
-
-export { HASH_PREFIX_LENGTH }
+import { runIncremental } from './incremental.js'
 
 /**
  * Create a manual mutation runner with project-specific config.

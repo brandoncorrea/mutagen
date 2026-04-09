@@ -13,7 +13,8 @@ vi.mock('node:fs', async (importOriginal) => {
   }
 })
 
-import { createManualRunner, HASH_PREFIX_LENGTH } from '../../cli/manual.js'
+import { createManualRunner } from '../../cli/manual.js'
+import { HASH_PREFIX_LENGTH } from '../../cli/incremental.js'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 
 const patterns = [
