@@ -99,4 +99,16 @@ describe('dryRun', () => {
     dryRun('/src/a.js', prepared, null)
     expect(writeFileSync).not.toHaveBeenCalled()
   })
+
+  it('groups and sorts mutations across multiple lines', () => {
+    readFileSync.mockReturnValue('if (a === b) {}\nconst x = 1\nif (c === d) {}')
+    const count = dryRun('/src/a.js', prepared, null)
+
+    expect(count).toBe(2)
+    const output = consoleSpy.mock.calls.map(c => c[0]).join('\n')
+    // Line 1 should appear before line 3
+    const l1Idx = output.indexOf('L1:')
+    const l3Idx = output.indexOf('L3:')
+    expect(l1Idx).toBeLessThan(l3Idx)
+  })
 })

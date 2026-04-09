@@ -741,6 +741,19 @@ describe('createManualRunner', () => {
       expect(code).toBe(1)
     })
 
+    it('returns 1 when preflight fails in single-file mode', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const runner = fakeRunner([{ passed: false }]) // preflight fails
+
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner)
+      })
+      const code = await manual.run(['src/a.js'])
+
+      expect(code).toBe(1)
+    })
+
     it('uses config timeout when CLI does not specify one', async () => {
       mockFs({ [resolve('src/a.js')]: sourceCode })
       const runner = fakeRunner([

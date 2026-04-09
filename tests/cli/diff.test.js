@@ -403,6 +403,80 @@ describe('diffReports', () => {
     expect(output).toContain('100.0%')
   })
 
+  it('prints new mutants section when all new mutants are killed', () => {
+    const before = makeReport({
+      'a.js': { mutants: [] }
+    })
+    const after = makeReport({
+      'a.js': { mutants: [makeMutant('m1', 'x', 'Killed', 5)] }
+    })
+    readFileSync
+      .mockReturnValueOnce(JSON.stringify(before))
+      .mockReturnValueOnce(JSON.stringify(after))
+
+    const result = diffReports('before.json', 'after.json')
+
+    expect(result.newMutants).toBe(1)
+    const output = console.log.mock.calls.map(c => c[0]).join('\n')
+    expect(output).toContain('NEW MUTANTS')
+    // No "SURVIVED" lines since all new mutants are killed
+    expect(output).not.toContain('SURVIVED')
+  })
+
+  it('sorts per-file deltas by score improvement including new files', () => {
+    const before = makeReport({
+      'a.js': { mutants: [makeMutant('m1', 'x', 'Survived'), makeMutant('m2', 'y', 'Survived')] }
+    })
+    const after = makeReport({
+      'a.js': { mutants: [makeMutant('m1', 'x', 'Killed'), makeMutant('m2', 'y', 'Survived')] },
+      'b.js': { mutants: [makeMutant('m3', 'z', 'Killed')] }
+    })
+    readFileSync
+      .mockReturnValueOnce(JSON.stringify(before))
+      .mockReturnValueOnce(JSON.stringify(after))
+
+    diffReports('before.json', 'after.json')
+
+    const output = console.log.mock.calls.map(c => c[0]).join('\n')
+    const perFileSection = output.slice(output.indexOf('PER-FILE CHANGES'))
+    expect(perFileSection).toContain('b.js')
+    expect(perFileSection).toContain('a.js')
+    // a.js has +50% delta, b.js is NEW (delta undefined → 0). Sort is descending by delta.
+    // a.js (+50) comes before b.js (0/NEW)
+    expect(perFileSection.indexOf('a.js')).toBeLessThan(perFileSection.indexOf('b.js'))
+  })
+
+  it('skips per-file section when no file scores changed', () => {
+    const report = makeReport({
+      'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] }
+    })
+    readFileSync
+      .mockReturnValueOnce(JSON.stringify(report))
+      .mockReturnValueOnce(JSON.stringify(report))
+
+    diffReports('before.json', 'after.json')
+
+    const output = console.log.mock.calls.map(c => c[0]).join('\n')
+    expect(output).not.toContain('PER-FILE CHANGES')
+  })
+
+  it('handles mutants with no location object', () => {
+    const mutant = { id: 'm1', mutatorName: 'x', status: 'Killed', replacement: 'y' }
+    const before = makeReport({
+      'a.js': { mutants: [mutant] }
+    })
+    const after = makeReport({
+      'a.js': { mutants: [{ ...mutant, status: 'Survived' }] }
+    })
+    readFileSync
+      .mockReturnValueOnce(JSON.stringify(before))
+      .mockReturnValueOnce(JSON.stringify(after))
+
+    const result = diffReports('before.json', 'after.json')
+
+    expect(result.regressions).toBe(1)
+  })
+
   it('falls back to mutantKey when mutant has no id', () => {
     const mutantNoId = {
       mutatorName: 'EqualityOperator',

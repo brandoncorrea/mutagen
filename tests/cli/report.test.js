@@ -58,6 +58,25 @@ describe('countStatuses', () => {
       timeout: 0
     })
   })
+
+  it('ignores unrecognized statuses', () => {
+    const report = {
+      files: {
+        'a.js': {
+          mutants: [
+            { status: 'Killed' },
+            { status: 'CompileError' },
+          ]
+        }
+      }
+    }
+    expect(countStatuses(report)).toEqual({
+      killed: 1,
+      survived: 0,
+      noCoverage: 0,
+      timeout: 0
+    })
+  })
 })
 
 describe('toJsonMutants', () => {
