@@ -652,6 +652,95 @@ describe('createManualRunner', () => {
       expect(code).toBe(1)
     })
 
+    it('returns 1 (not raw count) when multiple mutations survive in single-file mode', async () => {
+      const multiSource = 'if (a === b && c === d) {}'
+      mockFs({ [resolve('src/a.js')]: multiSource })
+      const runner = fakeRunner([
+        { passed: true },   // preflight
+        { passed: true },   // mutation 1 survived
+        { passed: true },   // mutation 2 survived
+      ])
+
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner)
+      })
+      const code = await manual.run(['src/a.js'])
+
+      expect(code).toBe(1)
+    })
+
+    it('returns 1 (not raw count) when --all has multiple survivors', async () => {
+      const multiSource = 'if (a === b && c === d) {}'
+      mockFs({ [resolve('src/a.js')]: multiSource })
+      const runner = fakeRunner([
+        { passed: true },   // preflight
+        { passed: true },   // mutation 1 survived
+        { passed: true },   // mutation 2 survived
+      ])
+
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner)
+      })
+      const code = await manual.run(['--all'])
+
+      expect(code).toBe(1)
+    })
+
+    it('returns 1 (not raw count) when --incremental has multiple survivors', async () => {
+      const multiSource = 'if (a === b && c === d) {}'
+      mockFs({ [resolve('src/a.js')]: multiSource })
+      existsSync.mockReturnValue(false)
+      const runner = fakeRunner([
+        { passed: true },   // preflight
+        { passed: true },   // mutation 1 survived
+        { passed: true },   // mutation 2 survived
+      ])
+
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner)
+      })
+      const code = await manual.run(['--incremental'])
+
+      expect(code).toBe(1)
+    })
+
+    it('returns 1 (not raw count) when --diff finds multiple regressions', async () => {
+      const before = JSON.stringify({
+        files: {
+          'a.js': {
+            mutants: [
+              { id: 'm1', mutatorName: 'x', status: 'Killed', location: { start: { line: 1 } }, replacement: 'y' },
+              { id: 'm2', mutatorName: 'x', status: 'Killed', location: { start: { line: 2 } }, replacement: 'z' },
+            ]
+          }
+        }
+      })
+      const after = JSON.stringify({
+        files: {
+          'a.js': {
+            mutants: [
+              { id: 'm1', mutatorName: 'x', status: 'Survived', location: { start: { line: 1 } }, replacement: 'y' },
+              { id: 'm2', mutatorName: 'x', status: 'Survived', location: { start: { line: 2 } }, replacement: 'z' },
+            ]
+          }
+        }
+      })
+      mockFs({
+        [resolve('before.json')]: before,
+        [resolve('after.json')]: after
+      })
+
+      const manual = createManualRunner({
+        patterns, sources: [], createRunner: vi.fn()
+      })
+      const code = await manual.run(['--diff', 'before.json', 'after.json'])
+
+      expect(code).toBe(1)
+    })
+
     it('uses config timeout when CLI does not specify one', async () => {
       mockFs({ [resolve('src/a.js')]: sourceCode })
       const runner = fakeRunner([

@@ -108,7 +108,7 @@ export function createManualRunner(config) {
     const timeout = parsed.timeout || configTimeout
     if (parsed.diffMode) {
       const result = diffReports(parsed.beforeFile, parsed.afterFile)
-      return result.regressions
+      return result.regressions > 0 ? 1 : 0
     }
     if (parsed.dryRunMode && parsed.allMode) {
       let total = 0
@@ -123,18 +123,18 @@ export function createManualRunner(config) {
     if (parsed.incrementalMode) {
       const incrementalConfig = { sources, testSources, reportDir, reportPath, runBatch }
       const { totalSurvived, failures } = await runIncremental(incrementalConfig, parsed.jsonOutput, timeout)
-      return totalSurvived + failures
+      return (totalSurvived + failures) > 0 ? 1 : 0
     }
     if (parsed.allMode) {
       const { totalSurvived, failures } = await runBatch(parsed.jsonOutput, timeout)
-      return totalSurvived + failures
+      return (totalSurvived + failures) > 0 ? 1 : 0
     }
     const result = await runSingle(
       parsed.sourceFile, prepared, createRunner, parsed.targetLine, timeout
     )
     if (result.error)
       return 1
-    return result.survived
+    return result.survived > 0 ? 1 : 0
   }
 
   return {
