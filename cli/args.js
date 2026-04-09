@@ -62,7 +62,7 @@ function argsToOptions(args) {
   let targetLine, timeout
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]
-    if (arg === '--line'){
+    if (arg === '--line') {
       targetLine = parseInt(args[++i], 10)
       if (Number.isNaN(targetLine))
         return { error: '--line requires a numeric value' }
