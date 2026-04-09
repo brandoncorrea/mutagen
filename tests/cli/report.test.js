@@ -1,5 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { mutantKey, countStatuses, toJsonMutants } from '../../core/report-data.js'
+
+vi.mock('node:fs', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    writeFileSync: vi.fn(),
+    mkdirSync: vi.fn(),
+  }
+})
+
+import { writeFileSync, mkdirSync } from 'node:fs'
+import { mutantKey, countStatuses, toJsonMutants, createReport, writeReportFile } from '../../core/report-data.js'
 import { printRunReport, printSummary } from '../../cli/report.js'
 
 describe('mutantKey', () => {
@@ -222,5 +233,59 @@ describe('printRunReport', () => {
     const output = console.log.mock.calls.map(c => c[0]).join('\n')
     expect(output).toContain('100.0%')
     console.log.mockRestore()
+  })
+})
+
+describe('createReport', () => {
+  it('builds a report with schemaVersion, thresholds, and files', () => {
+    const files = { 'a.js': { mutants: [{ status: 'Killed' }] } }
+    const report = createReport(files)
+
+    expect(report).toEqual({
+      schemaVersion: '1',
+      thresholds: { high: 80, low: 60 },
+      files
+    })
+  })
+
+  it('merges extra properties into the report', () => {
+    const files = { 'a.js': { mutants: [] } }
+    const report = createReport(files, { sourceHashes: { 'a.js': 'abc' }, testHashes: { 't.js': 'def' } })
+
+    expect(report.schemaVersion).toBe('1')
+    expect(report.thresholds).toEqual({ high: 80, low: 60 })
+    expect(report.files).toBe(files)
+    expect(report.sourceHashes).toEqual({ 'a.js': 'abc' })
+    expect(report.testHashes).toEqual({ 't.js': 'def' })
+  })
+
+  it('returns empty files when given an empty object', () => {
+    const report = createReport({})
+    expect(report.files).toEqual({})
+    expect(report.schemaVersion).toBe('1')
+  })
+})
+
+describe('writeReportFile', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.spyOn(console, 'log').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    console.log.mockRestore()
+  })
+
+  it('creates the directory, writes JSON, and logs the path', () => {
+    const report = { schemaVersion: '1', thresholds: { high: 80, low: 60 }, files: {} }
+
+    writeReportFile('reports/mutation', 'reports/mutation/report.json', report)
+
+    expect(mkdirSync).toHaveBeenCalledWith('reports/mutation', { recursive: true })
+    expect(writeFileSync).toHaveBeenCalledWith(
+      'reports/mutation/report.json',
+      JSON.stringify(report, null, 2)
+    )
+    expect(console.log).toHaveBeenCalledWith('JSON report: reports/mutation/report.json')
   })
 })

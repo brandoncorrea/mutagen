@@ -3,11 +3,11 @@
  * Tracks file hashes to skip unchanged sources between runs.
  */
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs'
+import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { resolve, relative } from 'node:path'
 
-import { SEPARATOR, isKilled } from '../core/report-data.js'
+import { SEPARATOR, isKilled, createReport, writeReportFile } from '../core/report-data.js'
 
 export const HASH_PREFIX_LENGTH = 16
 
@@ -222,14 +222,6 @@ function writeMergedReport(config, previous, classification, fileResults) {
     if (!currentRelPaths.has(key))
       delete mergedFiles[key]
 
-  mkdirSync(reportDir, { recursive: true })
-  const report = {
-    schemaVersion: '1',
-    thresholds: { high: 80, low: 60 },
-    files: mergedFiles,
-    sourceHashes: currentHashes,
-    testHashes: currentTestHashes
-  }
-  writeFileSync(reportPath, JSON.stringify(report, null, 2))
-  console.log(`JSON report: ${reportPath}`)
+  const report = createReport(mergedFiles, { sourceHashes: currentHashes, testHashes: currentTestHashes })
+  writeReportFile(reportDir, reportPath, report)
 }

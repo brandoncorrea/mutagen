@@ -3,9 +3,25 @@
  * Used by CLI, Stryker integration, and diff/incremental modules.
  */
 
+import { writeFileSync, mkdirSync } from 'node:fs'
 import { relative } from 'node:path'
 
 export const SEPARATOR = '═'.repeat(60)
+
+export function createReport(files, extra) {
+  return {
+    schemaVersion: '1',
+    thresholds: { high: 80, low: 60 },
+    files,
+    ...extra
+  }
+}
+
+export function writeReportFile(reportDir, reportPath, report) {
+  mkdirSync(reportDir, { recursive: true })
+  writeFileSync(reportPath, JSON.stringify(report, null, 2))
+  console.log(`JSON report: ${reportPath}`)
+}
 
 export function mutantKey(path, { location, mutatorName, replacement }) {
   const line = location?.start?.line || 0

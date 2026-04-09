@@ -12,11 +12,10 @@
  *   node mutate.js --diff <before.json> <after.json>
  */
 
-import { writeFileSync, mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 import { preparePatterns } from '../core/engine.js'
-import { SEPARATOR } from '../core/report-data.js'
+import { SEPARATOR, createReport, writeReportFile } from '../core/report-data.js'
 import { diffReports } from './diff.js'
 import { parseArgs } from './args.js'
 import { runSingle, dryRun } from './runner.js'
@@ -98,14 +97,7 @@ async function runBatch(ctx, jsonOutput, timeout, sourcesToRun) {
 }
 
 function writeReport(reportDir, reportPath, fileResults) {
-  mkdirSync(reportDir, { recursive: true })
-  const report = {
-    schemaVersion: '1',
-    thresholds: { high: 80, low: 60 },
-    files: fileResults
-  }
-  writeFileSync(reportPath, JSON.stringify(report, null, 2))
-  console.log(`JSON report: ${reportPath}`)
+  writeReportFile(reportDir, reportPath, createReport(fileResults))
 }
 
 function printBatchSummary(fileCount, { totalKilled, totalSurvived, totalTimedOut, failures }) {
