@@ -129,7 +129,6 @@ async function runPreflightTests(out, runner) {
   return { error: true }
 }
 
-
 function reportMutation(out, total, { number, line, name }, status) {
   out(`[${number}/${total}] Line ${line}: ${name} ... ${status}`)
 }
