@@ -135,15 +135,9 @@ describe('toJsonMutants', () => {
 })
 
 describe('printSummary', () => {
-  beforeEach(() => {
-    vi.spyOn(console, 'log').mockImplementation(() => {})
-  })
-
-  afterEach(() => {
-    console.log.mockRestore()
-  })
-
   it('prints file count, statuses, and mutation score', () => {
+    const lines = []
+    const out = msg => lines.push(msg)
     const merged = {
       files: {
         'a.js': { mutants: [{ status: 'Killed' }, { status: 'Survived' }] },
@@ -152,9 +146,9 @@ describe('printSummary', () => {
     }
     const counts = { killed: 2, survived: 1, noCoverage: 0, timeout: 0 }
 
-    printSummary(merged, counts, '/tmp/report.json')
+    printSummary(merged, counts, '/tmp/report.json', out)
 
-    const output = console.log.mock.calls.map(c => c[0]).join('\n')
+    const output = lines.join('\n')
     expect(output).toContain('Files:    2')
     expect(output).toContain('Killed:   2')
     expect(output).toContain('Survived: 1')
@@ -163,22 +157,26 @@ describe('printSummary', () => {
   })
 
   it('shows 100.0% when no mutants', () => {
+    const lines = []
+    const out = msg => lines.push(msg)
     const counts = { killed: 0, survived: 0, noCoverage: 0, timeout: 0 }
-    printSummary({ files: {} }, counts, null)
-    const output = console.log.mock.calls.map(c => c[0]).join('\n')
+    printSummary({ files: {} }, counts, null, out)
+    const output = lines.join('\n')
     expect(output).toContain('100.0%')
     expect(output).not.toContain('Report:')
   })
 
   it('includes timeout in score calculation', () => {
+    const lines = []
+    const out = msg => lines.push(msg)
     const merged = {
       files: { 'a.js': { mutants: [{ status: 'Timeout' }, { status: 'Survived' }] } }
     }
     const counts = { killed: 0, survived: 1, noCoverage: 0, timeout: 1 }
 
-    printSummary(merged, counts, null)
+    printSummary(merged, counts, null, out)
 
-    const output = console.log.mock.calls.map(c => c[0]).join('\n')
+    const output = lines.join('\n')
     expect(output).toContain('50.0%')
   })
 })
@@ -271,24 +269,20 @@ describe('createReport', () => {
 describe('writeReportFile', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.spyOn(console, 'log').mockImplementation(() => {})
-  })
-
-  afterEach(() => {
-    console.log.mockRestore()
   })
 
   it('creates the directory, writes JSON, and logs the path', () => {
     const report = { schemaVersion: '1', thresholds: { high: 80, low: 60 }, files: {} }
+    const out = vi.fn()
 
-    writeReportFile('reports/mutation', 'reports/mutation/report.json', report)
+    writeReportFile('reports/mutation', 'reports/mutation/report.json', report, out)
 
     expect(mkdirSync).toHaveBeenCalledWith('reports/mutation', { recursive: true })
     expect(writeFileSync).toHaveBeenCalledWith(
       'reports/mutation/report.json',
       JSON.stringify(report, null, 2)
     )
-    expect(console.log).toHaveBeenCalledWith('JSON report: reports/mutation/report.json')
+    expect(out).toHaveBeenCalledWith('JSON report: reports/mutation/report.json')
   })
 })
 

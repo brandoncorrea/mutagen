@@ -13,7 +13,7 @@ vi.mock('node:fs', async (importOriginal) => {
   }
 })
 
-import { createManualRunner } from '../../cli/manual.js'
+import { createManualRunner as _createManualRunner } from '../../cli/manual.js'
 import { HASH_PREFIX_LENGTH } from '../../cli/incremental.js'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 
@@ -49,9 +49,13 @@ function fakeRunner(results) {
   }
 }
 
+const noop = () => {}
+function createManualRunner(config) {
+  return _createManualRunner({ out: noop, ...config })
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.spyOn(console, 'log').mockImplementation(() => {})
   vi.spyOn(console, 'error').mockImplementation(() => {})
   existsSync.mockReturnValue(false)
 })

@@ -40,18 +40,19 @@ export function createManualRunner(config) {
     createRunner,
     reportDir = 'reports/mutation',
     reportFile = 'manual-report.json',
-    timeout: configTimeout = null
+    timeout: configTimeout = null,
+    out = console.log
   } = config
 
   const prepared = preparePatterns(patterns)
   const reportPath = `${reportDir}/${reportFile}`
-  const ctx = { prepared, sources, testSources, createRunner, reportDir, reportPath, configTimeout }
+  const ctx = { prepared, sources, testSources, createRunner, reportDir, reportPath, configTimeout, out }
 
   return {
     runBatch: (jsonOutput, timeout, sourcesToRun) =>
       runBatch(ctx, jsonOutput, timeout, sourcesToRun),
     runIncremental: (jsonOutput, timeout) =>
-      runIncremental({ sources, testSources, reportDir, reportPath, runBatch: runBatch.bind(null, ctx) }, jsonOutput, timeout),
+      runIncremental({ sources, testSources, reportDir, reportPath, runBatch: runBatch.bind(null, ctx) }, jsonOutput, timeout, out),
     run: argv => run(ctx, argv),
     async main() {
       process.exit(await run(ctx))
@@ -60,12 +61,12 @@ export function createManualRunner(config) {
 }
 
 async function runBatch(ctx, jsonOutput, timeout, sourcesToRun) {
-  const { prepared, createRunner, reportDir, reportPath, sources } = ctx
+  const { prepared, createRunner, reportDir, reportPath, sources, out } = ctx
   const filesToRun = sourcesToRun || sources
 
-  console.log(`\n${SEPARATOR}`)
-  console.log(`MUTAGEN — BATCH MODE`)
-  console.log(`   Sources: ${filesToRun.length} file(s)\n`)
+  out(`\n${SEPARATOR}`)
+  out(`MUTAGEN — BATCH MODE`)
+  out(`   Sources: ${filesToRun.length} file(s)\n`)
 
   let totalSurvived = 0
   let totalKilled = 0
@@ -74,7 +75,7 @@ async function runBatch(ctx, jsonOutput, timeout, sourcesToRun) {
   const fileResults = {}
 
   for (const source of filesToRun) {
-    const result = await runSingle({ sourceFile: resolve(source), prepared, createRunner, timeout })
+    const result = await runSingle({ sourceFile: resolve(source), prepared, createRunner, timeout, log: out })
     if (result.error) {
       failures++
     } else {
@@ -86,26 +87,26 @@ async function runBatch(ctx, jsonOutput, timeout, sourcesToRun) {
   }
 
   if (jsonOutput)
-    writeReport(reportDir, reportPath, fileResults)
+    writeReport(out, reportDir, reportPath, fileResults)
 
   const result = { totalSurvived, totalKilled, totalTimedOut, failures, fileResults }
-  printBatchSummary(filesToRun.length, result)
+  printBatchSummary(out, filesToRun.length, result)
 
   return result
 }
 
-function writeReport(reportDir, reportPath, fileResults) {
-  writeReportFile(reportDir, reportPath, createReport(fileResults))
+function writeReport(out, reportDir, reportPath, fileResults) {
+  writeReportFile(reportDir, reportPath, createReport(fileResults), out)
 }
 
-function printBatchSummary(fileCount, { totalKilled, totalSurvived, totalTimedOut, failures }) {
-  console.log(`\n${SEPARATOR}`)
-  console.log(`BATCH SUMMARY`)
-  console.log(SEPARATOR)
-  console.log(`Files: ${fileCount}  |  Killed: ${totalKilled}  |  Survived: ${totalSurvived}  |  Errors: ${failures}`)
+function printBatchSummary(out, fileCount, { totalKilled, totalSurvived, totalTimedOut, failures }) {
+  out(`\n${SEPARATOR}`)
+  out(`BATCH SUMMARY`)
+  out(SEPARATOR)
+  out(`Files: ${fileCount}  |  Killed: ${totalKilled}  |  Survived: ${totalSurvived}  |  Errors: ${failures}`)
   if (totalTimedOut)
-    console.log(`Timed out: ${totalTimedOut} (counted as killed)`)
-  console.log(`${SEPARATOR}\n`)
+    out(`Timed out: ${totalTimedOut} (counted as killed)`)
+  out(`${SEPARATOR}\n`)
 }
 
 async function run(ctx, argv) {
@@ -118,11 +119,11 @@ async function run(ctx, argv) {
   const timeout = parsed.timeout || ctx.configTimeout
 
   if (parsed.diffMode)
-    return diffReports(parsed.beforeFile, parsed.afterFile).regressions ? 1 : 0
+    return diffReports(parsed.beforeFile, parsed.afterFile, ctx.out).regressions ? 1 : 0
   if (parsed.dryRunMode && parsed.allMode)
     return runAllDryRun(ctx)
   if (parsed.dryRunMode)
-    return dryRun(parsed.sourceFile, ctx.prepared, parsed.targetLine) && 0
+    return dryRun(parsed.sourceFile, ctx.prepared, parsed.targetLine, ctx.out) && 0
   if (parsed.incrementalMode)
     return runIncrementalMode(ctx, parsed.jsonOutput, timeout)
   if (parsed.allMode)
@@ -130,17 +131,17 @@ async function run(ctx, argv) {
   return runSingleMode(ctx, parsed, timeout)
 }
 
-function runAllDryRun({ sources, prepared }) {
+function runAllDryRun({ sources, prepared, out }) {
   let total = 0
-  for (const source of sources) total += dryRun(resolve(source), prepared, null)
-  console.log(`\n  Grand total: ${total} mutations across ${sources.length} files`)
+  for (const source of sources) total += dryRun(resolve(source), prepared, null, out)
+  out(`\n  Grand total: ${total} mutations across ${sources.length} files`)
   return 0
 }
 
 async function runIncrementalMode(ctx, jsonOutput, timeout) {
-  const { sources, testSources, reportDir, reportPath } = ctx
+  const { sources, testSources, reportDir, reportPath, out } = ctx
   const incrementalConfig = { sources, testSources, reportDir, reportPath, runBatch: runBatch.bind(null, ctx) }
-  const { totalSurvived, failures } = await runIncremental(incrementalConfig, jsonOutput, timeout)
+  const { totalSurvived, failures } = await runIncremental(incrementalConfig, jsonOutput, timeout, out)
   return (totalSurvived + failures) ? 1 : 0
 }
 
@@ -155,7 +156,8 @@ async function runSingleMode(ctx, parsed, timeout) {
     prepared: ctx.prepared,
     createRunner: ctx.createRunner,
     targetLine: parsed.targetLine,
-    timeout
+    timeout,
+    log: ctx.out
   })
   if (result.error) return 1
   return result.survived ? 1 : 0

@@ -10,11 +10,6 @@ import { combineReportData, diffReports } from '../../cli/diff.js'
 describe('combineReportData', () => {
   beforeEach(() => {
     readFileSync.mockReset()
-    vi.spyOn(console, 'log').mockImplementation(() => {})
-  })
-
-  afterEach(() => {
-    console.log.mockRestore()
   })
 
   it('merges mutants from multiple report files', () => {
@@ -52,7 +47,7 @@ describe('combineReportData', () => {
       .mockReturnValueOnce(JSON.stringify(report1))
       .mockReturnValueOnce(JSON.stringify(report2))
 
-    const merged = combineReportData(['file1.json', 'file2.json'])
+    const merged = combineReportData(['file1.json', 'file2.json'], () => {})
 
     expect(Object.keys(merged.files)).toEqual(['a.js', 'b.js'])
     expect(merged.files['a.js'].mutants).toHaveLength(1)
@@ -77,28 +72,43 @@ describe('combineReportData', () => {
       .mockReturnValueOnce(JSON.stringify(report))
       .mockReturnValueOnce(JSON.stringify(report))
 
-    const merged = combineReportData(['file1.json', 'file2.json'])
+    const out = vi.fn()
+    const merged = combineReportData(['file1.json', 'file2.json'], out)
 
     expect(merged.files['a.js'].mutants).toHaveLength(1)
-    expect(console.log.mock.calls.some(c => c[0].includes('Deduplicated'))).toBe(true)
+    expect(out).toHaveBeenCalledWith(expect.stringContaining('Deduplicated'))
   })
 
   it('handles unreadable files gracefully', () => {
     readFileSync.mockImplementation(() => { throw new Error('ENOENT') })
-
-    const merged = combineReportData(['bad.json'])
-
-    expect(Object.keys(merged.files)).toHaveLength(0)
-    expect(console.log.mock.calls.some(c => c[0].includes('Warning'))).toBe(true)
-  })
-
-  it('routes warnings through injected out', () => {
-    readFileSync.mockImplementation(() => { throw new Error('ENOENT') })
     const out = vi.fn()
 
-    combineReportData(['bad.json'], out)
+    const merged = combineReportData(['bad.json'], out)
 
+    expect(Object.keys(merged.files)).toHaveLength(0)
     expect(out).toHaveBeenCalledWith(expect.stringContaining('Warning'))
+  })
+
+  it('routes deduplication message through injected out', () => {
+    const mutant = {
+      location: { start: { line: 1 } },
+      mutatorName: 'x',
+      replacement: 'y',
+      status: 'Killed'
+    }
+    const report = {
+      files: {
+        'a.js': { language: 'javascript', mutants: [mutant] }
+      }
+    }
+    readFileSync
+      .mockReturnValueOnce(JSON.stringify(report))
+      .mockReturnValueOnce(JSON.stringify(report))
+
+    const out = vi.fn()
+    combineReportData(['file1.json', 'file2.json'], out)
+
+    expect(out).toHaveBeenCalledWith(expect.stringContaining('Deduplicated'))
   })
 
   it('merges mutants into the same file from different reports', () => {
@@ -136,25 +146,24 @@ describe('combineReportData', () => {
       .mockReturnValueOnce(JSON.stringify(report1))
       .mockReturnValueOnce(JSON.stringify(report2))
 
-    const merged = combineReportData(['file1.json', 'file2.json'])
+    const merged = combineReportData(['file1.json', 'file2.json'], () => {})
 
     expect(merged.files['a.js'].mutants).toHaveLength(2)
   })
 
   it('returns empty files for empty input', () => {
-    const merged = combineReportData([])
+    const merged = combineReportData([], () => {})
     expect(Object.keys(merged.files)).toHaveLength(0)
   })
 })
 
 describe('diffReports', () => {
+  let lines, out
+
   beforeEach(() => {
     readFileSync.mockReset()
-    vi.spyOn(console, 'log').mockImplementation(() => {})
-  })
-
-  afterEach(() => {
-    console.log.mockRestore()
+    lines = []
+    out = msg => lines.push(msg)
   })
 
   function makeReport(files) {
@@ -175,6 +184,8 @@ describe('diffReports', () => {
     }
   }
 
+  function output() { return lines.join('\n') }
+
   it('detects newly killed mutants (Survived → Killed)', () => {
     const before = makeReport({
       'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Survived', 5)] }
@@ -186,12 +197,11 @@ describe('diffReports', () => {
       .mockReturnValueOnce(JSON.stringify(before))
       .mockReturnValueOnce(JSON.stringify(after))
 
-    const result = diffReports('before.json', 'after.json')
+    const result = diffReports('before.json', 'after.json', out)
 
     expect(result.newlyKilled).toBe(1)
     expect(result.regressions).toBe(0)
-    const output = console.log.mock.calls.map(c => c[0]).join('\n')
-    expect(output).toContain('NEWLY KILLED')
+    expect(output()).toContain('NEWLY KILLED')
   })
 
   it('detects regressions (Killed → Survived)', () => {
@@ -205,12 +215,11 @@ describe('diffReports', () => {
       .mockReturnValueOnce(JSON.stringify(before))
       .mockReturnValueOnce(JSON.stringify(after))
 
-    const result = diffReports('before.json', 'after.json')
+    const result = diffReports('before.json', 'after.json', out)
 
     expect(result.regressions).toBe(1)
     expect(result.newlyKilled).toBe(0)
-    const output = console.log.mock.calls.map(c => c[0]).join('\n')
-    expect(output).toContain('REGRESSIONS')
+    expect(output()).toContain('REGRESSIONS')
   })
 
   it('detects new mutants (present only in after)', () => {
@@ -229,11 +238,10 @@ describe('diffReports', () => {
       .mockReturnValueOnce(JSON.stringify(before))
       .mockReturnValueOnce(JSON.stringify(after))
 
-    const result = diffReports('before.json', 'after.json')
+    const result = diffReports('before.json', 'after.json', out)
 
     expect(result.newMutants).toBe(1)
-    const output = console.log.mock.calls.map(c => c[0]).join('\n')
-    expect(output).toContain('NEW MUTANTS')
+    expect(output()).toContain('NEW MUTANTS')
   })
 
   it('detects removed mutants (present only in before)', () => {
@@ -252,11 +260,10 @@ describe('diffReports', () => {
       .mockReturnValueOnce(JSON.stringify(before))
       .mockReturnValueOnce(JSON.stringify(after))
 
-    const result = diffReports('before.json', 'after.json')
+    const result = diffReports('before.json', 'after.json', out)
 
     expect(result.removedMutants).toBe(1)
-    const output = console.log.mock.calls.map(c => c[0]).join('\n')
-    expect(output).toContain('REMOVED MUTANTS')
+    expect(output()).toContain('REMOVED MUTANTS')
   })
 
   it('prints overall score delta', () => {
@@ -276,12 +283,11 @@ describe('diffReports', () => {
       .mockReturnValueOnce(JSON.stringify(before))
       .mockReturnValueOnce(JSON.stringify(after))
 
-    diffReports('before.json', 'after.json')
+    diffReports('before.json', 'after.json', out)
 
-    const output = console.log.mock.calls.map(c => c[0]).join('\n')
-    expect(output).toContain('50.0%')
-    expect(output).toContain('100.0%')
-    expect(output).toContain('+50.0%')
+    expect(output()).toContain('50.0%')
+    expect(output()).toContain('100.0%')
+    expect(output()).toContain('+50.0%')
   })
 
   it('shows per-file score changes', () => {
@@ -295,11 +301,10 @@ describe('diffReports', () => {
       .mockReturnValueOnce(JSON.stringify(before))
       .mockReturnValueOnce(JSON.stringify(after))
 
-    diffReports('before.json', 'after.json')
+    diffReports('before.json', 'after.json', out)
 
-    const output = console.log.mock.calls.map(c => c[0]).join('\n')
-    expect(output).toContain('PER-FILE CHANGES')
-    expect(output).toContain('a.js')
+    expect(output()).toContain('PER-FILE CHANGES')
+    expect(output()).toContain('a.js')
   })
 
   it('formats per-file delta to one decimal place', () => {
@@ -321,11 +326,10 @@ describe('diffReports', () => {
       .mockReturnValueOnce(JSON.stringify(before))
       .mockReturnValueOnce(JSON.stringify(after))
 
-    diffReports('before.json', 'after.json')
+    diffReports('before.json', 'after.json', out)
 
-    const output = console.log.mock.calls.map(c => c[0]).join('\n')
-    expect(output).toContain('+33.3%')
-    expect(output).not.toMatch(/\+33\.33/)
+    expect(output()).toContain('+33.3%')
+    expect(output()).not.toMatch(/\+33\.33/)
   })
 
   it('reports identical reports with no changes', () => {
@@ -336,7 +340,7 @@ describe('diffReports', () => {
       .mockReturnValueOnce(JSON.stringify(report))
       .mockReturnValueOnce(JSON.stringify(report))
 
-    const result = diffReports('before.json', 'after.json')
+    const result = diffReports('before.json', 'after.json', out)
 
     expect(result.newlyKilled).toBe(0)
     expect(result.regressions).toBe(0)
@@ -356,12 +360,11 @@ describe('diffReports', () => {
       .mockReturnValueOnce(JSON.stringify(before))
       .mockReturnValueOnce(JSON.stringify(after))
 
-    diffReports('before.json', 'after.json')
+    diffReports('before.json', 'after.json', out)
 
-    const output = console.log.mock.calls.map(c => c[0]).join('\n')
-    expect(output).toContain('PER-FILE CHANGES')
-    expect(output).toContain('b.js')
-    expect(output).toContain('NEW')
+    expect(output()).toContain('PER-FILE CHANGES')
+    expect(output()).toContain('b.js')
+    expect(output()).toContain('NEW')
   })
 
   it('handles removed files in after report', () => {
@@ -376,11 +379,10 @@ describe('diffReports', () => {
       .mockReturnValueOnce(JSON.stringify(before))
       .mockReturnValueOnce(JSON.stringify(after))
 
-    diffReports('before.json', 'after.json')
+    diffReports('before.json', 'after.json', out)
 
-    const output = console.log.mock.calls.map(c => c[0]).join('\n')
-    expect(output).toContain('PER-FILE CHANGES')
-    expect(output).toContain('REMOVED')
+    expect(output()).toContain('PER-FILE CHANGES')
+    expect(output()).toContain('REMOVED')
   })
 
   it('treats NoCoverage as alive for regression detection', () => {
@@ -394,7 +396,7 @@ describe('diffReports', () => {
       .mockReturnValueOnce(JSON.stringify(before))
       .mockReturnValueOnce(JSON.stringify(after))
 
-    const result = diffReports('before.json', 'after.json')
+    const result = diffReports('before.json', 'after.json', out)
 
     expect(result.regressions).toBe(1)
   })
@@ -406,10 +408,9 @@ describe('diffReports', () => {
       .mockReturnValueOnce(JSON.stringify(before))
       .mockReturnValueOnce(JSON.stringify(after))
 
-    diffReports('before.json', 'after.json')
+    diffReports('before.json', 'after.json', out)
 
-    const output = console.log.mock.calls.map(c => c[0]).join('\n')
-    expect(output).toContain('100.0%')
+    expect(output()).toContain('100.0%')
   })
 
   it('prints new mutants section when all new mutants are killed', () => {
@@ -423,20 +424,15 @@ describe('diffReports', () => {
       .mockReturnValueOnce(JSON.stringify(before))
       .mockReturnValueOnce(JSON.stringify(after))
 
-    const result = diffReports('before.json', 'after.json')
+    const result = diffReports('before.json', 'after.json', out)
 
     expect(result.newMutants).toBe(1)
-    const output = console.log.mock.calls.map(c => c[0]).join('\n')
-    expect(output).toContain('NEW MUTANTS')
+    expect(output()).toContain('NEW MUTANTS')
     // No "SURVIVED" lines since all new mutants are killed
-    expect(output).not.toContain('SURVIVED')
+    expect(output()).not.toContain('SURVIVED')
   })
 
   it('sorts REMOVED files after positive-delta files via || 0 fallback', () => {
-    // removed.js enters the Set from beforeScores (first in spread), so it
-    // appears BEFORE changed.js. Without || 0, the sort comparator produces
-    // NaN and V8 preserves input order → REMOVED first (wrong).
-    // With || 0, undefined becomes 0, arithmetic works, sort moves REMOVED after +delta.
     const before = makeReport({
       'removed.js': { mutants: [makeMutant('m1', 'x', 'Killed')] },
       'changed.js': { mutants: [makeMutant('m2', 'y', 'Survived')] }
@@ -448,18 +444,13 @@ describe('diffReports', () => {
       .mockReturnValueOnce(JSON.stringify(before))
       .mockReturnValueOnce(JSON.stringify(after))
 
-    diffReports('before.json', 'after.json')
+    diffReports('before.json', 'after.json', out)
 
-    const output = console.log.mock.calls.map(c => c[0]).join('\n')
-    const perFileSection = output.slice(output.indexOf('PER-FILE CHANGES'))
-    // changed.js (+100% delta) must sort before removed.js (no delta → 0)
+    const perFileSection = output().slice(output().indexOf('PER-FILE CHANGES'))
     expect(perFileSection.indexOf('changed.js')).toBeLessThan(perFileSection.indexOf('removed.js'))
   })
 
   it('sorts per-file deltas descending, using 0 for NEW files', () => {
-    // 3 files: c.js improved +100%, a.js improved +50%, b.js is NEW (no delta)
-    // Sort descending by delta: c.js (+100), a.js (+50), b.js (NEW → 0)
-    // Without || 0, b.js delta is undefined → NaN → sort is unstable
     const before = makeReport({
       'a.js': { mutants: [makeMutant('m1', 'x', 'Survived'), makeMutant('m2', 'y', 'Survived')] },
       'c.js': { mutants: [makeMutant('m4', 'w', 'Survived')] }
@@ -473,22 +464,17 @@ describe('diffReports', () => {
       .mockReturnValueOnce(JSON.stringify(before))
       .mockReturnValueOnce(JSON.stringify(after))
 
-    diffReports('before.json', 'after.json')
+    diffReports('before.json', 'after.json', out)
 
-    const output = console.log.mock.calls.map(c => c[0]).join('\n')
-    const perFileSection = output.slice(output.indexOf('PER-FILE CHANGES'))
+    const perFileSection = output().slice(output().indexOf('PER-FILE CHANGES'))
     const cIdx = perFileSection.indexOf('c.js')
     const aIdx = perFileSection.indexOf('a.js')
     const bIdx = perFileSection.indexOf('b.js')
-    // c.js (+100%) before a.js (+50%) before b.js (NEW, delta 0)
     expect(cIdx).toBeLessThan(aIdx)
     expect(aIdx).toBeLessThan(bIdx)
   })
 
   it('sorts NEW files before negative-delta files (delta: 0 vs undefined)', () => {
-    // worsened.js enters Set first (from beforeScores), new.js second (from afterScores).
-    // Sort descending: new.js (delta:0) should appear before worsened.js (delta:-50).
-    // Without delta:0 on NEW, undefined - (-50) = NaN → no swap → worsened stays first (wrong).
     const before = makeReport({
       'worsened.js': { mutants: [makeMutant('m1', 'x', 'Killed'), makeMutant('m2', 'y', 'Killed')] }
     })
@@ -500,11 +486,9 @@ describe('diffReports', () => {
       .mockReturnValueOnce(JSON.stringify(before))
       .mockReturnValueOnce(JSON.stringify(after))
 
-    diffReports('before.json', 'after.json')
+    diffReports('before.json', 'after.json', out)
 
-    const output = console.log.mock.calls.map(c => c[0]).join('\n')
-    const perFileSection = output.slice(output.indexOf('PER-FILE CHANGES'))
-    // new.js (delta: 0) should sort before worsened.js (delta: -50) in descending order
+    const perFileSection = output().slice(output().indexOf('PER-FILE CHANGES'))
     expect(perFileSection.indexOf('new.js')).toBeLessThan(perFileSection.indexOf('worsened.js'))
   })
 
@@ -516,10 +500,9 @@ describe('diffReports', () => {
       .mockReturnValueOnce(JSON.stringify(report))
       .mockReturnValueOnce(JSON.stringify(report))
 
-    diffReports('before.json', 'after.json')
+    diffReports('before.json', 'after.json', out)
 
-    const output = console.log.mock.calls.map(c => c[0]).join('\n')
-    expect(output).not.toContain('PER-FILE CHANGES')
+    expect(output()).not.toContain('PER-FILE CHANGES')
   })
 
   it('handles mutants with no location object', () => {
@@ -534,7 +517,7 @@ describe('diffReports', () => {
       .mockReturnValueOnce(JSON.stringify(before))
       .mockReturnValueOnce(JSON.stringify(after))
 
-    const result = diffReports('before.json', 'after.json')
+    const result = diffReports('before.json', 'after.json', out)
 
     expect(result.regressions).toBe(1)
   })
@@ -556,7 +539,7 @@ describe('diffReports', () => {
       .mockReturnValueOnce(JSON.stringify(before))
       .mockReturnValueOnce(JSON.stringify(after))
 
-    const result = diffReports('before.json', 'after.json')
+    const result = diffReports('before.json', 'after.json', out)
 
     expect(result.newlyKilled).toBe(1)
   })

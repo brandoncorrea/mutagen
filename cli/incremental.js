@@ -45,22 +45,22 @@ function countCachedMutation(results, mutation) {
  * @param {boolean} jsonOutput - whether to write JSON report
  * @param {number} timeout - per-mutation timeout in ms
  */
-export async function runIncremental(config, jsonOutput, timeout) {
+export async function runIncremental(config, jsonOutput, timeout, out = console.log) {
   const { sources, testSources, reportPath, runBatch } = config
-  const previous = loadPreviousReport(reportPath)
+  const previous = loadPreviousReport(reportPath, out)
   const classification = classifyAllSources(sources, testSources, previous)
 
-  printIncrementalHeader(sources, classification)
+  printIncrementalHeader(out, sources, classification)
 
   if (!classification.changedSources.length)
-    return handleAllCached(config, previous, classification, jsonOutput)
+    return handleAllCached(out, config, previous, classification, jsonOutput)
 
   const batchResult = await runBatch(false, timeout, classification.changedSources)
 
   if (jsonOutput)
-    writeMergedReport(config, previous, classification, batchResult.fileResults)
+    writeMergedReport(out, config, previous, classification, batchResult.fileResults)
 
-  return printIncrementalSummary(batchResult, sources, previous, classification)
+  return printIncrementalSummary(out, batchResult, sources, previous, classification)
 }
 
 function classifyAllSources(sources, testSources, previous) {
@@ -147,41 +147,41 @@ function isInvalidatedMutant(mutant, changedTestAbs) {
     || mutant.status === 'Survived'
 }
 
-function printIncrementalSummary(batchResult, sources, previous, classification) {
+function printIncrementalSummary(out, batchResult, sources, previous, classification) {
   const { totalSurvived, totalKilled, failures } = batchResult
   const { unchangedSources, changedSources } = classification
   const cachedCounts = countCachedResults(previous.previousReport, unchangedSources)
   const grandKilled = totalKilled + cachedCounts.killed
   const grandSurvived = totalSurvived + cachedCounts.survived
 
-  console.log(`\n${SEPARATOR}`)
-  console.log(`INCREMENTAL SUMMARY`)
-  console.log(SEPARATOR)
-  console.log(`Rerun: ${changedSources.length} files  |  Killed: ${totalKilled}  |  Survived: ${totalSurvived}  |  Errors: ${failures}`)
-  console.log(`Cached: ${unchangedSources.length} files  |  Killed: ${cachedCounts.killed}  |  Survived: ${cachedCounts.survived}`)
-  console.log(`Total: ${sources.length} files  |  Killed: ${grandKilled}  |  Survived: ${grandSurvived}`)
-  console.log(`${SEPARATOR}\n`)
+  out(`\n${SEPARATOR}`)
+  out(`INCREMENTAL SUMMARY`)
+  out(SEPARATOR)
+  out(`Rerun: ${changedSources.length} files  |  Killed: ${totalKilled}  |  Survived: ${totalSurvived}  |  Errors: ${failures}`)
+  out(`Cached: ${unchangedSources.length} files  |  Killed: ${cachedCounts.killed}  |  Survived: ${cachedCounts.survived}`)
+  out(`Total: ${sources.length} files  |  Killed: ${grandKilled}  |  Survived: ${grandSurvived}`)
+  out(`${SEPARATOR}\n`)
 
   return { totalSurvived: grandSurvived, totalKilled: grandKilled, failures }
 }
 
-function printIncrementalHeader(sources, classification) {
+function printIncrementalHeader(out, sources, classification) {
   const { changedSources, unchangedSources, changedTestFiles, testInvalidated } = classification
-  console.log(`\n${SEPARATOR}`)
-  console.log(`MUTAGEN — INCREMENTAL MODE`)
-  console.log(SEPARATOR)
-  console.log(`Total sources: ${sources.length}`)
-  console.log(`Changed/new:   ${changedSources.length}${testInvalidated.size ? ` (${testInvalidated.size} from test changes)` : ''}`)
-  console.log(`Cached:        ${unchangedSources.length}`)
+  out(`\n${SEPARATOR}`)
+  out(`MUTAGEN — INCREMENTAL MODE`)
+  out(SEPARATOR)
+  out(`Total sources: ${sources.length}`)
+  out(`Changed/new:   ${changedSources.length}${testInvalidated.size ? ` (${testInvalidated.size} from test changes)` : ''}`)
+  out(`Cached:        ${unchangedSources.length}`)
   if (changedTestFiles.length)
-    console.log(`Changed tests: ${changedTestFiles.length}`)
+    out(`Changed tests: ${changedTestFiles.length}`)
 }
 
-function handleAllCached(config, previous, classification, jsonOutput) {
+function handleAllCached(out, config, previous, classification, jsonOutput) {
   const { sources, reportPath } = config
   const { unchangedSources, currentHashes, currentTestHashes } = classification
 
-  console.log(`\nNo files changed since last report. Nothing to do.`)
+  out(`\nNo files changed since last report. Nothing to do.`)
 
   if (jsonOutput && previous.previousReport) {
     previous.previousReport.sourceHashes = currentHashes
@@ -190,15 +190,15 @@ function handleAllCached(config, previous, classification, jsonOutput) {
   }
 
   const cachedCounts = countCachedResults(previous.previousReport, unchangedSources)
-  console.log(`\n${SEPARATOR}`)
-  console.log(`INCREMENTAL SUMMARY (all cached)`)
-  console.log(SEPARATOR)
-  console.log(`Files: ${sources.length}  |  Killed: ${cachedCounts.killed}  |  Survived: ${cachedCounts.survived}  |  Rerun: 0`)
-  console.log(`${SEPARATOR}\n`)
+  out(`\n${SEPARATOR}`)
+  out(`INCREMENTAL SUMMARY (all cached)`)
+  out(SEPARATOR)
+  out(`Files: ${sources.length}  |  Killed: ${cachedCounts.killed}  |  Survived: ${cachedCounts.survived}  |  Rerun: 0`)
+  out(`${SEPARATOR}\n`)
   return { totalSurvived: cachedCounts.survived, totalKilled: cachedCounts.killed, failures: 0 }
 }
 
-function writeMergedReport(config, previous, classification, fileResults) {
+function writeMergedReport(out, config, previous, classification, fileResults) {
   const { sources, reportDir, reportPath } = config
   const { unchangedSources, currentHashes, currentTestHashes } = classification
   const mergedFiles = { ...fileResults }
@@ -214,5 +214,5 @@ function writeMergedReport(config, previous, classification, fileResults) {
       delete mergedFiles[key]
 
   const report = createReport(mergedFiles, { sourceHashes: currentHashes, testHashes: currentTestHashes })
-  writeReportFile(reportDir, reportPath, report)
+  writeReportFile(reportDir, reportPath, report, out)
 }

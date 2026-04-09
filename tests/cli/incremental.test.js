@@ -16,19 +16,14 @@ vi.mock('node:fs', async () => {
 })
 
 describe('loadPreviousReport', () => {
-  beforeEach(() => {
-    vi.spyOn(console, 'log').mockImplementation(() => {})
-  })
-
   afterEach(() => {
-    console.log.mockRestore()
     vi.restoreAllMocks()
   })
 
   it('returns defaults when report file does not exist', () => {
     existsSync.mockReturnValue(false)
 
-    const result = loadPreviousReport('/tmp/report.json')
+    const result = loadPreviousReport('/tmp/report.json', () => {})
 
     expect(result.previousReport).toBeFalsy()
     expect(result.previousHashes).toEqual({})
@@ -44,7 +39,7 @@ describe('loadPreviousReport', () => {
     existsSync.mockReturnValue(true)
     readFileSync.mockReturnValue(JSON.stringify(report))
 
-    const result = loadPreviousReport('/tmp/report.json')
+    const result = loadPreviousReport('/tmp/report.json', () => {})
 
     expect(result.previousReport).toEqual(report)
     expect(result.previousHashes).toEqual({ 'a.js': 'abc123' })
@@ -55,10 +50,9 @@ describe('loadPreviousReport', () => {
     existsSync.mockReturnValue(true)
     readFileSync.mockReturnValue(JSON.stringify({
       files: { 'a.js': { mutants: [{ status: 'Killed' }] } }
-      // no sourceHashes or testHashes fields
     }))
 
-    const result = loadPreviousReport('/tmp/report.json')
+    const result = loadPreviousReport('/tmp/report.json', () => {})
 
     expect(result.previousReport).toBeDefined()
     expect(result.previousHashes).toEqual({})
@@ -68,15 +62,14 @@ describe('loadPreviousReport', () => {
   it('warns when report file contains corrupt JSON', () => {
     existsSync.mockReturnValue(true)
     readFileSync.mockReturnValue('not valid json {{{')
+    const out = vi.fn()
 
-    const result = loadPreviousReport('/tmp/report.json')
+    const result = loadPreviousReport('/tmp/report.json', out)
 
     expect(result.previousReport).toBeFalsy()
     expect(result.previousHashes).toEqual({})
     expect(result.previousTestHashes).toEqual({})
-    expect(console.log).toHaveBeenCalledWith(
-      expect.stringContaining('report.json')
-    )
+    expect(out).toHaveBeenCalledWith(expect.stringContaining('report.json'))
   })
 
   it('routes warnings through injected out', () => {
@@ -170,6 +163,7 @@ describe('countCachedResults', () => {
 
 describe('runIncremental', () => {
   const sourceCode = 'if (a === b) {}'
+  const noop = () => {}
 
   function hashOf(content) {
     return createHash('sha256').update(Buffer.from(content)).digest('hex').slice(0, HASH_PREFIX_LENGTH)
@@ -177,11 +171,6 @@ describe('runIncremental', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.spyOn(console, 'log').mockImplementation(() => {})
-  })
-
-  afterEach(() => {
-    console.log.mockRestore()
   })
 
   it('carries forward unchanged file results and skips unchanged test hashes', async () => {
@@ -225,7 +214,8 @@ describe('runIncremental', () => {
         runBatch: fakeRunBatch,
       },
       true,
-      null
+      null,
+      noop
     )
 
     // Only src/b.js should be rerun (changed hash), src/a.js cached
@@ -277,7 +267,8 @@ describe('runIncremental', () => {
         runBatch: fakeRunBatch,
       },
       false,
-      null
+      null,
+      noop
     )
 
     // Source hash matches but test changed. However, killedBy doesn't match
@@ -310,7 +301,8 @@ describe('runIncremental', () => {
         runBatch: fakeRunBatch,
       },
       true,
-      null
+      null,
+      noop
     )
 
     const reportCalls = writeFileSync.mock.calls.filter(([p]) => p === 'reports/report.json')
@@ -362,7 +354,8 @@ describe('runIncremental', () => {
         runBatch: fakeRunBatch,
       },
       true,
-      null
+      null,
+      noop
     )
 
     // Only c.js should be rerun
@@ -411,7 +404,8 @@ describe('runIncremental', () => {
         runBatch: fakeRunBatch,
       },
       true, // jsonOutput
-      null
+      null,
+      noop
     )
 
     const reportCalls = writeFileSync.mock.calls.filter(([p]) => p === 'reports/report.json')

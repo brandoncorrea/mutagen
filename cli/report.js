@@ -5,22 +5,22 @@
 
 import { SEPARATOR } from '../core/report-data.js'
 
-export function printSummary(merged, counts, reportPath) {
+export function printSummary(merged, counts, reportPath, out = console.log) {
   const { killed, survived, noCoverage, timeout } = counts
   const total = killed + survived + noCoverage + timeout
   const score = total ? ((killed + timeout) / total * 100).toFixed(1) : '100.0'
 
-  console.log(`\n${SEPARATOR}`)
-  console.log(`MUTATION REPORT`)
-  console.log(SEPARATOR)
-  console.log(`Files:    ${Object.keys(merged.files).length}`)
-  console.log(`Killed:   ${killed}`)
-  console.log(`Survived: ${survived}`)
-  console.log(`No cov:   ${noCoverage}`)
-  console.log(`Timeout:  ${timeout}`)
-  console.log(`Score:    ${score}%`)
-  if (reportPath) console.log(`Report:   ${reportPath}`)
-  console.log(`${SEPARATOR}\n`)
+  out(`\n${SEPARATOR}`)
+  out(`MUTATION REPORT`)
+  out(SEPARATOR)
+  out(`Files:    ${Object.keys(merged.files).length}`)
+  out(`Killed:   ${killed}`)
+  out(`Survived: ${survived}`)
+  out(`No cov:   ${noCoverage}`)
+  out(`Timeout:  ${timeout}`)
+  out(`Score:    ${score}%`)
+  if (reportPath) out(`Report:   ${reportPath}`)
+  out(`${SEPARATOR}\n`)
 }
 
 const HR = '─'.repeat(60)

@@ -17,10 +17,10 @@ export function createReport(files, extra) {
   }
 }
 
-export function writeReportFile(reportDir, reportPath, report) {
+export function writeReportFile(reportDir, reportPath, report, out = console.log) {
   mkdirSync(reportDir, { recursive: true })
   writeFileSync(reportPath, JSON.stringify(report, null, 2))
-  console.log(`JSON report: ${reportPath}`)
+  out(`JSON report: ${reportPath}`)
 }
 
 export function tryLoadJson(path, out) {

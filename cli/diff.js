@@ -11,7 +11,7 @@ export function combineReportData(files, out = console.log) {
   const { mergedFiles, duplicates } = deduplicateMutants(loadAllEntries(files, out))
 
   if (duplicates)
-    console.log(`  Deduplicated: ${duplicates} duplicate mutant(s) removed`)
+    out(`  Deduplicated: ${duplicates} duplicate mutant(s) removed`)
 
   return createReport(mergedFiles)
 }
@@ -50,14 +50,14 @@ function deduplicateMutants(entries) {
  * @param {string} beforeFile - path to the baseline report JSON
  * @param {string} afterFile - path to the new report JSON
  */
-export function diffReports(beforeFile, afterFile) {
+export function diffReports(beforeFile, afterFile, out = console.log) {
   const before = loadJson(beforeFile)
   const after = loadJson(afterFile)
 
   const changes = classifyChanges(before, after)
   const fileDeltas = computeFileDeltas(before, after)
 
-  printDiffReport({ beforeFile, afterFile, before, after }, changes, fileDeltas)
+  printDiffReport({ beforeFile, afterFile, before, after }, changes, fileDeltas, out)
 
   return {
     newlyKilled: changes.newlyKilled.length,
@@ -134,23 +134,23 @@ function computeFileDelta(beforeScores, afterScores, file) {
     return { file, before, after, delta }
 }
 
-function printDiffReport({ beforeFile, afterFile, before, after }, changes, fileDeltas) {
-  console.log(`\n${SEPARATOR}`)
-  console.log(`MUTATION DIFF`)
-  console.log(`${SEPARATOR}`)
-  console.log(`Before: ${beforeFile}`)
-  console.log(`After:  ${afterFile}\n`)
+function printDiffReport({ beforeFile, afterFile, before, after }, changes, fileDeltas, out) {
+  out(`\n${SEPARATOR}`)
+  out(`MUTATION DIFF`)
+  out(`${SEPARATOR}`)
+  out(`Before: ${beforeFile}`)
+  out(`After:  ${afterFile}\n`)
 
-  printDiffSummary(before, after)
-  printCategory('✓ NEWLY KILLED', changes.newlyKilled)
-  printCategory('✗ REGRESSIONS', changes.regressions)
-  printNewMutants(changes.newMutants)
-  printRemovedMutants(changes.removedMutants)
-  printFileDeltas(fileDeltas)
-  console.log(`\n${SEPARATOR}\n`)
+  printDiffSummary(out, before, after)
+  printCategory(out, '✓ NEWLY KILLED', changes.newlyKilled)
+  printCategory(out, '✗ REGRESSIONS', changes.regressions)
+  printNewMutants(out, changes.newMutants)
+  printRemovedMutants(out, changes.removedMutants)
+  printFileDeltas(out, fileDeltas)
+  out(`\n${SEPARATOR}\n`)
 }
 
-function printDiffSummary(before, after) {
+function printDiffSummary(out, before, after) {
   const bCounts = countStatuses(before)
   const aCounts = countStatuses(after)
   const bTotal = totalCounts(bCounts)
@@ -159,48 +159,48 @@ function printDiffSummary(before, after) {
   const aScore = scoreCounts(aCounts, aTotal)
   const delta = aScore - bScore
 
-  console.log(`Overall: ${formatTenth(bScore)}% → ${formatTenth(aScore)}% (${formatSigned(delta)}%)`)
-  console.log(`Mutations: ${bTotal} → ${aTotal}`)
-  console.log(`Killed: ${bCounts.killed} → ${aCounts.killed}  |  Survived: ${bCounts.survived} → ${aCounts.survived}`)
+  out(`Overall: ${formatTenth(bScore)}% → ${formatTenth(aScore)}% (${formatSigned(delta)}%)`)
+  out(`Mutations: ${bTotal} → ${aTotal}`)
+  out(`Killed: ${bCounts.killed} → ${aCounts.killed}  |  Survived: ${bCounts.survived} → ${aCounts.survived}`)
 }
 
-function printCategory(label, results) {
+function printCategory(out, label, results) {
   if (!results.length) return
-  console.log(`\n${label} (${results.length})`)
+  out(`\n${label} (${results.length})`)
   for (const { after: a } of results)
-    console.log(`  ${a.file}:${a.line} ${a.mutatorName}`)
+    out(`  ${a.file}:${a.line} ${a.mutatorName}`)
 }
 
-function printNewMutants(newMutants) {
+function printNewMutants(out, newMutants) {
   if (!newMutants.length) return
   const newSurvived = newMutants.filter(isAlive)
   const newKilled = newMutants.length - newSurvived.length
-  console.log(`\n+ NEW MUTANTS: ${newMutants.length} (${newKilled} killed, ${newSurvived.length} survived)`)
+  out(`\n+ NEW MUTANTS: ${newMutants.length} (${newKilled} killed, ${newSurvived.length} survived)`)
   if (newSurvived.length)
     for (const { file, line, mutatorName } of newSurvived)
-      console.log(`  ${file}:${line} ${mutatorName} — SURVIVED`)
+      out(`  ${file}:${line} ${mutatorName} — SURVIVED`)
 }
 
-function printRemovedMutants(removedMutants) {
+function printRemovedMutants(out, removedMutants) {
   const total = removedMutants.length
   if (total)
-    console.log(`\n- REMOVED MUTANTS: ${total}`)
+    out(`\n- REMOVED MUTANTS: ${total}`)
 }
 
-function printFileDeltas(fileDeltas) {
+function printFileDeltas(out, fileDeltas) {
   if (!fileDeltas.length) return
   fileDeltas.sort((a, b) => b.delta - a.delta)
-  console.log(`\nPER-FILE CHANGES:`)
-  fileDeltas.forEach(printFileDelta)
+  out(`\nPER-FILE CHANGES:`)
+  fileDeltas.forEach(d => printFileDelta(out, d))
 }
 
-function printFileDelta({ label, file, after, before, delta }) {
+function printFileDelta(out, { label, file, after, before, delta }) {
   if (label === 'NEW')
-    console.log(`  ${file}: NEW (${formatTenth(after)}%)`)
+    out(`  ${file}: NEW (${formatTenth(after)}%)`)
   else if (label === 'REMOVED')
-    console.log(`  ${file}: REMOVED (was ${formatTenth(before)}%)`)
+    out(`  ${file}: REMOVED (was ${formatTenth(before)}%)`)
   else
-    console.log(`  ${file}: ${formatTenth(before)}% → ${formatTenth(after)}% (${formatSigned(delta)}%)`)
+    out(`  ${file}: ${formatTenth(before)}% → ${formatTenth(after)}% (${formatSigned(delta)}%)`)
 }
 
 function formatTenth(value) {

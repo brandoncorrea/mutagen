@@ -10,20 +10,20 @@ import { generateMutations } from '../core/engine.js'
 import { toJsonMutants, SEPARATOR } from '../core/report-data.js'
 import { printRunReport } from './report.js'
 
-export function dryRun(sourceFile, prepared, targetLine) {
+export function dryRun(sourceFile, prepared, targetLine, out = console.log) {
   const source = readFileSync(sourceFile, 'utf-8')
   const mutations = generateMutations(source, prepared, targetLine)
   const relPath = relative(process.cwd(), sourceFile)
 
-  console.log(`\nDRY RUN — ${relPath}`)
-  console.log(`   Found ${mutations.length} mutation(s)\n`)
+  out(`\nDRY RUN — ${relPath}`)
+  out(`   Found ${mutations.length} mutation(s)\n`)
 
   const byLine = mutationsByLine(mutations)
   const mutationLines = Object.entries(byLine).sort((a, b) => Number(a[0]) - Number(b[0]))
   for (const [line, names] of mutationLines)
-    console.log(`  L${line}: ${names.join(', ')}`)
+    out(`  L${line}: ${names.join(', ')}`)
 
-  console.log(`\n  Total: ${mutations.length} mutations`)
+  out(`\n  Total: ${mutations.length} mutations`)
   return mutations.length
 }
 
