@@ -129,10 +129,10 @@ function computeFileDelta(beforeScores, afterScores, file) {
   const before = bs?.score
   const after = as?.score
   if (!bs)
-    return { file, after, label: 'NEW' }
+    return { file, after, delta: 0, label: 'NEW' }
   else if (!as)
-    return { file, before, label: 'REMOVED' }
-  
+    return { file, before, delta: 0, label: 'REMOVED' }
+
   const delta = after - before
   if (Math.abs(delta) > 0.05)
     return { file, before, after, delta }
@@ -193,7 +193,7 @@ function printRemovedMutants(removedMutants) {
 
 function printFileDeltas(fileDeltas) {
   if (!fileDeltas.length) return
-  fileDeltas.sort((a, b) => (b.delta || 0) - (a.delta || 0))
+  fileDeltas.sort((a, b) => b.delta - a.delta)
   console.log(`\nPER-FILE CHANGES:`)
   fileDeltas.forEach(printFileDelta)
 }
