@@ -4,14 +4,16 @@ vi.mock('node:fs', async (importOriginal) => {
   const actual = await importOriginal()
   return {
     ...actual,
+    readFileSync: vi.fn(),
     writeFileSync: vi.fn(),
     mkdirSync: vi.fn(),
   }
 })
 
-import { writeFileSync, mkdirSync } from 'node:fs'
-import { mutantKey, countStatuses, toJsonMutants, createReport, writeReportFile } from '../../core/report-data.js'
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
+import { mutantKey, countStatuses, toJsonMutants, createReport, writeReportFile, tryLoadJson } from '../../core/report-data.js'
 import { printRunReport, printSummary } from '../../cli/report.js'
+
 
 describe('mutantKey', () => {
   it('builds a key from path, line, mutator name, and replacement', () => {
@@ -287,5 +289,49 @@ describe('writeReportFile', () => {
       JSON.stringify(report, null, 2)
     )
     expect(console.log).toHaveBeenCalledWith('JSON report: reports/mutation/report.json')
+  })
+})
+
+describe('tryLoadJson', () => {
+  afterEach(() => {
+    readFileSync.mockReset()
+  })
+
+  it('parses valid JSON from a file', () => {
+    const data = { files: {}, schemaVersion: '1' }
+    readFileSync.mockReturnValue(JSON.stringify(data))
+
+    const result = tryLoadJson('/tmp/report.json')
+
+    expect(result).toEqual(data)
+  })
+
+  it('returns undefined and calls out on read error', () => {
+    readFileSync.mockImplementation(() => { throw new Error('ENOENT') })
+    const out = vi.fn()
+
+    const result = tryLoadJson('/tmp/missing.json', out)
+
+    expect(result).toBeUndefined()
+    expect(out).toHaveBeenCalledWith(expect.stringContaining('Warning'))
+    expect(out).toHaveBeenCalledWith(expect.stringContaining('missing.json'))
+  })
+
+  it('returns undefined and calls out on invalid JSON', () => {
+    readFileSync.mockReturnValue('not valid json {{{')
+    const out = vi.fn()
+
+    const result = tryLoadJson('/tmp/bad.json', out)
+
+    expect(result).toBeUndefined()
+    expect(out).toHaveBeenCalledWith(expect.stringContaining('Warning'))
+  })
+
+  it('returns undefined silently when no out callback provided', () => {
+    readFileSync.mockImplementation(() => { throw new Error('ENOENT') })
+
+    const result = tryLoadJson('/tmp/missing.json')
+
+    expect(result).toBeUndefined()
   })
 })

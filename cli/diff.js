@@ -5,7 +5,7 @@
 
 import { readFileSync } from 'node:fs'
 
-import { mutantKey, countStatuses, isKilled, isAlive, SEPARATOR, createReport } from '../core/report-data.js'
+import { mutantKey, countStatuses, isKilled, isAlive, SEPARATOR, createReport, tryLoadJson } from '../core/report-data.js'
 
 export function combineReportData(files, out = console.log) {
   const { mergedFiles, duplicates } = deduplicateMutants(loadAllEntries(files, out))
@@ -64,14 +64,6 @@ export function diffReports(beforeFile, afterFile) {
     regressions: changes.regressions.length,
     newMutants: changes.newMutants.length,
     removedMutants: changes.removedMutants.length
-  }
-}
-
-function tryLoadJson(file, out) {
-  try {
-    return loadJson(file)
-  } catch (err) {
-    out(`  Warning: could not read ${file}: ${err.message}`)
   }
 }
 

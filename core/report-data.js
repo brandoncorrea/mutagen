@@ -3,7 +3,7 @@
  * Used by CLI, Stryker integration, and diff/incremental modules.
  */
 
-import { writeFileSync, mkdirSync } from 'node:fs'
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { relative } from 'node:path'
 
 export const SEPARATOR = '═'.repeat(60)
@@ -21,6 +21,14 @@ export function writeReportFile(reportDir, reportPath, report) {
   mkdirSync(reportDir, { recursive: true })
   writeFileSync(reportPath, JSON.stringify(report, null, 2))
   console.log(`JSON report: ${reportPath}`)
+}
+
+export function tryLoadJson(path, out) {
+  try {
+    return JSON.parse(readFileSync(path, 'utf-8'))
+  } catch (err) {
+    if (out) out(`Warning: could not read ${path}: ${err.message}`)
+  }
 }
 
 export function mutantKey(path, { location, mutatorName, replacement }) {

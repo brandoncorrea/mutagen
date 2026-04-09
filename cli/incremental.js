@@ -7,7 +7,7 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { resolve, relative } from 'node:path'
 
-import { SEPARATOR, isKilled, createReport, writeReportFile } from '../core/report-data.js'
+import { SEPARATOR, isKilled, createReport, writeReportFile, tryLoadJson } from '../core/report-data.js'
 
 export const HASH_PREFIX_LENGTH = 16
 
@@ -96,20 +96,11 @@ function classifySources(sources, previousHashes, testInvalidated) {
 }
 
 export function loadPreviousReport(reportPath, out = console.log) {
-  const previousReport = tryLoadJson(reportPath, out)
+  const previousReport = existsSync(reportPath) ? tryLoadJson(reportPath, out) : undefined
   return {
     previousReport,
     previousHashes: previousReport?.sourceHashes || {},
     previousTestHashes: previousReport?.testHashes || {}
-  }
-}
-
-function tryLoadJson(path, out) {
-  if (!existsSync(path)) return
-  try {
-    return JSON.parse(readFileSync(path, 'utf-8'))
-  } catch (err) {
-    out(`Warning: could not parse previous report ${path} — discarding cache (${err.message})`)
   }
 }
 
