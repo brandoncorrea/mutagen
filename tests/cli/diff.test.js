@@ -423,13 +423,18 @@ describe('diffReports', () => {
     expect(output).not.toContain('SURVIVED')
   })
 
-  it('sorts per-file deltas by score improvement including new files', () => {
+  it('sorts per-file deltas descending, using 0 for NEW/REMOVED files', () => {
+    // 3 files: c.js improved +100%, a.js improved +50%, b.js is NEW (no delta)
+    // Sort descending by delta: c.js (+100), a.js (+50), b.js (NEW → 0)
+    // Without || 0, b.js delta is undefined → NaN → sort is unstable
     const before = makeReport({
-      'a.js': { mutants: [makeMutant('m1', 'x', 'Survived'), makeMutant('m2', 'y', 'Survived')] }
+      'a.js': { mutants: [makeMutant('m1', 'x', 'Survived'), makeMutant('m2', 'y', 'Survived')] },
+      'c.js': { mutants: [makeMutant('m4', 'w', 'Survived')] }
     })
     const after = makeReport({
       'a.js': { mutants: [makeMutant('m1', 'x', 'Killed'), makeMutant('m2', 'y', 'Survived')] },
-      'b.js': { mutants: [makeMutant('m3', 'z', 'Killed')] }
+      'b.js': { mutants: [makeMutant('m3', 'z', 'Killed')] },
+      'c.js': { mutants: [makeMutant('m4', 'w', 'Killed')] }
     })
     readFileSync
       .mockReturnValueOnce(JSON.stringify(before))
@@ -439,11 +444,12 @@ describe('diffReports', () => {
 
     const output = console.log.mock.calls.map(c => c[0]).join('\n')
     const perFileSection = output.slice(output.indexOf('PER-FILE CHANGES'))
-    expect(perFileSection).toContain('b.js')
-    expect(perFileSection).toContain('a.js')
-    // a.js has +50% delta, b.js is NEW (delta undefined → 0). Sort is descending by delta.
-    // a.js (+50) comes before b.js (0/NEW)
-    expect(perFileSection.indexOf('a.js')).toBeLessThan(perFileSection.indexOf('b.js'))
+    const cIdx = perFileSection.indexOf('c.js')
+    const aIdx = perFileSection.indexOf('a.js')
+    const bIdx = perFileSection.indexOf('b.js')
+    // c.js (+100%) before a.js (+50%) before b.js (NEW, delta 0)
+    expect(cIdx).toBeLessThan(aIdx)
+    expect(aIdx).toBeLessThan(bIdx)
   })
 
   it('skips per-file section when no file scores changed', () => {

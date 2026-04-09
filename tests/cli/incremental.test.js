@@ -263,6 +263,97 @@ describe('runIncremental', () => {
     expect(result.totalKilled).toBe(2)
   })
 
+  it('writes report without carry-forward when no previous report exists', async () => {
+    const src = resolve('src/a.js')
+
+    existsSync.mockReturnValue(false) // no previous report
+    readFileSync.mockImplementation((path, enc) => {
+      if (path === src) return enc === 'utf-8' ? sourceCode : Buffer.from(sourceCode)
+      return Buffer.from('')
+    })
+
+    const fakeRunBatch = vi.fn().mockResolvedValue({
+      totalSurvived: 0, totalKilled: 1, failures: 0,
+      fileResults: { 'src/a.js': { mutants: [{ status: 'Killed' }] } }
+    })
+
+    await runIncremental(
+      {
+        sources: ['src/a.js'],
+        testSources: [],
+        reportDir: 'reports',
+        reportPath: 'reports/report.json',
+        runBatch: fakeRunBatch,
+      },
+      true,
+      null
+    )
+
+    const reportCalls = writeFileSync.mock.calls.filter(([p]) => p === 'reports/report.json')
+    expect(reportCalls).toHaveLength(1)
+    const report = JSON.parse(reportCalls[0][1])
+    expect(report.files['src/a.js']).toBeDefined()
+    expect(report.sourceHashes).toBeDefined()
+  })
+
+  it('skips carry-forward for unchanged files missing from previous report', async () => {
+    const srcA = resolve('src/a.js')
+    const srcB = resolve('src/b.js')
+    const srcC = resolve('src/c.js')
+    const codeA = 'const a = 1'
+    const codeB = 'if (a === b) {}'
+    const codeC = 'const c = 3'
+
+    existsSync.mockReturnValue(true)
+    readFileSync.mockImplementation((path, enc) => {
+      if (path === 'reports/report.json')
+        return JSON.stringify({
+          // files has src/a.js results but NOT src/b.js
+          files: { 'src/a.js': { mutants: [{ status: 'Killed' }] } },
+          // sourceHashes: a.js and b.js match (unchanged), c.js is stale (changed)
+          sourceHashes: {
+            'src/a.js': hashOf(codeA),
+            'src/b.js': hashOf(codeB),
+            'src/c.js': 'stale',
+          },
+          testHashes: {},
+        })
+      const map = { [srcA]: codeA, [srcB]: codeB, [srcC]: codeC }
+      const content = map[path] || ''
+      return enc === 'utf-8' ? content : Buffer.from(content)
+    })
+
+    // c.js changed → batch runs on c.js. This ensures writeMergedReport is called.
+    const fakeRunBatch = vi.fn().mockResolvedValue({
+      totalSurvived: 0, totalKilled: 1, failures: 0,
+      fileResults: { 'src/c.js': { mutants: [{ status: 'Killed' }] } }
+    })
+
+    await runIncremental(
+      {
+        sources: ['src/a.js', 'src/b.js', 'src/c.js'],
+        testSources: [],
+        reportDir: 'reports',
+        reportPath: 'reports/report.json',
+        runBatch: fakeRunBatch,
+      },
+      true,
+      null
+    )
+
+    // Only c.js should be rerun
+    expect(fakeRunBatch).toHaveBeenCalledWith(false, null, ['src/c.js'])
+
+    const reportCalls = writeFileSync.mock.calls.filter(([p]) => p === 'reports/report.json')
+    const report = JSON.parse(reportCalls[0][1])
+    // src/a.js carried forward (has entry in previousReport.files)
+    expect(report.files['src/a.js']).toBeDefined()
+    // src/b.js NOT carried forward (no entry in previousReport.files, despite matching hash)
+    expect(report.files['src/b.js']).toBeUndefined()
+    // src/c.js from batch results
+    expect(report.files['src/c.js']).toBeDefined()
+  })
+
   it('removes stale files from merged report when batch returns extra keys', async () => {
     const src = resolve('src/a.js')
 
