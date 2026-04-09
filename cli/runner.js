@@ -7,7 +7,8 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { relative } from 'node:path'
 
 import { generateMutations } from '../core/engine.js'
-import { toJsonMutants, printRunReport, SEPARATOR } from './report.js'
+import { toJsonMutants, SEPARATOR } from '../core/report-data.js'
+import { printRunReport } from './report.js'
 
 export function dryRun(sourceFile, prepared, targetLine) {
   const source = readFileSync(sourceFile, 'utf-8')

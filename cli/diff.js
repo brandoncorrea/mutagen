@@ -5,7 +5,7 @@
 
 import { readFileSync } from 'node:fs'
 
-import { mutantKey, countStatuses, isKilled, isAlive, SEPARATOR } from './report.js'
+import { mutantKey, countStatuses, isKilled, isAlive, SEPARATOR } from '../core/report-data.js'
 
 export function combineReportData(files, out = console.log) {
   const { mergedFiles, duplicates } = deduplicateMutants(loadAllEntries(files, out))

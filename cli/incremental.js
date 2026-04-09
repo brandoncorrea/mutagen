@@ -7,7 +7,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { resolve, relative } from 'node:path'
 
-import { SEPARATOR, isKilled } from './report.js'
+import { SEPARATOR, isKilled } from '../core/report-data.js'
 
 export const HASH_PREFIX_LENGTH = 16
 

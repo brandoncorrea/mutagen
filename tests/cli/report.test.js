@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { mutantKey, countStatuses, toJsonMutants, printRunReport, printSummary } from '../../cli/report.js'
+import { mutantKey, countStatuses, toJsonMutants } from '../../core/report-data.js'
+import { printRunReport, printSummary } from '../../cli/report.js'
 
 describe('mutantKey', () => {
   it('builds a key from path, line, mutator name, and replacement', () => {

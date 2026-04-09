@@ -6,7 +6,8 @@
 import { execFileSync } from 'node:child_process'
 import { existsSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 
-import { countStatuses, printSummary, SEPARATOR } from './cli/report.js'
+import { countStatuses, SEPARATOR } from './core/report-data.js'
+import { printSummary } from './cli/report.js'
 import { combineReportData } from './cli/diff.js'
 
 function isUnexpectedError(err) {

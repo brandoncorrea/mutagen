@@ -16,7 +16,7 @@ import { writeFileSync, mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 import { preparePatterns } from '../core/engine.js'
-import { SEPARATOR } from './report.js'
+import { SEPARATOR } from '../core/report-data.js'
 import { diffReports } from './diff.js'
 import { parseArgs } from './args.js'
 import { runSingle, dryRun } from './runner.js'
