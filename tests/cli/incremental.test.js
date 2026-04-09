@@ -51,6 +51,20 @@ describe('loadPreviousReport', () => {
     expect(result.previousTestHashes).toEqual({ 'a.test.js': 'def456' })
   })
 
+  it('treats missing sourceHashes and testHashes as empty objects', () => {
+    existsSync.mockReturnValue(true)
+    readFileSync.mockReturnValue(JSON.stringify({
+      files: { 'a.js': { mutants: [{ status: 'Killed' }] } }
+      // no sourceHashes or testHashes fields
+    }))
+
+    const result = loadPreviousReport('/tmp/report.json')
+
+    expect(result.previousReport).toBeDefined()
+    expect(result.previousHashes).toEqual({})
+    expect(result.previousTestHashes).toEqual({})
+  })
+
   it('warns when report file contains corrupt JSON', () => {
     existsSync.mockReturnValue(true)
     readFileSync.mockReturnValue('not valid json {{{')

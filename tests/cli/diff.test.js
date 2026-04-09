@@ -423,7 +423,31 @@ describe('diffReports', () => {
     expect(output).not.toContain('SURVIVED')
   })
 
-  it('sorts per-file deltas descending, using 0 for NEW/REMOVED files', () => {
+  it('sorts REMOVED files after positive-delta files via || 0 fallback', () => {
+    // removed.js enters the Set from beforeScores (first in spread), so it
+    // appears BEFORE changed.js. Without || 0, the sort comparator produces
+    // NaN and V8 preserves input order → REMOVED first (wrong).
+    // With || 0, undefined becomes 0, arithmetic works, sort moves REMOVED after +delta.
+    const before = makeReport({
+      'removed.js': { mutants: [makeMutant('m1', 'x', 'Killed')] },
+      'changed.js': { mutants: [makeMutant('m2', 'y', 'Survived')] }
+    })
+    const after = makeReport({
+      'changed.js': { mutants: [makeMutant('m2', 'y', 'Killed')] }
+    })
+    readFileSync
+      .mockReturnValueOnce(JSON.stringify(before))
+      .mockReturnValueOnce(JSON.stringify(after))
+
+    diffReports('before.json', 'after.json')
+
+    const output = console.log.mock.calls.map(c => c[0]).join('\n')
+    const perFileSection = output.slice(output.indexOf('PER-FILE CHANGES'))
+    // changed.js (+100% delta) must sort before removed.js (no delta → 0)
+    expect(perFileSection.indexOf('changed.js')).toBeLessThan(perFileSection.indexOf('removed.js'))
+  })
+
+  it('sorts per-file deltas descending, using 0 for NEW files', () => {
     // 3 files: c.js improved +100%, a.js improved +50%, b.js is NEW (no delta)
     // Sort descending by delta: c.js (+100), a.js (+50), b.js (NEW → 0)
     // Without || 0, b.js delta is undefined → NaN → sort is unstable
