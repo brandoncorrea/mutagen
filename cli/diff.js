@@ -7,8 +7,8 @@ import { readFileSync } from 'node:fs'
 
 import { mutantKey, countStatuses, isKilled, isAlive, SEPARATOR } from './report.js'
 
-export function combineReportData(files) {
-  const { mergedFiles, duplicates } = deduplicateMutants(loadAllEntries(files))
+export function combineReportData(files, out = console.log) {
+  const { mergedFiles, duplicates } = deduplicateMutants(loadAllEntries(files, out))
 
   if (duplicates)
     console.log(`  Deduplicated: ${duplicates} duplicate mutant(s) removed`)
@@ -20,9 +20,9 @@ export function combineReportData(files) {
   }
 }
 
-function loadAllEntries(files) {
+function loadAllEntries(files, out) {
   return files
-    .map(tryLoadJson)
+    .map(f => tryLoadJson(f, out))
     .filter(Boolean)
     .flatMap(({ files }) => Object.entries(files))
 }
@@ -71,11 +71,11 @@ export function diffReports(beforeFile, afterFile) {
   }
 }
 
-function tryLoadJson(file) {
+function tryLoadJson(file, out) {
   try {
     return loadJson(file)
   } catch (err) {
-    console.log(`  Warning: could not read ${file}: ${err.message}`)
+    out(`  Warning: could not read ${file}: ${err.message}`)
   }
 }
 

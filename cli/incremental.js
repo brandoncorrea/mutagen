@@ -95,8 +95,8 @@ function classifySources(sources, previousHashes, testInvalidated) {
   return { currentHashes, changedSources, unchangedSources }
 }
 
-export function loadPreviousReport(reportPath) {
-  const previousReport = tryLoadJson(reportPath)
+export function loadPreviousReport(reportPath, out = console.log) {
+  const previousReport = tryLoadJson(reportPath, out)
   return {
     previousReport,
     previousHashes: previousReport?.sourceHashes || {},
@@ -104,12 +104,12 @@ export function loadPreviousReport(reportPath) {
   }
 }
 
-function tryLoadJson(path) {
+function tryLoadJson(path, out) {
   if (!existsSync(path)) return
   try {
     return JSON.parse(readFileSync(path, 'utf-8'))
   } catch (err) {
-    console.warn(`Warning: could not parse previous report ${path} — discarding cache (${err.message})`)
+    out(`Warning: could not parse previous report ${path} — discarding cache (${err.message})`)
   }
 }
 

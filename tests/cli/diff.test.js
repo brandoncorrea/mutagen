@@ -92,6 +92,15 @@ describe('combineReportData', () => {
     expect(console.log.mock.calls.some(c => c[0].includes('Warning'))).toBe(true)
   })
 
+  it('routes warnings through injected out', () => {
+    readFileSync.mockImplementation(() => { throw new Error('ENOENT') })
+    const out = vi.fn()
+
+    combineReportData(['bad.json'], out)
+
+    expect(out).toHaveBeenCalledWith(expect.stringContaining('Warning'))
+  })
+
   it('merges mutants into the same file from different reports', () => {
     const report1 = {
       files: {

@@ -17,11 +17,11 @@ vi.mock('node:fs', async () => {
 
 describe('loadPreviousReport', () => {
   beforeEach(() => {
-    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    vi.spyOn(console, 'log').mockImplementation(() => {})
   })
 
   afterEach(() => {
-    console.warn.mockRestore()
+    console.log.mockRestore()
     vi.restoreAllMocks()
   })
 
@@ -74,9 +74,19 @@ describe('loadPreviousReport', () => {
     expect(result.previousReport).toBeFalsy()
     expect(result.previousHashes).toEqual({})
     expect(result.previousTestHashes).toEqual({})
-    expect(console.warn).toHaveBeenCalledWith(
+    expect(console.log).toHaveBeenCalledWith(
       expect.stringContaining('report.json')
     )
+  })
+
+  it('routes warnings through injected out', () => {
+    existsSync.mockReturnValue(true)
+    readFileSync.mockReturnValue('not valid json {{{')
+    const out = vi.fn()
+
+    loadPreviousReport('/tmp/report.json', out)
+
+    expect(out).toHaveBeenCalledWith(expect.stringContaining('Warning'))
   })
 })
 
