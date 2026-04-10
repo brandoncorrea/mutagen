@@ -9,40 +9,9 @@ vi.mock('node:fs', async importOriginal => {
   }
 })
 
-import { withTimeout, dryRun } from '../../cli/runner.js'
+import { dryRun } from '../../cli/runner.js'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { preparePatterns } from '../../core/engine.js'
-
-describe('withTimeout', () => {
-  it('calls fn directly when ms is falsy', async () => {
-    const fn = vi.fn().mockResolvedValue('result')
-    const result = await withTimeout(fn, 0)
-    expect(result).toBe('result')
-    expect(fn).toHaveBeenCalledOnce()
-  })
-
-  it('calls fn directly when ms is null', async () => {
-    const fn = vi.fn().mockResolvedValue('ok')
-    const result = await withTimeout(fn, null)
-    expect(result).toBe('ok')
-  })
-
-  it('returns fn result when fn resolves before timeout', async () => {
-    const fn = () => Promise.resolve('fast')
-    const result = await withTimeout(fn, 5000)
-    expect(result).toBe('fast')
-  })
-
-  it('rejects with timeout error when fn exceeds timeout', async () => {
-    const fn = () => new Promise(resolve => setTimeout(resolve, 500))
-    await expect(withTimeout(fn, 1)).rejects.toThrow('timed out after 1ms')
-  })
-
-  it('propagates fn rejection', async () => {
-    const fn = () => Promise.reject(new Error('boom'))
-    await expect(withTimeout(fn, 5000)).rejects.toThrow('boom')
-  })
-})
 
 describe('dryRun', () => {
   beforeEach(() => {

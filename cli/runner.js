@@ -37,7 +37,7 @@ function mutationsByLine(mutations) {
   return byLine
 }
 
-export function withTimeout(fn, ms) {
+function withTimeout(fn, ms) {
   if (!ms) return fn()
   return Promise.race([
     fn(),
