@@ -7,7 +7,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { relative } from 'node:path'
 
 import { generateMutations } from '../core/engine.js'
-import { toJsonMutants, SEPARATOR } from '../core/report-data.js'
+import { toJsonMutants, HEADER_SEPARATOR } from '../core/report-data.js'
 import { printRunReport } from './report.js'
 
 export function dryRun(sourceFile, prepared, targetLine, out = console.log) {
@@ -50,9 +50,9 @@ export async function runSingle(options) {
   const { sourceFile, prepared, createRunner, targetLine, timeout, out = console.log } = options
   const original = readFileSync(sourceFile, 'utf-8')
 
-  out(`\n${SEPARATOR}`)
+  out(`\n${HEADER_SEPARATOR}`)
   out(`MUTAGEN`)
-  out(SEPARATOR)
+  out(HEADER_SEPARATOR)
   out(`Source: ${sourceFile}`)
   if (targetLine) out(`Target: line ${targetLine}`)
   if (timeout) out(`Timeout: ${timeout}ms per mutation`)

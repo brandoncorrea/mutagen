@@ -6,7 +6,8 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { relative } from 'node:path'
 
-export const SEPARATOR = '═'.repeat(60)
+export const HEADER_SEPARATOR = '═'.repeat(60)
+export const SECTION_SEPARATOR = '─'.repeat(60)
 
 export function createReport(files, extra) {
   return {

@@ -3,15 +3,15 @@
  * Data utilities live in core/report-data.js.
  */
 
-import { SEPARATOR, mutationScore } from '../core/report-data.js'
+import { HEADER_SEPARATOR, SECTION_SEPARATOR, mutationScore } from '../core/report-data.js'
 
 export function printSummary(merged, counts, reportPath, out = console.log) {
   const { killed, survived, noCoverage, timeout } = counts
   const score = mutationScore(counts).toFixed(1)
 
-  out(`\n${SEPARATOR}`)
+  out(`\n${HEADER_SEPARATOR}`)
   out(`MUTATION REPORT`)
-  out(SEPARATOR)
+  out(HEADER_SEPARATOR)
   out(`Files:    ${Object.keys(merged.files).length}`)
   out(`Killed:   ${killed}`)
   out(`Survived: ${survived}`)
@@ -19,10 +19,8 @@ export function printSummary(merged, counts, reportPath, out = console.log) {
   out(`Timeout:  ${timeout}`)
   out(`Score:    ${score}%`)
   if (reportPath) out(`Report:   ${reportPath}`)
-  out(`${SEPARATOR}\n`)
+  out(`${HEADER_SEPARATOR}\n`)
 }
-
-const HR = '─'.repeat(60)
 
 export function printRunReport(mutations, results, out = console.log) {
   const { killed, survived } = results
@@ -34,13 +32,13 @@ export function printRunReport(mutations, results, out = console.log) {
   else
     out(`\nALL mutations killed. Tests are strong.`)
 
-  out(`\n${HR}\n`)
+  out(`\n${SECTION_SEPARATOR}\n`)
 }
 
 function writeSummary(out, mutations, killed, survived) {
-  out(`\n${HR}`)
+  out(`\n${SECTION_SEPARATOR}`)
   out(`MUTATION REPORT`)
-  out(HR)
+  out(SECTION_SEPARATOR)
   out(`Total: ${mutations.length}  |  Killed: ${killed.length}  |  Survived: ${survived.length}`)
 }
 

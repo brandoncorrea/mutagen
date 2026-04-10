@@ -15,7 +15,7 @@
 import { resolve } from 'node:path'
 
 import { preparePatterns } from '../core/engine.js'
-import { SEPARATOR, createReport, writeReportFile } from '../core/report-data.js'
+import { HEADER_SEPARATOR, createReport, writeReportFile } from '../core/report-data.js'
 import { diffReports } from './diff.js'
 import { parseArgs } from './args.js'
 import { runSingle, dryRun } from './runner.js'
@@ -64,7 +64,7 @@ async function runBatch(ctx, jsonOutput, timeout, sourcesToRun) {
   const { prepared, createRunner, reportDir, reportPath, sources, out } = ctx
   const filesToRun = sourcesToRun || sources
 
-  out(`\n${SEPARATOR}`)
+  out(`\n${HEADER_SEPARATOR}`)
   out(`MUTAGEN — BATCH MODE`)
   out(`   Sources: ${filesToRun.length} file(s)\n`)
 
@@ -100,13 +100,13 @@ function writeReport(out, reportDir, reportPath, fileResults) {
 }
 
 function printBatchSummary(out, fileCount, { totalKilled, totalSurvived, totalTimedOut, failures }) {
-  out(`\n${SEPARATOR}`)
+  out(`\n${HEADER_SEPARATOR}`)
   out(`BATCH SUMMARY`)
-  out(SEPARATOR)
+  out(HEADER_SEPARATOR)
   out(`Files: ${fileCount}  |  Killed: ${totalKilled}  |  Survived: ${totalSurvived}  |  Errors: ${failures}`)
   if (totalTimedOut)
     out(`Timed out: ${totalTimedOut} (counted as killed)`)
-  out(`${SEPARATOR}\n`)
+  out(`${HEADER_SEPARATOR}\n`)
 }
 
 async function run(ctx, argv) {

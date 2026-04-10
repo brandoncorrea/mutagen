@@ -7,7 +7,7 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { resolve, relative } from 'node:path'
 
-import { SEPARATOR, isKilled, createReport, writeReportFile, tryLoadJson } from '../core/report-data.js'
+import { HEADER_SEPARATOR, isKilled, createReport, writeReportFile, tryLoadJson } from '../core/report-data.js'
 
 export const HASH_PREFIX_LENGTH = 16
 
@@ -154,22 +154,22 @@ function printIncrementalSummary(out, batchResult, sources, previous, classifica
   const grandKilled = totalKilled + cachedCounts.killed
   const grandSurvived = totalSurvived + cachedCounts.survived
 
-  out(`\n${SEPARATOR}`)
+  out(`\n${HEADER_SEPARATOR}`)
   out(`INCREMENTAL SUMMARY`)
-  out(SEPARATOR)
+  out(HEADER_SEPARATOR)
   out(`Rerun: ${changedSources.length} files  |  Killed: ${totalKilled}  |  Survived: ${totalSurvived}  |  Errors: ${failures}`)
   out(`Cached: ${unchangedSources.length} files  |  Killed: ${cachedCounts.killed}  |  Survived: ${cachedCounts.survived}`)
   out(`Total: ${sources.length} files  |  Killed: ${grandKilled}  |  Survived: ${grandSurvived}`)
-  out(`${SEPARATOR}\n`)
+  out(`${HEADER_SEPARATOR}\n`)
 
   return { totalSurvived: grandSurvived, totalKilled: grandKilled, failures }
 }
 
 function printIncrementalHeader(out, sources, classification) {
   const { changedSources, unchangedSources, changedTestFiles, testInvalidated } = classification
-  out(`\n${SEPARATOR}`)
+  out(`\n${HEADER_SEPARATOR}`)
   out(`MUTAGEN — INCREMENTAL MODE`)
-  out(SEPARATOR)
+  out(HEADER_SEPARATOR)
   out(`Total sources: ${sources.length}`)
   out(`Changed/new:   ${changedSources.length}${testInvalidated.size ? ` (${testInvalidated.size} from test changes)` : ''}`)
   out(`Cached:        ${unchangedSources.length}`)
@@ -190,11 +190,11 @@ function handleAllCached(out, config, previous, classification, jsonOutput) {
   }
 
   const cachedCounts = countCachedResults(previous.previousReport, unchangedSources)
-  out(`\n${SEPARATOR}`)
+  out(`\n${HEADER_SEPARATOR}`)
   out(`INCREMENTAL SUMMARY (all cached)`)
-  out(SEPARATOR)
+  out(HEADER_SEPARATOR)
   out(`Files: ${sources.length}  |  Killed: ${cachedCounts.killed}  |  Survived: ${cachedCounts.survived}  |  Rerun: 0`)
-  out(`${SEPARATOR}\n`)
+  out(`${HEADER_SEPARATOR}\n`)
   return { totalSurvived: cachedCounts.survived, totalKilled: cachedCounts.killed, failures: 0 }
 }
 

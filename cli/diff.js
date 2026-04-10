@@ -3,7 +3,7 @@
  * Compare two reports to find regressions, improvements, and new mutants.
  */
 
-import { mutantKey, countStatuses, totalMutants, mutationScore, isKilled, isAlive, SEPARATOR, tryLoadJson } from '../core/report-data.js'
+import { mutantKey, countStatuses, totalMutants, mutationScore, isKilled, isAlive, HEADER_SEPARATOR, tryLoadJson } from '../core/report-data.js'
 
 /**
  * Diff two mutation reports and print a summary of changes.
@@ -93,9 +93,9 @@ function computeFileDelta(beforeScores, afterScores, file) {
 }
 
 function printDiffReport({ beforeFile, afterFile, before, after }, changes, fileDeltas, out) {
-  out(`\n${SEPARATOR}`)
+  out(`\n${HEADER_SEPARATOR}`)
   out(`MUTATION DIFF`)
-  out(`${SEPARATOR}`)
+  out(`${HEADER_SEPARATOR}`)
   out(`Before: ${beforeFile}`)
   out(`After:  ${afterFile}\n`)
 
@@ -105,7 +105,7 @@ function printDiffReport({ beforeFile, afterFile, before, after }, changes, file
   printNewMutants(out, changes.newMutants)
   printRemovedMutants(out, changes.removedMutants)
   printFileDeltas(out, fileDeltas)
-  out(`\n${SEPARATOR}\n`)
+  out(`\n${HEADER_SEPARATOR}\n`)
 }
 
 function printDiffSummary(out, before, after) {
