@@ -372,6 +372,15 @@ describe('diffReports', () => {
     expect(result.regressions).toBe(1)
   })
 
+  it('returns null and warns when a report file is unreadable', () => {
+    readFileSync.mockImplementation(() => { throw new Error('ENOENT') })
+
+    const result = diffReports('missing.json', 'also-missing.json', out)
+
+    expect(result).toBeNull()
+    expect(output()).toContain('Warning')
+  })
+
   it('falls back to mutantKey when mutant has no id', () => {
     const mutantNoId = {
       mutatorName: 'EqualityOperator',

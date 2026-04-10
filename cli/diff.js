@@ -3,9 +3,7 @@
  * Compare two reports to find regressions, improvements, and new mutants.
  */
 
-import { readFileSync } from 'node:fs'
-
-import { mutantKey, countStatuses, totalMutants, mutationScore, isKilled, isAlive, SEPARATOR } from '../core/report-data.js'
+import { mutantKey, countStatuses, totalMutants, mutationScore, isKilled, isAlive, SEPARATOR, tryLoadJson } from '../core/report-data.js'
 
 /**
  * Diff two mutation reports and print a summary of changes.
@@ -13,8 +11,10 @@ import { mutantKey, countStatuses, totalMutants, mutationScore, isKilled, isAliv
  * @param {string} afterFile - path to the new report JSON
  */
 export function diffReports(beforeFile, afterFile, out = console.log) {
-  const before = loadJson(beforeFile)
-  const after = loadJson(afterFile)
+  const before = tryLoadJson(beforeFile, out)
+  const after = tryLoadJson(afterFile, out)
+
+  if (!before || !after) return null
 
   const changes = classifyChanges(before, after)
   const fileDeltas = computeFileDeltas(before, after)
@@ -27,10 +27,6 @@ export function diffReports(beforeFile, afterFile, out = console.log) {
     newMutants: changes.newMutants.length,
     removedMutants: changes.removedMutants.length
   }
-}
-
-function loadJson(file) {
-  return JSON.parse(readFileSync(file, 'utf-8'))
 }
 
 function classifyChanges(beforeData, afterData) {
