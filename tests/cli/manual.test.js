@@ -657,6 +657,17 @@ describe('createManualRunner', () => {
       expect(code).toBe(1)
     })
 
+    it('returns 1 when --diff report file is unreadable', async () => {
+      readFileSync.mockImplementation(() => { throw new Error('ENOENT') })
+
+      const manual = createManualRunner({
+        patterns, sources: [], createRunner: vi.fn()
+      })
+      const code = await manual.run(['--diff', 'missing.json', 'also-missing.json'])
+
+      expect(code).toBe(1)
+    })
+
     it('returns 1 (not raw count) when multiple mutations survive in single-file mode', async () => {
       const multiSource = 'if (a === b && c === d) {}'
       mockFs({ [resolve('src/a.js')]: multiSource })

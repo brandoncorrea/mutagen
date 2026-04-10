@@ -118,8 +118,10 @@ async function run(ctx, argv) {
 
   const timeout = parsed.timeout || ctx.configTimeout
 
-  if (parsed.diffMode)
-    return diffReports(parsed.beforeFile, parsed.afterFile, ctx.out).regressions ? 1 : 0
+  if (parsed.diffMode) {
+    const result = diffReports(parsed.beforeFile, parsed.afterFile, ctx.out)
+    return !result || result.regressions ? 1 : 0
+  }
   if (parsed.dryRunMode && parsed.allMode)
     return runAllDryRun(ctx)
   if (parsed.dryRunMode)

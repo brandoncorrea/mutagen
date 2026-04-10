@@ -157,6 +157,21 @@ describe('toJsonMutants', () => {
     expect(survived.killedBy).toBeUndefined()
   })
 
+  it('includes timedOut mutations as Timeout status', () => {
+    const results = {
+      killed: [],
+      survived: [],
+      timedOut: [
+        { line: 3, name: '&& → ||', original: 'a && b', mutated: 'a || b' }
+      ]
+    }
+
+    const output = toJsonMutants('/project/src/foo.js', results)
+    expect(output.mutants).toHaveLength(1)
+    expect(output.mutants[0].status).toBe('Timeout')
+    expect(output.mutants[0].mutatorName).toBe('&& → ||')
+  })
+
   it('produces a relative path', () => {
     const output = toJsonMutants(process.cwd() + '/src/foo.js', { killed: [], survived: [] })
     expect(output.path).toBe('src/foo.js')

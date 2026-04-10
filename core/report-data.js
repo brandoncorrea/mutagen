@@ -113,7 +113,8 @@ export function toJsonMutants(sourceFile, results) {
     path: relPath,
     mutants: [
       ...results.killed.map(m => toMutant(relPath, m, 'Killed')),
-      ...results.survived.map(m => toMutant(relPath, m, 'Survived'))
+      ...results.survived.map(m => toMutant(relPath, m, 'Survived')),
+      ...(results.timedOut || []).map(m => toMutant(relPath, m, 'Timeout'))
     ]
   }
 }
