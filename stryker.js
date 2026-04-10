@@ -16,17 +16,15 @@ function isUnexpectedError(err) {
 
 export function cleanStaleSandboxes() {
   const strykerTmp = '.stryker-tmp'
-  if (existsSync(strykerTmp)) {
-    rmSync(strykerTmp, { recursive: true, force: true })
-    console.log('Cleaned stale .stryker-tmp directory')
-  }
+  if (!existsSync(strykerTmp)) return
+  rmSync(strykerTmp, { recursive: true, force: true })
+  console.log('Cleaned stale .stryker-tmp directory')
 }
 
 export function clearIncrementalCache(cacheFile = 'reports/stryker-incremental.json') {
-  if (existsSync(cacheFile)) {
-    rmSync(cacheFile)
-    console.log('Cleared incremental cache between scoped runs')
-  }
+  if (!existsSync(cacheFile)) return
+  rmSync(cacheFile)
+  console.log('Cleared incremental cache between scoped runs')
 }
 
 export function runStrykerScope(name, scope, { reportDir = 'reports/mutation', strykerJson } = {}) {

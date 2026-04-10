@@ -27,7 +27,8 @@ export function tryLoadJson(path, out) {
   try {
     return JSON.parse(readFileSync(path, 'utf-8'))
   } catch (err) {
-    if (out) out(`Warning: could not read ${path}: ${err.message}`)
+    if (out)
+      out(`Warning: could not read ${path}: ${err.message}`)
   }
 }
 

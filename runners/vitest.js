@@ -106,8 +106,10 @@ async function noWarmRerun(vitest) {
   try {
     const specs = await vitest.globTestSpecifications()
     await vitest.runTestSpecifications(specs)
-    const results = vitest.state.getFiles()
-    return !results.every(isPassing)
+    return !vitest
+      .state
+      .getFiles()
+      .every(isPassing)
   } catch {
     return true
   }
