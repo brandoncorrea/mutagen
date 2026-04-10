@@ -13,28 +13,28 @@ function isUnexpectedError(err) {
   return !err.status || err.status > 1
 }
 
-export function cleanStaleSandboxes() {
+export function cleanStaleSandboxes(out = console.log) {
   const strykerTmp = '.stryker-tmp'
   if (!existsSync(strykerTmp)) return
   rmSync(strykerTmp, { recursive: true, force: true })
-  console.log('Cleaned stale .stryker-tmp directory')
+  out('Cleaned stale .stryker-tmp directory')
 }
 
-export function clearIncrementalCache(cacheFile = 'reports/stryker-incremental.json') {
+export function clearIncrementalCache(cacheFile = 'reports/stryker-incremental.json', out = console.log) {
   if (!existsSync(cacheFile)) return
   rmSync(cacheFile)
-  console.log('Cleared incremental cache between scoped runs')
+  out('Cleared incremental cache between scoped runs')
 }
 
-export function runStrykerScope(name, scope, { reportDir = 'reports/mutation', strykerJson } = {}) {
+export function runStrykerScope(name, scope, { reportDir = 'reports/mutation', strykerJson, out = console.log } = {}) {
   const outputJson = strykerJson || `${reportDir}/report.json`
   const mutateArg = scope.join(',')
   const targetFile = `${reportDir}/${name}-report.json`
   const sep = HEADER_SEPARATOR
 
-  console.log(`\n${sep}`)
-  console.log(`STRYKER — ${name.toUpperCase()}`)
-  console.log(`${sep}\n`)
+  out(`\n${sep}`)
+  out(`STRYKER — ${name.toUpperCase()}`)
+  out(`${sep}\n`)
 
   try {
     execFileSync(
@@ -44,23 +44,23 @@ export function runStrykerScope(name, scope, { reportDir = 'reports/mutation', s
     )
   } catch (err) {
     if (isUnexpectedError(err))
-      console.error(`  Stryker ${name} crashed (exit ${err.status}): ${err.message}`)
+      out(`  Stryker ${name} crashed (exit ${err.status}): ${err.message}`)
   }
 
   if (existsSync(outputJson)) {
     renameSync(outputJson, targetFile)
-    console.log(`\nReport saved: ${targetFile}`)
+    out(`\nReport saved: ${targetFile}`)
   }
 
   return targetFile
 }
 
-export function mergeReports(files, { outputPath = 'reports/mutation/report.json' } = {}) {
-  const merged = combineReportData(files)
+export function mergeReports(files, { outputPath = 'reports/mutation/report.json', out = console.log } = {}) {
+  const merged = combineReportData(files, out)
   writeFileSync(outputPath, JSON.stringify(merged, null, 2))
 
   const counts = countStatuses(merged)
-  printSummary(merged, counts, outputPath)
+  printSummary(merged, counts, outputPath, out)
 
   return counts.survived
 }

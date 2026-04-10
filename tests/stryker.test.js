@@ -26,27 +26,30 @@ import {
 import { existsSync, renameSync, rmSync, readFileSync, writeFileSync } from 'node:fs'
 import { execSync, execFileSync } from 'node:child_process'
 
+let out
+
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.spyOn(console, 'log').mockImplementation(() => {})
-  vi.spyOn(console, 'error').mockImplementation(() => {})
+  out = vi.fn()
 })
 
 describe('cleanStaleSandboxes', () => {
   it('removes .stryker-tmp when it exists', () => {
     existsSync.mockReturnValue(true)
 
-    cleanStaleSandboxes()
+    cleanStaleSandboxes(out)
 
     expect(rmSync).toHaveBeenCalledWith('.stryker-tmp', { recursive: true, force: true })
+    expect(out).toHaveBeenCalledWith('Cleaned stale .stryker-tmp directory')
   })
 
   it('does nothing when .stryker-tmp does not exist', () => {
     existsSync.mockReturnValue(false)
 
-    cleanStaleSandboxes()
+    cleanStaleSandboxes(out)
 
     expect(rmSync).not.toHaveBeenCalled()
+    expect(out).not.toHaveBeenCalled()
   })
 })
 
@@ -54,15 +57,16 @@ describe('clearIncrementalCache', () => {
   it('removes default cache file when it exists', () => {
     existsSync.mockReturnValue(true)
 
-    clearIncrementalCache()
+    clearIncrementalCache(undefined, out)
 
     expect(rmSync).toHaveBeenCalledWith('reports/stryker-incremental.json')
+    expect(out).toHaveBeenCalledWith('Cleared incremental cache between scoped runs')
   })
 
   it('removes specified cache file', () => {
     existsSync.mockReturnValue(true)
 
-    clearIncrementalCache('custom/cache.json')
+    clearIncrementalCache('custom/cache.json', out)
 
     expect(rmSync).toHaveBeenCalledWith('custom/cache.json')
   })
@@ -70,9 +74,10 @@ describe('clearIncrementalCache', () => {
   it('does nothing when cache file does not exist', () => {
     existsSync.mockReturnValue(false)
 
-    clearIncrementalCache()
+    clearIncrementalCache(undefined, out)
 
     expect(rmSync).not.toHaveBeenCalled()
+    expect(out).not.toHaveBeenCalled()
   })
 })
 
@@ -80,7 +85,7 @@ describe('runStrykerScope', () => {
   it('runs stryker with execFileSync to prevent command injection', () => {
     existsSync.mockReturnValue(false)
 
-    runStrykerScope('core', ['src/a.js', 'src/b.js'])
+    runStrykerScope('core', ['src/a.js', 'src/b.js'], { out })
 
     expect(execFileSync).toHaveBeenCalledWith(
       'npx',
@@ -93,7 +98,7 @@ describe('runStrykerScope', () => {
   it('does not pass scope through a shell (prevents injection)', () => {
     existsSync.mockReturnValue(false)
 
-    runStrykerScope('core', ["src/foo.js'; rm -rf /; '"])
+    runStrykerScope('core', ["src/foo.js'; rm -rf /; '"], { out })
 
     const args = execFileSync.mock.calls[0][1]
     expect(args).toContain("src/foo.js'; rm -rf /; '")
@@ -103,7 +108,7 @@ describe('runStrykerScope', () => {
   it('renames output report to scoped target file', () => {
     existsSync.mockReturnValue(true)
 
-    runStrykerScope('core', ['src/a.js'])
+    runStrykerScope('core', ['src/a.js'], { out })
 
     expect(renameSync).toHaveBeenCalledWith(
       'reports/mutation/report.json',
@@ -114,7 +119,7 @@ describe('runStrykerScope', () => {
   it('returns the scoped target file path', () => {
     existsSync.mockReturnValue(false)
 
-    const result = runStrykerScope('core', ['src/a.js'])
+    const result = runStrykerScope('core', ['src/a.js'], { out })
 
     expect(result).toBe('reports/mutation/core-report.json')
   })
@@ -124,7 +129,8 @@ describe('runStrykerScope', () => {
 
     const result = runStrykerScope('core', ['src/a.js'], {
       reportDir: 'out',
-      strykerJson: 'out/stryker.json'
+      strykerJson: 'out/stryker.json',
+      out
     })
 
     expect(renameSync).toHaveBeenCalledWith('out/stryker.json', 'out/core-report.json')
@@ -134,7 +140,7 @@ describe('runStrykerScope', () => {
   it('skips rename when output report does not exist', () => {
     existsSync.mockReturnValue(false)
 
-    runStrykerScope('core', ['src/a.js'])
+    runStrykerScope('core', ['src/a.js'], { out })
 
     expect(renameSync).not.toHaveBeenCalled()
   })
@@ -145,9 +151,9 @@ describe('runStrykerScope', () => {
       throw Object.assign(new Error('boom'), { status: 2 })
     })
 
-    runStrykerScope('core', ['src/a.js'])
+    runStrykerScope('core', ['src/a.js'], { out })
 
-    expect(console.error).toHaveBeenCalledWith(
+    expect(out).toHaveBeenCalledWith(
       expect.stringContaining('Stryker core crashed')
     )
   })
@@ -158,9 +164,9 @@ describe('runStrykerScope', () => {
       throw Object.assign(new Error('signal'), { status: null })
     })
 
-    runStrykerScope('core', ['src/a.js'])
+    runStrykerScope('core', ['src/a.js'], { out })
 
-    expect(console.error).toHaveBeenCalled()
+    expect(out).toHaveBeenCalledWith(expect.stringContaining('Stryker core crashed'))
   })
 
   it('logs error when stryker exits with undefined status', () => {
@@ -169,9 +175,9 @@ describe('runStrykerScope', () => {
       throw Object.assign(new Error('killed'), { status: undefined })
     })
 
-    runStrykerScope('core', ['src/a.js'])
+    runStrykerScope('core', ['src/a.js'], { out })
 
-    expect(console.error).toHaveBeenCalled()
+    expect(out).toHaveBeenCalledWith(expect.stringContaining('Stryker core crashed'))
   })
 
   it('does not log error when stryker exits with status 1 (surviving mutants)', () => {
@@ -180,9 +186,18 @@ describe('runStrykerScope', () => {
       throw Object.assign(new Error('mutants survived'), { status: 1 })
     })
 
-    runStrykerScope('core', ['src/a.js'])
+    runStrykerScope('core', ['src/a.js'], { out })
 
-    expect(console.error).not.toHaveBeenCalled()
+    expect(out).not.toHaveBeenCalledWith(expect.stringContaining('crashed'))
+  })
+
+  it('logs scope banner to out', () => {
+    existsSync.mockReturnValue(false)
+
+    runStrykerScope('core', ['src/a.js'], { out })
+
+    expect(out).toHaveBeenCalledWith(expect.stringContaining('STRYKER'))
+    expect(out).toHaveBeenCalledWith(expect.stringContaining('CORE'))
   })
 })
 
@@ -210,7 +225,7 @@ describe('mergeReports', () => {
     }
     readFileSync.mockReturnValue(JSON.stringify(report))
 
-    const survived = mergeReports(['scope-a.json'])
+    const survived = mergeReports(['scope-a.json'], { out })
 
     expect(survived).toBe(1)
     expect(writeFileSync).toHaveBeenCalledWith(
@@ -225,7 +240,7 @@ describe('mergeReports', () => {
   it('writes to custom output path', () => {
     readFileSync.mockReturnValue(JSON.stringify({ files: {} }))
 
-    mergeReports(['a.json'], { outputPath: 'custom/out.json' })
+    mergeReports(['a.json'], { outputPath: 'custom/out.json', out })
 
     expect(writeFileSync.mock.calls[0][0]).toBe('custom/out.json')
   })
@@ -247,6 +262,6 @@ describe('mergeReports', () => {
     }
     readFileSync.mockReturnValue(JSON.stringify(report))
 
-    expect(mergeReports(['a.json'])).toBe(0)
+    expect(mergeReports(['a.json'], { out })).toBe(0)
   })
 })
