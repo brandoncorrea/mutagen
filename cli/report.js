@@ -24,8 +24,7 @@ export function printSummary(merged, counts, reportPath, out = console.log) {
 
 const HR = '─'.repeat(60)
 
-export function printRunReport(mutations, results, log) {
-  const out = log || console.log
+export function printRunReport(mutations, results, out = console.log) {
   const { killed, survived } = results
 
   writeSummary(out, mutations, killed, survived)

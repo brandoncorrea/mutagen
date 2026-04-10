@@ -75,7 +75,7 @@ async function runBatch(ctx, jsonOutput, timeout, sourcesToRun) {
   const fileResults = {}
 
   for (const source of filesToRun) {
-    const result = await runSingle({ sourceFile: resolve(source), prepared, createRunner, timeout, log: out })
+    const result = await runSingle({ sourceFile: resolve(source), prepared, createRunner, timeout, out })
     if (result.error) {
       failures++
     } else {
@@ -157,7 +157,7 @@ async function runSingleMode(ctx, parsed, timeout) {
     createRunner: ctx.createRunner,
     targetLine: parsed.targetLine,
     timeout,
-    log: ctx.out
+    out: ctx.out
   })
   if (result.error) return 1
   return result.survived ? 1 : 0

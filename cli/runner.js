@@ -47,8 +47,7 @@ function withTimeout(fn, ms) {
 }
 
 export async function runSingle(options) {
-  const { sourceFile, prepared, createRunner, targetLine, timeout, log } = options
-  const out = log || console.log
+  const { sourceFile, prepared, createRunner, targetLine, timeout, out = console.log } = options
   const original = readFileSync(sourceFile, 'utf-8')
 
   out(`\n${SEPARATOR}`)
