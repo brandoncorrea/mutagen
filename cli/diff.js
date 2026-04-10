@@ -5,45 +5,7 @@
 
 import { readFileSync } from 'node:fs'
 
-import { mutantKey, countStatuses, isKilled, isAlive, SEPARATOR, createReport, tryLoadJson } from '../core/report-data.js'
-
-export function combineReportData(files, out = console.log) {
-  const { mergedFiles, duplicates } = deduplicateMutants(loadAllEntries(files, out))
-
-  if (duplicates)
-    out(`  Deduplicated: ${duplicates} duplicate mutant(s) removed`)
-
-  return createReport(mergedFiles)
-}
-
-function loadAllEntries(files, out) {
-  return files
-    .map(f => tryLoadJson(f, out))
-    .filter(Boolean)
-    .flatMap(({ files }) => Object.entries(files))
-}
-
-function deduplicateMutants(entries) {
-  const mergedFiles = {}
-  const seen = new Set()
-  let duplicates = 0
-
-  for (const [path, fileData] of entries) {
-    if (!mergedFiles[path])
-      mergedFiles[path] = { ...fileData, mutants: [] }
-    for (const mut of fileData.mutants) {
-      const key = mutantKey(path, mut)
-      if (seen.has(key)) {
-        duplicates++
-      } else {
-        seen.add(key)
-        mergedFiles[path].mutants.push(mut)
-      }
-    }
-  }
-
-  return { mergedFiles, duplicates }
-}
+import { mutantKey, countStatuses, isKilled, isAlive, SEPARATOR } from '../core/report-data.js'
 
 /**
  * Diff two mutation reports and print a summary of changes.

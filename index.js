@@ -12,6 +12,6 @@ export { createVitestRunner } from './runners/vitest.js'
 export { createManualRunner } from './cli/manual.js'
 
 // Report utilities
-export { countStatuses, toJsonMutants } from './core/report-data.js'
+export { countStatuses, toJsonMutants, combineReportData } from './core/report-data.js'
 export { printSummary, printRunReport } from './cli/report.js'
-export { combineReportData, diffReports } from './cli/diff.js'
+export { diffReports } from './cli/diff.js'
