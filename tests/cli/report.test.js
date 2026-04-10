@@ -11,7 +11,7 @@ vi.mock('node:fs', async (importOriginal) => {
 })
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
-import { mutantKey, countStatuses, toJsonMutants, createReport, writeReportFile, tryLoadJson } from '../../core/report-data.js'
+import { mutantKey, countStatuses, totalMutants, mutationScore, toJsonMutants, createReport, writeReportFile, tryLoadJson } from '../../core/report-data.js'
 import { printRunReport, printSummary } from '../../cli/report.js'
 
 
@@ -90,6 +90,35 @@ describe('countStatuses', () => {
       noCoverage: 0,
       timeout: 0
     })
+  })
+})
+
+describe('totalMutants', () => {
+  it('sums all four status counts', () => {
+    const counts = { killed: 3, survived: 2, noCoverage: 1, timeout: 4 }
+    expect(totalMutants(counts)).toBe(10)
+  })
+
+  it('returns zero when all counts are zero', () => {
+    const counts = { killed: 0, survived: 0, noCoverage: 0, timeout: 0 }
+    expect(totalMutants(counts)).toBe(0)
+  })
+})
+
+describe('mutationScore', () => {
+  it('computes (killed + timeout) / total * 100', () => {
+    const counts = { killed: 3, survived: 1, noCoverage: 0, timeout: 1 }
+    expect(mutationScore(counts)).toBeCloseTo(80.0)
+  })
+
+  it('returns 100 when total is zero', () => {
+    const counts = { killed: 0, survived: 0, noCoverage: 0, timeout: 0 }
+    expect(mutationScore(counts)).toBe(100)
+  })
+
+  it('counts timeout as killed for scoring', () => {
+    const counts = { killed: 0, survived: 1, noCoverage: 0, timeout: 1 }
+    expect(mutationScore(counts)).toBeCloseTo(50.0)
   })
 })
 

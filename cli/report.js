@@ -3,12 +3,11 @@
  * Data utilities live in core/report-data.js.
  */
 
-import { SEPARATOR } from '../core/report-data.js'
+import { SEPARATOR, mutationScore } from '../core/report-data.js'
 
 export function printSummary(merged, counts, reportPath, out = console.log) {
   const { killed, survived, noCoverage, timeout } = counts
-  const total = killed + survived + noCoverage + timeout
-  const score = total ? ((killed + timeout) / total * 100).toFixed(1) : '100.0'
+  const score = mutationScore(counts).toFixed(1)
 
   out(`\n${SEPARATOR}`)
   out(`MUTATION REPORT`)

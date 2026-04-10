@@ -96,6 +96,15 @@ function deduplicateMutants(entries) {
   return { mergedFiles, duplicates }
 }
 
+export function totalMutants({ killed, survived, noCoverage, timeout }) {
+  return killed + survived + noCoverage + timeout
+}
+
+export function mutationScore(counts) {
+  const total = totalMutants(counts)
+  return total ? (counts.killed + counts.timeout) / total * 100 : 100
+}
+
 export function toJsonMutants(sourceFile, results) {
   const relPath = relative(process.cwd(), sourceFile)
 

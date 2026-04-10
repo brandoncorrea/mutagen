@@ -5,7 +5,7 @@
 
 import { readFileSync } from 'node:fs'
 
-import { mutantKey, countStatuses, isKilled, isAlive, SEPARATOR } from '../core/report-data.js'
+import { mutantKey, countStatuses, totalMutants, mutationScore, isKilled, isAlive, SEPARATOR } from '../core/report-data.js'
 
 /**
  * Diff two mutation reports and print a summary of changes.
@@ -115,10 +115,10 @@ function printDiffReport({ beforeFile, afterFile, before, after }, changes, file
 function printDiffSummary(out, before, after) {
   const bCounts = countStatuses(before)
   const aCounts = countStatuses(after)
-  const bTotal = totalCounts(bCounts)
-  const aTotal = totalCounts(aCounts)
-  const bScore = scoreCounts(bCounts, bTotal)
-  const aScore = scoreCounts(aCounts, aTotal)
+  const bTotal = totalMutants(bCounts)
+  const aTotal = totalMutants(aCounts)
+  const bScore = mutationScore(bCounts)
+  const aScore = mutationScore(aCounts)
   const delta = aScore - bScore
 
   out(`Overall: ${formatTenth(bScore)}% → ${formatTenth(aScore)}% (${formatSigned(delta)}%)`)
@@ -172,16 +172,6 @@ function formatTenth(value) {
 function formatSigned(value) {
   const sign = value >= 0 ? '+' : ''
   return `${sign}${value.toFixed(1)}`
-}
-
-function scoreCounts(counts, total) {
-  if (total)
-    return (counts.killed + counts.timeout) / total * 100
-  return 100
-}
-
-function totalCounts({ killed, survived, noCoverage, timeout }) {
-  return killed + survived + noCoverage + timeout
 }
 
 function buildMutantMap(report) {
