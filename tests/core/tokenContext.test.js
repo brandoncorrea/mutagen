@@ -91,28 +91,28 @@ describe('getTokenContextAt', () => {
 describe('isInJsxTag', () => {
   it('returns true when position is after < with no closing >', () => {
     const line = '<div className'
-    expect(isInJsxTag(line, 5)).toBe(true)
+    expect(isInJsxTag(line, 5)).toBeTruthy()
   })
 
   it('returns false when position is after a closed tag >', () => {
     const line = '<div> content'
-    expect(isInJsxTag(line, 6)).toBe(false)
+    expect(isInJsxTag(line, 6)).toBeFalsy()
   })
 
   it('returns false when no angle brackets precede position (line 62 fallback)', () => {
     const line = 'const x = 1'
-    expect(isInJsxTag(line, 5)).toBe(false)
+    expect(isInJsxTag(line, 5)).toBeFalsy()
   })
 
   it('returns false when only code tokens exist (line 62 fallback)', () => {
     // No angle brackets at all — loop exhausts all spans, returns false
-    expect(isInJsxTag('abc def', 4)).toBe(false)
+    expect(isInJsxTag('abc def', 4)).toBeFalsy()
   })
 
   it('skips whitespace spans when scanning backwards', () => {
     // Whitespace between < and position should be continued over
     const line = '<   div'
-    expect(isInJsxTag(line, 5)).toBe(true)
+    expect(isInJsxTag(line, 5)).toBeTruthy()
   })
 
   it('returns false when > appears before < scanning backwards', () => {
@@ -122,7 +122,7 @@ describe('isInJsxTag', () => {
     // '<div> <span> text'
     //  0123456789...
     // position 12 is the space after <span>, but `>` at 11 would be encountered first
-    expect(isInJsxTag(line, 13)).toBe(false)
+    expect(isInJsxTag(line, 13)).toBeFalsy()
   })
 })
 
@@ -130,20 +130,20 @@ describe('isArrowOperator', () => {
   it('returns true for => at the correct position', () => {
     const line = 'x => y'
     // '>' is at index 3, '=' at index 2
-    expect(isArrowOperator(line, 3)).toBe(true)
+    expect(isArrowOperator(line, 3)).toBeTruthy()
   })
 
   it('returns false when position is 0 (cannot check position - 1)', () => {
-    expect(isArrowOperator('=>', 0)).toBe(false)
+    expect(isArrowOperator('=>', 0)).toBeFalsy()
   })
 
   it('returns false when char at position is not >', () => {
-    expect(isArrowOperator('a = b', 2)).toBe(false)
+    expect(isArrowOperator('a = b', 2)).toBeFalsy()
   })
 
   it('returns false when char before position is not =', () => {
     const line = 'a > b'
-    expect(isArrowOperator(line, 2)).toBe(false)
+    expect(isArrowOperator(line, 2)).toBeFalsy()
   })
 
   it('returns false for >= (not an arrow)', () => {
@@ -151,6 +151,6 @@ describe('isArrowOperator', () => {
     // '>' is at 2, '=' is at 3
     // isArrowOperator checks line[position-1]==='=' and line[position]==='>'
     // At position 2: line[1]=' ', line[2]='>' => false (no = before)
-    expect(isArrowOperator(line, 2)).toBe(false)
+    expect(isArrowOperator(line, 2)).toBeFalsy()
   })
 })

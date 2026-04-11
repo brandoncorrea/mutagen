@@ -59,7 +59,6 @@ export function isInJsxTag(line, position) {
     if (value === '>') return false
     if (value === '<') return true
   }
-  return false
 }
 
 export function isArrowOperator(line, position) {

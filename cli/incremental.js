@@ -22,8 +22,8 @@ export function countCachedResults(report, relPaths) {
 function countCachedResult(results, report, relPath) {
   const fileData = report.files[relPath]
   if (fileData)
-    for (const m of fileData.mutants)
-      countCachedMutation(results, m)
+    for (const mutant of fileData.mutants)
+      countCachedMutation(results, mutant)
 }
 
 function countCachedMutation(results, mutation) {
@@ -142,9 +142,9 @@ function findTestInvalidatedSources(changedTestFiles, previousReport) {
   return testInvalidated
 }
 
-function isInvalidatedMutant(mutant, changedTestAbs) {
-  return mutant.killedBy?.some(t => changedTestAbs.has(t))
-    || mutant.status === 'Survived'
+function isInvalidatedMutant({ killedBy, status }, changedTestAbs) {
+  return killedBy?.some(t => changedTestAbs.has(t))
+    || status === 'Survived'
 }
 
 function printIncrementalSummary(out, batchResult, sources, previous, classification) {

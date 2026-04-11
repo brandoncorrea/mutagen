@@ -14,7 +14,7 @@ export function diffReports(beforeFile, afterFile, out = console.log) {
   const before = tryLoadJson(beforeFile, out)
   const after = tryLoadJson(afterFile, out)
 
-  if (!before || !after) return null
+  if (!before || !after) return
 
   const changes = classifyChanges(before, after)
   const fileDeltas = computeFileDeltas(before, after)
@@ -32,7 +32,10 @@ export function diffReports(beforeFile, afterFile, out = console.log) {
 function classifyChanges(beforeData, afterData) {
   const beforeMap = buildMutantMap(beforeData)
   const afterMap = buildMutantMap(afterData)
-  const allKeys = new Set([...Object.keys(beforeMap), ...Object.keys(afterMap)])
+  const allKeys = new Set([
+    ...Object.keys(beforeMap),
+    ...Object.keys(afterMap)
+  ])
   const changes = {
     newlyKilled: [],
     regressions: [],

@@ -76,13 +76,12 @@ function argsToOptions(args) {
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]
     if (arg === '--line') {
-      targetLine = parseInt(args[++i], 10)
-      if (Number.isNaN(targetLine))
+      targetLine = Number(args[++i])
+      if (isNonNegative(targetLine))
         return { error: '--line requires a numeric value' }
-    }
-    else if (arg === '--timeout') {
+    } else if (arg === '--timeout') {
       timeout = Number(args[++i])
-      if (isInvalidTimeout(timeout))
+      if (isNonNegative(timeout))
         return { error: '--timeout requires a numeric value' }
     } else if (isNotFlag(arg)) {
       filtered.push(arg)
@@ -95,7 +94,7 @@ function parseTimeout(args) {
   const idx = args.indexOf('--timeout')
   if (idx < 0) return
   const value = Number(args[idx + 1])
-  if (isInvalidTimeout(value))
+  if (isNonNegative(value))
     return { error: '--timeout requires a numeric value' }
   return value
 }
@@ -104,8 +103,8 @@ function hasFlag(argv, flag) {
   return argv.includes(flag)
 }
 
-function isInvalidTimeout(timeout) {
-  return Number.isNaN(timeout) || timeout < 0
+function isNonNegative(value) {
+  return Number.isNaN(value) || value < 0
 }
 
 const FLAG_OPTIONS = new Set(['--json', '--dry-run'])
