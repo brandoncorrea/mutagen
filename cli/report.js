@@ -23,10 +23,11 @@ export function printSummary(merged, counts, reportPath, out = console.log) {
 }
 
 export function printRunReport(mutations, results, out = console.log) {
-  const { killed, survived } = results
+  const { killed, survived, timedOut = [] } = results
+  const allKilled = [...killed, ...timedOut]
 
-  writeSummary(out, mutations, killed, survived)
-  writeScore(out, mutations, killed)
+  writeSummary(out, mutations, allKilled, survived)
+  writeScore(out, mutations, allKilled)
   if (survived.length)
     writeSurvivors(out, survived)
   else

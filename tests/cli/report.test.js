@@ -267,6 +267,30 @@ describe('printRunReport', () => {
     expect(lines.join('\n')).toContain('100.0%')
   })
 
+  it('counts timed-out mutations as killed in score', () => {
+    const lines = []
+    const log = msg => lines.push(msg)
+    const mutations = [
+      { line: 1, name: 'a' },
+      { line: 2, name: 'b' }
+    ]
+    const results = {
+      killed: [],
+      survived: [],
+      timedOut: [
+        { line: 1, name: 'a' },
+        { line: 2, name: 'b' }
+      ]
+    }
+
+    printRunReport(mutations, results, log)
+
+    const output = lines.join('\n')
+    expect(output).toContain('100.0%')
+    expect(output).toContain('Killed: 2')
+    expect(output).toContain('ALL mutations killed')
+  })
+
   it('defaults to console.log when no log function provided', () => {
     vi.spyOn(console, 'log').mockImplementation(() => {})
     const mutations = [{ line: 1, name: 'test' }]
