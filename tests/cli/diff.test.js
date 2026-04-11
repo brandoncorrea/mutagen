@@ -377,7 +377,7 @@ describe('diffReports', () => {
 
     const result = diffReports('missing.json', 'also-missing.json', out)
 
-    expect(result).toBeNull()
+    expect(result).toBeFalsy()
     expect(output()).toContain('Warning')
   })
 

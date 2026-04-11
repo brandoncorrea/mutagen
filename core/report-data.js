@@ -38,25 +38,36 @@ export function mutantKey(path, { location, mutatorName, replacement }) {
   return `${path}:${line}:${mutatorName || ''}:${replacement || ''}`
 }
 
-export function isKilled(mutation) {
-  return mutation.status === 'Killed' || mutation.status === 'Timeout'
+export function isKilled({ status }) {
+  return status === 'Killed' || status === 'Timeout'
 }
 
-export function isAlive(mutation) {
-  return mutation.status === 'Survived' || mutation.status === 'NoCoverage'
+export function isAlive({ status }) {
+  return status === 'Survived' || status === 'NoCoverage'
 }
 
 export function countStatuses(merged) {
-  let killed = 0, survived = 0, noCoverage = 0, timeout = 0
-  for (const fileData of Object.values(merged.files)) {
-    for (const { status } of fileData.mutants) {
-      if (status === 'Killed') killed++
-      else if (status === 'Survived') survived++
-      else if (status === 'NoCoverage') noCoverage++
-      else if (status === 'Timeout') timeout++
-    }
+  const statuses = {
+    killed: 0,
+    survived: 0,
+    noCoverage: 0,
+    timeout: 0
   }
-  return { killed, survived, noCoverage, timeout }
+  for (const fileData of Object.values(merged.files))
+    for (const mutant of fileData.mutants)
+      countStatus(statuses, mutant)
+  return statuses
+}
+
+function countStatus(statuses, { status }) {
+  if (status === 'Killed')
+    statuses.killed++
+  else if (status === 'Survived')
+    statuses.survived++
+  else if (status === 'NoCoverage')
+    statuses.noCoverage++
+  else if (status === 'Timeout')
+    statuses.timeout++
 }
 
 export function combineReportData(files, out = console.log) {

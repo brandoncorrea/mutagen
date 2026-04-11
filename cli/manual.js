@@ -135,7 +135,8 @@ async function run(ctx, argv) {
 
 function runAllDryRun({ sources, prepared, out }) {
   let total = 0
-  for (const source of sources) total += dryRun(resolve(source), prepared, null, out)
+  for (const source of sources)
+    total += dryRun(resolve(source), prepared, null, out)
   out(`\n  Grand total: ${total} mutations across ${sources.length} files`)
   return 0
 }
@@ -153,7 +154,7 @@ async function runBatchMode(ctx, jsonOutput, timeout) {
 }
 
 async function runSingleMode(ctx, parsed, timeout) {
-  const result = await runSingle({
+  const { error, survived } = await runSingle({
     sourceFile: parsed.sourceFile,
     prepared: ctx.prepared,
     createRunner: ctx.createRunner,
@@ -161,6 +162,5 @@ async function runSingleMode(ctx, parsed, timeout) {
     timeout,
     out: ctx.out
   })
-  if (result.error) return 1
-  return result.survived ? 1 : 0
+  return error || survived ? 1 : 0
 }

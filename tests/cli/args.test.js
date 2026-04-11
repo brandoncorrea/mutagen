@@ -49,6 +49,9 @@ describe('parseArgs', () => {
 
     it('returns error when --timeout value is non-numeric', () =>
       expectErrorResult('--incremental', '--timeout', 'abc'))
+
+    it('returns error when --timeout value is negative', () =>
+      expectErrorResult('--incremental', '--timeout', '-1'))
   })
 
   describe('--line flag', () => {
@@ -57,6 +60,9 @@ describe('parseArgs', () => {
 
     it('returns error when --line value is non-numeric', () =>
       expectErrorResult('source.js', '--line', 'abc'))
+
+    it('returns error when --line value is negative', () =>
+      expectErrorResult('source.js', '--line', '-5'))
 
     it('parses --line with a valid numeric value', () => {
       const result = parseArgs(['source.js', '--line', '42'])
