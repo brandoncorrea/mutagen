@@ -43,10 +43,13 @@ function writeSummary(out, mutations, killed, survived) {
 }
 
 function writeScore(out, mutations, killed) {
-  const score = mutations.length
-    ? (killed.length / mutations.length) * 100
-    : 100
-  out(`Mutation score: ${score.toFixed(1)}%`)
+  const counts = {
+    killed: killed.length,
+    survived: mutations.length - killed.length,
+    noCoverage: 0,
+    timeout: 0
+  }
+  out(`Mutation score: ${mutationScore(counts).toFixed(1)}%`)
 }
 
 function writeSurvivors(out, mutations) {
