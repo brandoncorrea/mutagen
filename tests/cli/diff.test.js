@@ -381,6 +381,70 @@ describe('diffReports', () => {
     expect(output()).toContain('Warning')
   })
 
+  it('prints negative score delta when score decreases', () => {
+    const before = makeReport({
+      'a.js': { mutants: [
+        makeMutant('m1', 'a', 'Killed'),
+        makeMutant('m2', 'b', 'Killed'),
+        makeMutant('m3', 'c', 'Killed'),
+        makeMutant('m4', 'd', 'Killed'),
+        makeMutant('m5', 'e', 'Survived')
+      ] }
+    })
+    const after = makeReport({
+      'a.js': { mutants: [
+        makeMutant('m1', 'a', 'Killed'),
+        makeMutant('m2', 'b', 'Killed'),
+        makeMutant('m3', 'c', 'Killed'),
+        makeMutant('m4', 'd', 'Survived'),
+        makeMutant('m5', 'e', 'Survived')
+      ] }
+    })
+    readFileSync
+      .mockReturnValueOnce(JSON.stringify(before))
+      .mockReturnValueOnce(JSON.stringify(after))
+
+    diffReports('before.json', 'after.json', out)
+
+    expect(output()).toContain('Overall: 80.0% → 60.0% (-20.0%)')
+  })
+
+  it('prints correct killed count among new mutants', () => {
+    const before = makeReport({
+      'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] }
+    })
+    const after = makeReport({
+      'a.js': { mutants: [
+        makeMutant('m1', 'x', 'Killed'),
+        makeMutant('m2', 'y', 'Killed', 10),
+        makeMutant('m3', 'z', 'Survived', 20)
+      ] }
+    })
+    readFileSync
+      .mockReturnValueOnce(JSON.stringify(before))
+      .mockReturnValueOnce(JSON.stringify(after))
+
+    diffReports('before.json', 'after.json', out)
+
+    expect(output()).toContain('NEW MUTANTS: 2 (1 killed, 1 survived)')
+  })
+
+  it('hides REMOVED MUTANTS section when no mutants were removed', () => {
+    const before = makeReport({
+      'a.js': { mutants: [makeMutant('m1', 'x', 'Survived')] }
+    })
+    const after = makeReport({
+      'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] }
+    })
+    readFileSync
+      .mockReturnValueOnce(JSON.stringify(before))
+      .mockReturnValueOnce(JSON.stringify(after))
+
+    diffReports('before.json', 'after.json', out)
+
+    expect(output()).not.toContain('REMOVED MUTANTS')
+  })
+
   it('falls back to mutantKey when mutant has no id', () => {
     const mutantNoId = {
       mutatorName: 'EqualityOperator',
