@@ -505,6 +505,53 @@ describe('createManualRunner', () => {
       expect(result.totalKilled).toBe(1)
     })
 
+    it('invalidates source when only one of multiple killedBy tests changed', async () => {
+      const src = resolve('src/a.js')
+      const testFileA = resolve('test/a.test.js')
+      const testFileB = resolve('test/b.test.js')
+      const srcHash = hashOf(sourceCode)
+      const testContentB = 'test B code'
+
+      existsSync.mockReturnValue(true)
+      mockFs({
+        [src]: sourceCode,
+        [testFileA]: 'changed test A code',
+        [testFileB]: testContentB,
+        [reportPath]: JSON.stringify({
+          files: {
+            'src/a.js': {
+              mutants: [{
+                status: 'Killed',
+                killedBy: [resolve('test/a.test.js'), resolve('test/b.test.js')]
+              }]
+            }
+          },
+          sourceHashes: { 'src/a.js': srcHash },
+          testHashes: {
+            'test/a.test.js': 'old-hash-a',
+            'test/b.test.js': hashOf(testContentB)
+          }
+        })
+      })
+
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: false, killedBy: ['test/a.test.js'] }
+      ])
+      const manual = createManualRunner({
+        patterns,
+        sources: ['src/a.js'],
+        testSources: ['test/a.test.js', 'test/b.test.js'],
+        createRunner: vi.fn().mockResolvedValue(runner)
+      })
+      const result = await manual.runIncremental(false, null)
+
+      // Source hash unchanged, but one of two killedBy tests changed → must re-run
+      // This guards against .some() being weakened to .every()
+      expect(result.totalKilled).toBe(1)
+      expect(runner.run).toHaveBeenCalled()
+    })
+
     it('does not invalidate source when changed test is not in killedBy', async () => {
       const src = resolve('src/a.js')
       const testFile = resolve('test/a.test.js')
