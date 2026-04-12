@@ -77,6 +77,7 @@ describe('createManualRunner', () => {
 
       expect(result.totalKilled).toBe(1)
       expect(result.totalSurvived).toBe(0)
+      expect(result.totalTimedOut).toBe(0)
       expect(result.failures).toBe(0)
     })
 
@@ -201,6 +202,24 @@ describe('createManualRunner', () => {
 
       expect(result.totalKilled).toBe(1)
       expect(result.totalTimedOut).toBe(1)
+    })
+
+    it('prints correct file count in batch summary', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: false }
+      ])
+
+      const lines = []
+      const manual = _createManualRunner({
+        patterns, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner),
+        out: msg => lines.push(msg)
+      })
+      await manual.runBatch(false, null)
+
+      expect(lines.join('\n')).toContain('Files: 1  |')
     })
   })
 
@@ -977,6 +996,51 @@ describe('createManualRunner', () => {
       expect(code).toBe(1)
     })
 
+    it('returns 1 when --all has both survivors and failures', async () => {
+      mockFs({
+        [resolve('src/a.js')]: sourceCode,
+        [resolve('src/b.js')]: sourceCode,
+      })
+      const failRunner = fakeRunner([{ passed: false }])
+      const surviveRunner = fakeRunner([
+        { passed: true },
+        { passed: true },
+      ])
+
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js', 'src/b.js'],
+        createRunner: vi.fn()
+          .mockResolvedValueOnce(failRunner)
+          .mockResolvedValueOnce(surviveRunner),
+      })
+      const code = await manual.run(['--all'])
+
+      expect(code).toBe(1)
+    })
+
+    it('returns 1 when --incremental has both survivors and failures', async () => {
+      mockFs({
+        [resolve('src/a.js')]: sourceCode,
+        [resolve('src/b.js')]: sourceCode,
+      })
+      existsSync.mockReturnValue(false)
+      const failRunner = fakeRunner([{ passed: false }])
+      const surviveRunner = fakeRunner([
+        { passed: true },
+        { passed: true },
+      ])
+
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js', 'src/b.js'],
+        createRunner: vi.fn()
+          .mockResolvedValueOnce(failRunner)
+          .mockResolvedValueOnce(surviveRunner),
+      })
+      const code = await manual.run(['--incremental'])
+
+      expect(code).toBe(1)
+    })
+
     it('returns 1 when preflight fails in single-file mode', async () => {
       mockFs({ [resolve('src/a.js')]: sourceCode })
       const runner = fakeRunner([{ passed: false }]) // preflight fails
@@ -1021,14 +1085,17 @@ describe('createManualRunner', () => {
         { passed: false }
       ])
 
-      const manual = createManualRunner({
+      const lines = []
+      const manual = _createManualRunner({
         patterns, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner),
-        timeout: 3000
+        timeout: 3000,
+        out: msg => lines.push(msg)
       })
       const code = await manual.run(['src/a.js'])
 
       expect(code).toBe(0)
+      expect(lines.join('\n')).toContain('Timeout: 3000ms')
     })
   })
 })
