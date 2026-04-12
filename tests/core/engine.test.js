@@ -171,4 +171,51 @@ describe('generateMutations', () => {
     // The > after <div is inside a JSX tag — should be skipped
     expect(mutations).toHaveLength(0)
   })
+
+  describe('nearGuard window boundaries', () => {
+    const nearGuardPatterns = preparePatterns([{
+      pattern: / > /g,
+      replacement: ' < ',
+      name: '> → <',
+      nearGuard: /[@]/
+    }])
+
+    it('blocks when guard char is at position 0 and match is near line start', () => {
+      // match.index=2, windowStart must clamp to 0 (not -3)
+      // Kills: Math.max→Math.min, 0→1, +→- on window size
+      const source = '@x > rest'
+      expect(generateMutations(source, nearGuardPatterns)).toHaveLength(0)
+    })
+
+    it('blocks when guard char is exactly 5 chars before match', () => {
+      // @ at index 5, match at index 10, windowStart=5 includes @
+      const source = 'xxxxx@abcd > rest'
+      expect(generateMutations(source, nearGuardPatterns)).toHaveLength(0)
+    })
+
+    it('does not block when guard char is 6 chars before match', () => {
+      // @ at index 4, match at index 10, windowStart=5 excludes @
+      const source = 'xxxx@xabcd > rest'
+      expect(generateMutations(source, nearGuardPatterns)).toHaveLength(1)
+    })
+
+    it('blocks when guard char is exactly 5 chars after match end', () => {
+      // match at 5 (len 3, ends at 8), windowEnd=13, @ at index 12 included
+      const source = 'abcde > xxxx@xxxx'
+      expect(generateMutations(source, nearGuardPatterns)).toHaveLength(0)
+    })
+
+    it('does not block when guard char is 6 chars after match end', () => {
+      // match ends at 8, windowEnd=13, @ at index 13 excluded
+      // Kills: Math.min→Math.max on windowEnd, .length+1
+      const source = 'abcde > xxxxx@xxx'
+      expect(generateMutations(source, nearGuardPatterns)).toHaveLength(1)
+    })
+
+    it('blocks when guard char is immediately after match end', () => {
+      // @ at first position after match — kills slice boundary shifts
+      const source = 'abcde > @rest'
+      expect(generateMutations(source, nearGuardPatterns)).toHaveLength(0)
+    })
+  })
 })
