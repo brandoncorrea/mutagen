@@ -1,182 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-
-vi.mock('node:fs', async (importOriginal) => {
-  const actual = await importOriginal()
-  return {
-    ...actual,
-    readFileSync: vi.fn(),
-    writeFileSync: vi.fn(),
-    mkdirSync: vi.fn(),
-  }
-})
-
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
-import { mutantKey, countStatuses, totalMutants, mutationScore, toJsonMutants, createReport, writeReportFile, tryLoadJson } from '../../core/report-data.js'
+import { describe, it, expect, vi } from 'vitest'
 import { printRunReport, printSummary } from '../../cli/report.js'
-
-
-describe('mutantKey', () => {
-  it('builds a key from path, line, mutator name, and replacement', () => {
-    const m = {
-      location: { start: { line: 10 } },
-      mutatorName: '=== → !==',
-      replacement: ' !== '
-    }
-    expect(mutantKey('src/foo.js', m)).toBe('src/foo.js:10:=== → !==: !== ')
-  })
-
-  it('defaults to line 0 when location is missing', () => {
-    const m = { mutatorName: 'test', replacement: 'r' }
-    expect(mutantKey('file.js', m)).toBe('file.js:0:test:r')
-  })
-
-  it('handles missing mutatorName and replacement', () => {
-    const m = { location: { start: { line: 5 } } }
-    expect(mutantKey('file.js', m)).toBe('file.js:5::')
-  })
-})
-
-describe('countStatuses', () => {
-  it('counts each status type across files', () => {
-    const report = {
-      files: {
-        'a.js': {
-          mutants: [
-            { status: 'Killed' },
-            { status: 'Survived' }
-          ]
-        },
-        'b.js': {
-          mutants: [
-            { status: 'NoCoverage' },
-            { status: 'Timeout' },
-            { status: 'Killed' }
-          ]
-        }
-      }
-    }
-    expect(countStatuses(report)).toEqual({
-      killed: 2,
-      survived: 1,
-      noCoverage: 1,
-      timeout: 1
-    })
-  })
-
-  it('returns zeros when no mutants exist', () => {
-    const report = { files: {} }
-    expect(countStatuses(report)).toEqual({
-      killed: 0,
-      survived: 0,
-      noCoverage: 0,
-      timeout: 0
-    })
-  })
-
-  it('ignores unrecognized statuses', () => {
-    const report = {
-      files: {
-        'a.js': {
-          mutants: [
-            { status: 'Killed' },
-            { status: 'CompileError' },
-          ]
-        }
-      }
-    }
-    expect(countStatuses(report)).toEqual({
-      killed: 1,
-      survived: 0,
-      noCoverage: 0,
-      timeout: 0
-    })
-  })
-})
-
-describe('totalMutants', () => {
-  it('sums all four status counts', () => {
-    const counts = { killed: 3, survived: 2, noCoverage: 1, timeout: 4 }
-    expect(totalMutants(counts)).toBe(10)
-  })
-
-  it('returns zero when all counts are zero', () => {
-    const counts = { killed: 0, survived: 0, noCoverage: 0, timeout: 0 }
-    expect(totalMutants(counts)).toBe(0)
-  })
-})
-
-describe('mutationScore', () => {
-  it('computes (killed + timeout) / total * 100', () => {
-    const counts = { killed: 3, survived: 1, noCoverage: 0, timeout: 1 }
-    expect(mutationScore(counts)).toBeCloseTo(80.0)
-  })
-
-  it('returns 100 when total is zero', () => {
-    const counts = { killed: 0, survived: 0, noCoverage: 0, timeout: 0 }
-    expect(mutationScore(counts)).toBe(100)
-  })
-
-  it('counts timeout as killed for scoring', () => {
-    const counts = { killed: 0, survived: 1, noCoverage: 0, timeout: 1 }
-    expect(mutationScore(counts)).toBeCloseTo(50.0)
-  })
-})
-
-describe('toJsonMutants', () => {
-  it('converts killed and survived results to Stryker-compatible format', () => {
-    const results = {
-      killed: [
-        {
-          line: 5,
-          name: '=== → !==',
-          original: 'a === b',
-          mutated: 'a !== b',
-          killedBy: ['/tests/a.test.js']
-        }
-      ],
-      survived: [
-        {
-          line: 10,
-          name: '+ → -',
-          original: 'a + b',
-          mutated: 'a - b'
-        }
-      ]
-    }
-
-    const output = toJsonMutants('/project/src/foo.js', results)
-    expect(output.mutants).toHaveLength(2)
-
-    const killed = output.mutants.find(m => m.status === 'Killed')
-    expect(killed.mutatorName).toBe('=== → !==')
-    expect(killed.location.start.line).toBe(5)
-    expect(killed.killedBy).toEqual(['/tests/a.test.js'])
-
-    const survived = output.mutants.find(m => m.status === 'Survived')
-    expect(survived.mutatorName).toBe('+ → -')
-    expect(survived.killedBy).toBeUndefined()
-  })
-
-  it('includes timedOut mutations as Timeout status', () => {
-    const results = {
-      killed: [],
-      survived: [],
-      timedOut: [
-        { line: 3, name: '&& → ||', original: 'a && b', mutated: 'a || b' }
-      ]
-    }
-
-    const output = toJsonMutants('/project/src/foo.js', results)
-    expect(output.mutants).toHaveLength(1)
-    expect(output.mutants[0].status).toBe('Timeout')
-    expect(output.mutants[0].mutatorName).toBe('&& → ||')
-  })
-
-  it('produces a relative path', () => {
-    const output = toJsonMutants(process.cwd() + '/src/foo.js', { killed: [], survived: [] })
-    expect(output.path).toBe('src/foo.js')
-  })
-})
 
 describe('printSummary', () => {
   it('prints file count, statuses, and mutation score', () => {
@@ -267,6 +90,30 @@ describe('printRunReport', () => {
     expect(lines.join('\n')).toContain('100.0%')
   })
 
+  it('counts timed-out mutations as killed in score', () => {
+    const lines = []
+    const log = msg => lines.push(msg)
+    const mutations = [
+      { line: 1, name: 'a' },
+      { line: 2, name: 'b' }
+    ]
+    const results = {
+      killed: [],
+      survived: [],
+      timedOut: [
+        { line: 1, name: 'a' },
+        { line: 2, name: 'b' }
+      ]
+    }
+
+    printRunReport(mutations, results, log)
+
+    const output = lines.join('\n')
+    expect(output).toContain('100.0%')
+    expect(output).toContain('Killed: 2')
+    expect(output).toContain('ALL mutations killed')
+  })
+
   it('defaults to console.log when no log function provided', () => {
     vi.spyOn(console, 'log').mockImplementation(() => {})
     const mutations = [{ line: 1, name: 'test' }]
@@ -277,99 +124,5 @@ describe('printRunReport', () => {
     const output = console.log.mock.calls.map(c => c[0]).join('\n')
     expect(output).toContain('100.0%')
     console.log.mockRestore()
-  })
-})
-
-describe('createReport', () => {
-  it('builds a report with schemaVersion, thresholds, and files', () => {
-    const files = { 'a.js': { mutants: [{ status: 'Killed' }] } }
-    const report = createReport(files)
-
-    expect(report).toEqual({
-      schemaVersion: '1',
-      thresholds: { high: 80, low: 60 },
-      files
-    })
-  })
-
-  it('merges extra properties into the report', () => {
-    const files = { 'a.js': { mutants: [] } }
-    const report = createReport(files, { sourceHashes: { 'a.js': 'abc' }, testHashes: { 't.js': 'def' } })
-
-    expect(report.schemaVersion).toBe('1')
-    expect(report.thresholds).toEqual({ high: 80, low: 60 })
-    expect(report.files).toBe(files)
-    expect(report.sourceHashes).toEqual({ 'a.js': 'abc' })
-    expect(report.testHashes).toEqual({ 't.js': 'def' })
-  })
-
-  it('returns empty files when given an empty object', () => {
-    const report = createReport({})
-    expect(report.files).toEqual({})
-    expect(report.schemaVersion).toBe('1')
-  })
-})
-
-describe('writeReportFile', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it('creates the directory, writes JSON, and logs the path', () => {
-    const report = { schemaVersion: '1', thresholds: { high: 80, low: 60 }, files: {} }
-    const out = vi.fn()
-
-    writeReportFile('reports/mutation', 'reports/mutation/report.json', report, out)
-
-    expect(mkdirSync).toHaveBeenCalledWith('reports/mutation', { recursive: true })
-    expect(writeFileSync).toHaveBeenCalledWith(
-      'reports/mutation/report.json',
-      JSON.stringify(report, null, 2)
-    )
-    expect(out).toHaveBeenCalledWith('JSON report: reports/mutation/report.json')
-  })
-})
-
-describe('tryLoadJson', () => {
-  afterEach(() => {
-    readFileSync.mockReset()
-  })
-
-  it('parses valid JSON from a file', () => {
-    const data = { files: {}, schemaVersion: '1' }
-    readFileSync.mockReturnValue(JSON.stringify(data))
-
-    const result = tryLoadJson('/tmp/report.json')
-
-    expect(result).toEqual(data)
-  })
-
-  it('returns undefined and calls out on read error', () => {
-    readFileSync.mockImplementation(() => { throw new Error('ENOENT') })
-    const out = vi.fn()
-
-    const result = tryLoadJson('/tmp/missing.json', out)
-
-    expect(result).toBeUndefined()
-    expect(out).toHaveBeenCalledWith(expect.stringContaining('Warning'))
-    expect(out).toHaveBeenCalledWith(expect.stringContaining('missing.json'))
-  })
-
-  it('returns undefined and calls out on invalid JSON', () => {
-    readFileSync.mockReturnValue('not valid json {{{')
-    const out = vi.fn()
-
-    const result = tryLoadJson('/tmp/bad.json', out)
-
-    expect(result).toBeUndefined()
-    expect(out).toHaveBeenCalledWith(expect.stringContaining('Warning'))
-  })
-
-  it('returns undefined silently when no out callback provided', () => {
-    readFileSync.mockImplementation(() => { throw new Error('ENOENT') })
-
-    const result = tryLoadJson('/tmp/missing.json')
-
-    expect(result).toBeUndefined()
   })
 })

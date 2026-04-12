@@ -10,8 +10,6 @@ import { resolve, relative } from 'node:path'
 import { tryLoadJson } from '../core/report-data.js'
 import { printIncrementalHeader, handleAllCached, writeMergedReport, printIncrementalSummary } from './incremental-report.js'
 
-export { countCachedResults } from './incremental-report.js'
-
 export const HASH_PREFIX_LENGTH = 16
 
 /**

@@ -468,6 +468,203 @@ describe('createManualRunner', () => {
       expect(report.files['src/b.js']).toBeDefined()
       expect(report.sourceHashes).toBeDefined()
     })
+
+    it('skips test invalidation when test files are unchanged', async () => {
+      const src = resolve('src/a.js')
+      const testFile = resolve('test/a.test.js')
+      const testContent = 'test code'
+      const srcHash = hashOf(sourceCode)
+      const testHash = hashOf(testContent)
+
+      existsSync.mockReturnValue(true)
+      mockFs({
+        [src]: sourceCode,
+        [testFile]: testContent,
+        [reportPath]: JSON.stringify({
+          files: {
+            'src/a.js': {
+              mutants: [{ status: 'Killed', killedBy: [resolve('test/a.test.js')] }]
+            }
+          },
+          sourceHashes: { 'src/a.js': srcHash },
+          testHashes: { 'test/a.test.js': testHash }
+        })
+      })
+
+      const createRunner = vi.fn()
+      const manual = createManualRunner({
+        patterns,
+        sources: ['src/a.js'],
+        testSources: ['test/a.test.js'],
+        createRunner
+      })
+      const result = await manual.runIncremental(false, null)
+
+      // Both source and test unchanged → fully cached
+      expect(createRunner).not.toHaveBeenCalled()
+      expect(result.totalKilled).toBe(1)
+    })
+
+    it('invalidates source when only one of multiple killedBy tests changed', async () => {
+      const src = resolve('src/a.js')
+      const testFileA = resolve('test/a.test.js')
+      const testFileB = resolve('test/b.test.js')
+      const srcHash = hashOf(sourceCode)
+      const testContentB = 'test B code'
+
+      existsSync.mockReturnValue(true)
+      mockFs({
+        [src]: sourceCode,
+        [testFileA]: 'changed test A code',
+        [testFileB]: testContentB,
+        [reportPath]: JSON.stringify({
+          files: {
+            'src/a.js': {
+              mutants: [{
+                status: 'Killed',
+                killedBy: [resolve('test/a.test.js'), resolve('test/b.test.js')]
+              }]
+            }
+          },
+          sourceHashes: { 'src/a.js': srcHash },
+          testHashes: {
+            'test/a.test.js': 'old-hash-a',
+            'test/b.test.js': hashOf(testContentB)
+          }
+        })
+      })
+
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: false, killedBy: ['test/a.test.js'] }
+      ])
+      const manual = createManualRunner({
+        patterns,
+        sources: ['src/a.js'],
+        testSources: ['test/a.test.js', 'test/b.test.js'],
+        createRunner: vi.fn().mockResolvedValue(runner)
+      })
+      const result = await manual.runIncremental(false, null)
+
+      // Source hash unchanged, but one of two killedBy tests changed → must re-run
+      // This guards against .some() being weakened to .every()
+      expect(result.totalKilled).toBe(1)
+      expect(runner.run).toHaveBeenCalled()
+    })
+
+    it('does not invalidate source when changed test is not in killedBy', async () => {
+      const src = resolve('src/a.js')
+      const testFile = resolve('test/a.test.js')
+      const srcHash = hashOf(sourceCode)
+
+      existsSync.mockReturnValue(true)
+      mockFs({
+        [src]: sourceCode,
+        [testFile]: 'new test code',
+        [reportPath]: JSON.stringify({
+          files: {
+            'src/a.js': {
+              mutants: [
+                { status: 'Killed', killedBy: ['/other/test.js'] },
+                { status: 'Killed' },
+              ]
+            }
+          },
+          sourceHashes: { 'src/a.js': srcHash },
+          testHashes: { 'test/a.test.js': 'old-hash' }
+        })
+      })
+
+      const createRunner = vi.fn()
+      const manual = createManualRunner({
+        patterns,
+        sources: ['src/a.js'],
+        testSources: ['test/a.test.js'],
+        createRunner
+      })
+      const result = await manual.runIncremental(false, null)
+
+      // Source hash matches, test changed, but no mutant's killedBy matches
+      // the changed test and no mutant survived → source not invalidated
+      expect(createRunner).not.toHaveBeenCalled()
+      expect(result.totalKilled).toBe(2)
+    })
+
+    it('skips carry-forward for unchanged files missing from previous report', async () => {
+      const srcA = resolve('src/a.js')
+      const srcB = resolve('src/b.js')
+      const srcC = resolve('src/c.js')
+      const codeA = 'const a = 1'
+      const codeB = 'const b = 2'
+      const codeC = 'if (a === b) {}'
+
+      existsSync.mockReturnValue(true)
+      mockFs({
+        [srcA]: codeA,
+        [srcB]: codeB,
+        [srcC]: codeC,
+        [reportPath]: JSON.stringify({
+          files: {
+            'src/a.js': { mutants: [{ status: 'Killed' }] }
+            // src/b.js has a matching hash but no entry in files
+          },
+          sourceHashes: {
+            'src/a.js': hashOf(codeA),
+            'src/b.js': hashOf(codeB),
+            'src/c.js': 'stale'
+          },
+          testHashes: {}
+        })
+      })
+
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: false }
+      ])
+      const manual = createManualRunner({
+        patterns,
+        sources: ['src/a.js', 'src/b.js', 'src/c.js'],
+        createRunner: vi.fn().mockResolvedValue(runner)
+      })
+      await manual.runIncremental(true, null)
+
+      const reportCalls = writeFileSync.mock.calls.filter(([p]) => p === reportPath)
+      const report = JSON.parse(reportCalls[0][1])
+      expect(report.files['src/a.js']).toBeDefined()
+      expect(report.files['src/b.js']).toBeUndefined()
+      expect(report.files['src/c.js']).toBeDefined()
+    })
+
+    it('counts NoCoverage mutants as neither killed nor survived in cache', async () => {
+      const src = resolve('src/a.js')
+      const hash = hashOf(sourceCode)
+
+      existsSync.mockReturnValue(true)
+      mockFs({
+        [src]: sourceCode,
+        [reportPath]: JSON.stringify({
+          files: {
+            'src/a.js': {
+              mutants: [
+                { status: 'Killed' },
+                { status: 'NoCoverage' }
+              ]
+            }
+          },
+          sourceHashes: { 'src/a.js': hash },
+          testHashes: {}
+        })
+      })
+
+      const createRunner = vi.fn()
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js'], createRunner
+      })
+      const result = await manual.runIncremental(false, null)
+
+      expect(result.totalKilled).toBe(1)
+      expect(result.totalSurvived).toBe(0)
+    })
   })
 
   describe('run (CLI dispatch)', () => {
@@ -521,17 +718,37 @@ describe('createManualRunner', () => {
       expect(code).toBe(1)
     })
 
-    it('runs dry-run mode without executing tests', async () => {
+    it('runs dry-run mode: shows mutations grouped by line, no tests run', async () => {
       mockFs({ [resolve('src/a.js')]: sourceCode })
+      const lines = []
       const createRunner = vi.fn()
 
-      const manual = createManualRunner({
+      const manual = _createManualRunner({
         patterns, sources: ['src/a.js'], createRunner,
+        out: msg => lines.push(msg)
       })
       const code = await manual.run(['src/a.js', '--dry-run'])
 
       expect(code).toBe(0)
       expect(createRunner).not.toHaveBeenCalled()
+      const output = lines.join('\n')
+      expect(output).toContain('DRY RUN')
+      expect(output).toContain('L1:')
+      expect(output).toContain('Total: 1 mutations')
+    })
+
+    it('dry-run filters to target line', async () => {
+      mockFs({ [resolve('src/a.js')]: 'line1\nif (a === b) {}' })
+      const lines = []
+
+      const manual = _createManualRunner({
+        patterns, sources: ['src/a.js'], createRunner: vi.fn(),
+        out: msg => lines.push(msg)
+      })
+      const code = await manual.run(['src/a.js', '--dry-run', '--line', '1'])
+
+      expect(code).toBe(0)
+      expect(lines.join('\n')).toContain('Total: 0 mutations')
     })
 
     it('runs batch dry-run across all sources', async () => {
@@ -539,15 +756,18 @@ describe('createManualRunner', () => {
         [resolve('src/a.js')]: sourceCode,
         [resolve('src/b.js')]: 'if (x === y) {}'
       })
+      const lines = []
       const createRunner = vi.fn()
 
-      const manual = createManualRunner({
-        patterns, sources: ['src/a.js', 'src/b.js'], createRunner
+      const manual = _createManualRunner({
+        patterns, sources: ['src/a.js', 'src/b.js'], createRunner,
+        out: msg => lines.push(msg)
       })
       const code = await manual.run(['--all', '--dry-run'])
 
       expect(code).toBe(0)
       expect(createRunner).not.toHaveBeenCalled()
+      expect(lines.join('\n')).toContain('Grand total: 2 mutations across 2 files')
     })
 
     it('runs --all batch mode and returns exit code', async () => {
