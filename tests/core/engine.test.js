@@ -214,4 +214,24 @@ describe('generateMutations', () => {
       expect(generateMutations(source, nearGuardPatterns)).toHaveLength(0)
     })
   })
+
+  it('trims whitespace from original field in mutation output', () => {
+    // Kills: trim() removed from original field in compileMutation (line 104)
+    const source = '  if (a === b) {}'
+    const mutations = generateMutations(source, prepared)
+    expect(mutations).toHaveLength(1)
+    expect(mutations[0].original).toBe('if (a === b) {}')
+  })
+
+  it('skips > mutation where > is at index 0 of match string', () => {
+    // Kills: includes→indexOf on match[0] in isAngleBracketSyntax (line 62)
+    // indexOf('>') returns 0 (falsy) when > is first char, but includes returns true
+    const patterns = preparePatterns([{
+      pattern: />/g,
+      replacement: '<',
+      name: '> → <'
+    }])
+    const source = '<div> content'
+    expect(generateMutations(source, patterns)).toHaveLength(0)
+  })
 })
