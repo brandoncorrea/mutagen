@@ -59,19 +59,17 @@ export function printIncrementalHeader(out, sources, classification) {
     out(`Changed tests: ${changedTestFiles.length}`)
 }
 
-export function handleAllCached(out, config, previous, classification, jsonOutput) {
-  const { sources, reportPath } = config
-  const { unchangedSources, currentHashes, currentTestHashes } = classification
+export function updateCachedReportHashes(reportPath, previousReport, classification) {
+  const { currentHashes, currentTestHashes } = classification
+  previousReport.sourceHashes = currentHashes
+  previousReport.testHashes = currentTestHashes
+  writeFileSync(reportPath, JSON.stringify(previousReport, null, 2))
+}
+
+export function printAllCachedSummary(out, sources, previous, classification) {
+  const cachedCounts = countCachedResults(previous.previousReport, classification.unchangedSources)
 
   out(`\nNo files changed since last report. Nothing to do.`)
-
-  if (jsonOutput && previous.previousReport) {
-    previous.previousReport.sourceHashes = currentHashes
-    previous.previousReport.testHashes = currentTestHashes
-    writeFileSync(reportPath, JSON.stringify(previous.previousReport, null, 2))
-  }
-
-  const cachedCounts = countCachedResults(previous.previousReport, unchangedSources)
   out(`\n${HEADER_SEPARATOR}`)
   out(`INCREMENTAL SUMMARY (all cached)`)
   out(HEADER_SEPARATOR)
@@ -84,7 +82,7 @@ export function handleAllCached(out, config, previous, classification, jsonOutpu
   }
 }
 
-export function writeMergedReport(out, config, previous, classification, fileResults) {
+export function writeMergedReport(out, { config, previous, classification, fileResults }) {
   const { reportDir, reportPath } = config
   const { unchangedSources, currentHashes, currentTestHashes } = classification
   const mergedFiles = { ...fileResults }

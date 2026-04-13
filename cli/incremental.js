@@ -8,7 +8,7 @@ import { createHash } from 'node:crypto'
 import { resolve, relative } from 'node:path'
 
 import { tryLoadJson } from '../core/report-data.js'
-import { printIncrementalHeader, handleAllCached, writeMergedReport, printIncrementalSummary } from './incremental-report.js'
+import { printIncrementalHeader, updateCachedReportHashes, printAllCachedSummary, writeMergedReport, printIncrementalSummary } from './incremental-report.js'
 
 const HASH_PREFIX_LENGTH = 16
 
@@ -31,13 +31,16 @@ export async function runIncremental(config, jsonOutput, timeout, out = console.
 
   printIncrementalHeader(out, sources, classification)
 
-  if (!classification.changedSources.length)
-    return handleAllCached(out, config, previous, classification, jsonOutput)
+  if (!classification.changedSources.length) {
+    if (jsonOutput && previous.previousReport)
+      updateCachedReportHashes(config.reportPath, previous.previousReport, classification)
+    return printAllCachedSummary(out, sources, previous, classification)
+  }
 
   const batchResult = await runBatch(false, timeout, classification.changedSources)
 
   if (jsonOutput)
-    writeMergedReport(out, config, previous, classification, batchResult.fileResults)
+    writeMergedReport(out, { config, previous, classification, fileResults: batchResult.fileResults })
 
   return printIncrementalSummary(out, batchResult, sources, previous, classification)
 }
