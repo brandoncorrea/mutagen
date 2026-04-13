@@ -63,6 +63,18 @@ describe('createVitestRunner', () => {
       expect(mock.close).toHaveBeenCalled()
     })
 
+    it('close is a safe no-op (runner contract)', async () => {
+      const mock = createMockVitest()
+      startVitest.mockResolvedValue(mock)
+
+      const runner = await createVitestRunner('src/a.js', { warm: false })
+      await runner.close()
+
+      // Cold runner manages vitest lifecycle per-run, so close() is a no-op
+      // but must exist — runSingle calls runner.close() unconditionally
+      expect(mock.close).not.toHaveBeenCalled()
+    })
+
     it('closes vitest even when getFiles throws', async () => {
       const mock = createMockVitest()
       mock.state.getFiles.mockImplementation(() => { throw new Error('boom') })
