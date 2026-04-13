@@ -15,7 +15,9 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "mutate": "node ./scripts/self-mutate.js",
+    "mutate:json": "node ./scripts/self-mutate.js --json"
   },
   "peerDependenciesMeta": {
     "vitest": {
