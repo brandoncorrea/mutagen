@@ -17,8 +17,12 @@
   ],
   "type": "module",
   "main": "index.js",
+  "bin": {
+    "mutagen": "./bin/mutagen.js"
+  },
   "files": [
     "index.js",
+    "bin/",
     "core/",
     "cli/",
     "runners/",
