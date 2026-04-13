@@ -10,7 +10,7 @@ import { resolve, relative } from 'node:path'
 import { tryLoadJson } from '../core/report-data.js'
 import { printIncrementalHeader, handleAllCached, writeMergedReport, printIncrementalSummary } from './incremental-report.js'
 
-export const HASH_PREFIX_LENGTH = 16
+const HASH_PREFIX_LENGTH = 16
 
 /**
  * Run mutations incrementally, skipping unchanged files.
@@ -74,7 +74,7 @@ function classifySources(sources, previousHashes, testInvalidated) {
   return { currentHashes, changedSources, unchangedSources }
 }
 
-export function loadPreviousReport(reportPath, out = console.log) {
+function loadPreviousReport(reportPath, out = console.log) {
   const previousReport = existsSync(reportPath) ? tryLoadJson(reportPath, out) : undefined
   return {
     previousReport,

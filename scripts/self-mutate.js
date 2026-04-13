@@ -14,7 +14,7 @@
 
 import { readFileSync, writeFileSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
-import { resolve, relative } from 'node:path'
+import { resolve } from 'node:path'
 import { generateMutations, preparePatterns } from '../index.js'
 import { javascript } from '../core/patterns/javascript.js'
 

@@ -72,11 +72,11 @@ function printFileDelta(out, { label, file, after, before, delta }) {
     out(`  ${file}: ${formatTenth(before)}% → ${formatTenth(after)}% (${formatSigned(delta)}%)`)
 }
 
-export function formatSigned(value) {
+function formatSigned(value) {
   const sign = value >= 0 ? '+' : ''
   return `${sign}${formatTenth(value)}`
 }
 
-export function formatTenth(value) {
+function formatTenth(value) {
   return value.toFixed(1)
 }

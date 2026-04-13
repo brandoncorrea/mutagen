@@ -14,7 +14,6 @@ vi.mock('node:fs', async (importOriginal) => {
 })
 
 import { createManualRunner as _createManualRunner } from '../../cli/manual.js'
-import { HASH_PREFIX_LENGTH } from '../../cli/incremental.js'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 
 const patterns = [
@@ -28,7 +27,7 @@ function hashOf(content) {
   return createHash('sha256')
     .update(Buffer.from(content))
     .digest('hex')
-    .slice(0, HASH_PREFIX_LENGTH)
+    .slice(0, 16)
 }
 
 function mockFs(files) {

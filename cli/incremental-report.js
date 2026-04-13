@@ -8,7 +8,25 @@ import { resolve, relative } from 'node:path'
 
 import { HEADER_SEPARATOR, isKilled, createReport, writeReportFile } from '../core/report-data.js'
 
-export function countCachedResults(report, relPaths) {
+export function printIncrementalSummary(out, batchResult, sources, previous, classification) {
+  const { totalSurvived, totalKilled, failures } = batchResult
+  const { unchangedSources, changedSources } = classification
+  const cachedCounts = countCachedResults(previous.previousReport, unchangedSources)
+  const grandKilled = totalKilled + cachedCounts.killed
+  const grandSurvived = totalSurvived + cachedCounts.survived
+
+  out(`\n${HEADER_SEPARATOR}`)
+  out(`INCREMENTAL SUMMARY`)
+  out(HEADER_SEPARATOR)
+  out(`Rerun: ${changedSources.length} files  |  Killed: ${totalKilled}  |  Survived: ${totalSurvived}  |  Errors: ${failures}`)
+  out(`Cached: ${unchangedSources.length} files  |  Killed: ${cachedCounts.killed}  |  Survived: ${cachedCounts.survived}`)
+  out(`Total: ${sources.length} files  |  Killed: ${grandKilled}  |  Survived: ${grandSurvived}`)
+  out(`${HEADER_SEPARATOR}\n`)
+
+  return { totalSurvived: grandSurvived, totalKilled: grandKilled, failures }
+}
+
+function countCachedResults(report, relPaths) {
   const results = { killed: 0, survived: 0 }
   if (report)
     for (const relPath of relPaths)
@@ -28,24 +46,6 @@ function countCachedMutation(results, mutation) {
     results.killed++
   else if (mutation.status === 'Survived')
     results.survived++
-}
-
-export function printIncrementalSummary(out, batchResult, sources, previous, classification) {
-  const { totalSurvived, totalKilled, failures } = batchResult
-  const { unchangedSources, changedSources } = classification
-  const cachedCounts = countCachedResults(previous.previousReport, unchangedSources)
-  const grandKilled = totalKilled + cachedCounts.killed
-  const grandSurvived = totalSurvived + cachedCounts.survived
-
-  out(`\n${HEADER_SEPARATOR}`)
-  out(`INCREMENTAL SUMMARY`)
-  out(HEADER_SEPARATOR)
-  out(`Rerun: ${changedSources.length} files  |  Killed: ${totalKilled}  |  Survived: ${totalSurvived}  |  Errors: ${failures}`)
-  out(`Cached: ${unchangedSources.length} files  |  Killed: ${cachedCounts.killed}  |  Survived: ${cachedCounts.survived}`)
-  out(`Total: ${sources.length} files  |  Killed: ${grandKilled}  |  Survived: ${grandSurvived}`)
-  out(`${HEADER_SEPARATOR}\n`)
-
-  return { totalSurvived: grandSurvived, totalKilled: grandKilled, failures }
 }
 
 export function printIncrementalHeader(out, sources, classification) {
