@@ -9,7 +9,7 @@ vi.mock('node:fs', async (importOriginal) => {
     readFileSync: vi.fn(),
     writeFileSync: vi.fn(),
     mkdirSync: vi.fn(),
-    existsSync: vi.fn(),
+    existsSync: vi.fn()
   }
 })
 
@@ -17,7 +17,7 @@ import { createManualRunner as _createManualRunner } from '../../cli/manual.js'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 
 const patterns = [
-  { pattern: / === /g, replacement: ' !== ', name: '=== → !==' },
+  { pattern: / === /g, replacement: ' !== ', name: '=== → !==' }
 ]
 
 // Exactly one mutation site
@@ -45,7 +45,7 @@ function fakeRunner(results) {
   return {
     run: vi.fn().mockImplementation(() =>
       Promise.resolve(queue.shift() || { passed: true })),
-    close: vi.fn().mockResolvedValue(undefined),
+    close: vi.fn().mockResolvedValue(undefined)
   }
 }
 
@@ -230,7 +230,7 @@ describe('createManualRunner', () => {
       const runner = fakeRunner([
         { passed: true },  // preflight
         { passed: false },
-        { passed: false },
+        { passed: false }
       ])
 
       const lines = []
@@ -252,7 +252,7 @@ describe('createManualRunner', () => {
       const runner = fakeRunner([
         { passed: true },  // preflight
         { passed: false },
-        { passed: false },
+        { passed: false }
       ])
 
       const lines = []
@@ -309,7 +309,7 @@ describe('createManualRunner', () => {
       mockFs({ [resolve('src/a.js')]: sourceCode })
       const runner = {
         run: vi.fn().mockResolvedValue({ passed: true }),
-        close: vi.fn().mockRejectedValue(new Error('close failed')),
+        close: vi.fn().mockRejectedValue(new Error('close failed'))
       }
 
       const manual = createManualRunner({
@@ -328,7 +328,7 @@ describe('createManualRunner', () => {
           .mockResolvedValueOnce({ passed: true })  // preflight
           .mockResolvedValueOnce({ passed: false, killedBy: ['t.js'] })  // killed
           .mockRejectedValueOnce(new Error('Mutation timed out after 10ms')),  // timedOut
-        close: vi.fn().mockResolvedValue(undefined),
+        close: vi.fn().mockResolvedValue(undefined)
       }
 
       const manual = createManualRunner({
@@ -349,7 +349,7 @@ describe('createManualRunner', () => {
           .mockResolvedValueOnce({ passed: true }) // preflight
           .mockImplementationOnce(() => new Promise(resolve =>
             setTimeout(() => resolve({ passed: true }), 500))),
-        close: vi.fn().mockResolvedValue(undefined),
+        close: vi.fn().mockResolvedValue(undefined)
       }
 
       const manual = createManualRunner({
@@ -370,7 +370,7 @@ describe('createManualRunner', () => {
         run: vi.fn()
           .mockImplementationOnce(async () => ({ passed: true }))  // preflight
           .mockImplementationOnce(async () => { await Promise.resolve(); return { passed: true } }),
-        close: vi.fn().mockResolvedValue(undefined),
+        close: vi.fn().mockResolvedValue(undefined)
       }
 
       const manual = createManualRunner({
@@ -518,7 +518,7 @@ describe('createManualRunner', () => {
         [src]: sourceCode,
         [reportPath]: JSON.stringify({
           files: {
-            'src/a.js': { mutants: [{ status: 'Killed' }] },
+            'src/a.js': { mutants: [{ status: 'Killed' }] }
           },
           sourceHashes: { 'src/a.js': hash },
           testHashes: {}
@@ -750,7 +750,7 @@ describe('createManualRunner', () => {
             'src/a.js': {
               mutants: [
                 { status: 'Killed', killedBy: ['/other/test.js'] },
-                { status: 'Killed' },
+                { status: 'Killed' }
               ]
             }
           },
@@ -1307,7 +1307,7 @@ describe('createManualRunner', () => {
           'a.js': {
             mutants: [
               { id: 'm1', mutatorName: 'x', status: 'Killed', location: { start: { line: 1 } }, replacement: 'y' },
-              { id: 'm2', mutatorName: 'x', status: 'Killed', location: { start: { line: 2 } }, replacement: 'z' },
+              { id: 'm2', mutatorName: 'x', status: 'Killed', location: { start: { line: 2 } }, replacement: 'z' }
             ]
           }
         }
@@ -1317,7 +1317,7 @@ describe('createManualRunner', () => {
           'a.js': {
             mutants: [
               { id: 'm1', mutatorName: 'x', status: 'Survived', location: { start: { line: 1 } }, replacement: 'y' },
-              { id: 'm2', mutatorName: 'x', status: 'Survived', location: { start: { line: 2 } }, replacement: 'z' },
+              { id: 'm2', mutatorName: 'x', status: 'Survived', location: { start: { line: 2 } }, replacement: 'z' }
             ]
           }
         }
@@ -1338,19 +1338,19 @@ describe('createManualRunner', () => {
     it('returns 1 when --all has both survivors and failures', async () => {
       mockFs({
         [resolve('src/a.js')]: sourceCode,
-        [resolve('src/b.js')]: sourceCode,
+        [resolve('src/b.js')]: sourceCode
       })
       const failRunner = fakeRunner([{ passed: false }])
       const surviveRunner = fakeRunner([
         { passed: true },
-        { passed: true },
+        { passed: true }
       ])
 
       const manual = createManualRunner({
         patterns, sources: ['src/a.js', 'src/b.js'],
         createRunner: vi.fn()
           .mockResolvedValueOnce(failRunner)
-          .mockResolvedValueOnce(surviveRunner),
+          .mockResolvedValueOnce(surviveRunner)
       })
       const code = await manual.run(['--all'])
 
@@ -1360,20 +1360,20 @@ describe('createManualRunner', () => {
     it('returns 1 when --incremental has both survivors and failures', async () => {
       mockFs({
         [resolve('src/a.js')]: sourceCode,
-        [resolve('src/b.js')]: sourceCode,
+        [resolve('src/b.js')]: sourceCode
       })
       existsSync.mockReturnValue(false)
       const failRunner = fakeRunner([{ passed: false }])
       const surviveRunner = fakeRunner([
         { passed: true },
-        { passed: true },
+        { passed: true }
       ])
 
       const manual = createManualRunner({
         patterns, sources: ['src/a.js', 'src/b.js'],
         createRunner: vi.fn()
           .mockResolvedValueOnce(failRunner)
-          .mockResolvedValueOnce(surviveRunner),
+          .mockResolvedValueOnce(surviveRunner)
       })
       const code = await manual.run(['--incremental'])
 

@@ -7,7 +7,7 @@ vi.mock('node:fs', async (importOriginal) => {
     ...actual,
     readFileSync: vi.fn(),
     writeFileSync: vi.fn(),
-    mkdirSync: vi.fn(),
+    mkdirSync: vi.fn()
   }
 })
 
@@ -81,7 +81,7 @@ describe('countStatuses', () => {
         'a.js': {
           mutants: [
             { status: 'Killed' },
-            { status: 'CompileError' },
+            { status: 'CompileError' }
           ]
         }
       }

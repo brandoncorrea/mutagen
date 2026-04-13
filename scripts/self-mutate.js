@@ -34,7 +34,7 @@ const TARGET_MODULES = [
   'cli/runner.js',
   'cli/report.js',
   'cli/manual.js',
-  'stryker.js',
+  'stryker.js'
 ]
 
 // Excluded: runners/vitest.js — mutating the test runner itself corrupts execution
@@ -55,7 +55,7 @@ function runTests() {
     execFileSync('npx', ['vitest', 'run', '--reporter=dot'], {
       cwd: ROOT,
       timeout: TIMEOUT_MS,
-      stdio: 'pipe',
+      stdio: 'pipe'
     })
     return { passed: true }
   } catch (err) {
@@ -94,7 +94,7 @@ function mutateFile(sourceFile, dryRun) {
       name: m.name,
       original: m.original,
       mutated: m.mutated,
-      status: 'dry-run',
+      status: 'dry-run'
     }))
   }
 
@@ -108,7 +108,7 @@ function mutateFile(sourceFile, dryRun) {
       name: mutation.name,
       original: mutation.original,
       mutated: mutation.mutated,
-      status,
+      status
     })
 
     const icon = status === 'Killed' ? '.' : status === 'Timeout' ? 'T' : '!'

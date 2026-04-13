@@ -24,7 +24,7 @@ describe('public API (index.js)', () => {
     'combineReportData',
     'printSummary',
     'printRunReport',
-    'diffReports',
+    'diffReports'
   ]
 
   for (const name of expectedExports) {
