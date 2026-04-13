@@ -15,14 +15,15 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { generateMutations, preparePatterns } from '../index.js'
 import { javascript } from '../core/patterns.js'
 
-const ROOT = resolve(import.meta.dirname, '..')
-const TIMEOUT_MS = 30_000
+export const ROOT = resolve(import.meta.dirname, '..')
+export const TIMEOUT_MS = 30_000
 
 // All release code under mutation — no exclusions
-const TARGET_MODULES = [
+export const TARGET_MODULES = [
   'index.js',
   'core/engine.js',
   'core/token-context.js',
@@ -40,7 +41,7 @@ const TARGET_MODULES = [
   'stryker.js'
 ]
 
-function parseArgs(argv) {
+export function parseArgs(argv) {
   const args = argv.slice(2)
   const dryRun = args.includes('--dry-run')
   const json = args.includes('--json')
@@ -51,7 +52,7 @@ function parseArgs(argv) {
   return { dryRun, json, targets }
 }
 
-function runTests() {
+export function runTests() {
   try {
     execFileSync('npx', ['vitest', 'run', '--reporter=dot'], {
       cwd: ROOT,
@@ -65,7 +66,7 @@ function runTests() {
   }
 }
 
-function runMutation(sourceFile, mutation) {
+export function runMutation(sourceFile, mutation) {
   const absPath = resolve(ROOT, sourceFile)
   const original = readFileSync(absPath, 'utf8')
   try {
@@ -76,12 +77,12 @@ function runMutation(sourceFile, mutation) {
   }
 }
 
-function isCommentOnlyLine(original) {
+export function isCommentOnlyLine(original) {
   const t = original.trim()
   return t.startsWith('*') || t.startsWith('//') || t.startsWith('/*') || t === '*/'
 }
 
-function loadMutations(sourceFile) {
+export function loadMutations(sourceFile) {
   const absPath = resolve(ROOT, sourceFile)
   const source = readFileSync(absPath, 'utf8')
   const prepared = preparePatterns(javascript)
@@ -89,7 +90,7 @@ function loadMutations(sourceFile) {
     .filter(m => !isCommentOnlyLine(m.original))
 }
 
-function toResult(sourceFile, mutation, status) {
+export function toResult(sourceFile, mutation, status) {
   return {
     file: sourceFile,
     line: mutation.line,
@@ -100,12 +101,12 @@ function toResult(sourceFile, mutation, status) {
   }
 }
 
-function previewMutations(sourceFile) {
+export function previewMutations(sourceFile) {
   return loadMutations(sourceFile)
     .map(m => toResult(sourceFile, m, 'dry-run'))
 }
 
-function executeMutations(sourceFile) {
+export function executeMutations(sourceFile) {
   const mutations = loadMutations(sourceFile)
   const results = []
   for (const mutation of mutations) {
@@ -120,7 +121,7 @@ function executeMutations(sourceFile) {
   return results
 }
 
-function printSummary(allResults) {
+export function printSummary(allResults) {
   const survived = allResults.filter(r => r.status === 'Survived')
   const killed = allResults.filter(r => r.status === 'Killed')
   const timedOut = allResults.filter(r => r.status === 'Timeout')
@@ -138,7 +139,7 @@ function printSummary(allResults) {
     printSurvivors(survived)
 }
 
-function printSurvivors(survived) {
+export function printSurvivors(survived) {
   console.log('\n--- SURVIVORS ---\n')
   for (const r of survived) {
     console.log(`${r.file}:${r.line} — ${r.name}`)
@@ -148,7 +149,7 @@ function printSurvivors(survived) {
   }
 }
 
-function printPerFileScores(allResults) {
+export function printPerFileScores(allResults) {
   const byFile = new Map()
   for (const r of allResults) {
     if (!byFile.has(r.file)) byFile.set(r.file, { killed: 0, survived: 0, timedOut: 0, total: 0 })
@@ -161,18 +162,18 @@ function printPerFileScores(allResults) {
 
   console.log('--- PER-FILE SCORES ---\n')
   for (const [file, counts] of byFile) {
-    const score = counts.total > 0 ? ((counts.killed + counts.timedOut) / counts.total * 100).toFixed(1) : '0.0'
+    const score = ((counts.killed + counts.timedOut) / counts.total * 100).toFixed(1)
     const flag = counts.survived > 0 ? ` ← ${counts.survived} SURVIVED` : ''
     console.log(`  ${file}: ${score}% (${counts.killed}/${counts.total})${flag}`)
   }
 }
 
-function printTextReport(allResults) {
+export function printTextReport(allResults) {
   printSummary(allResults)
   printPerFileScores(allResults)
 }
 
-function main() {
+export function main() {
   const { dryRun, json, targets } = parseArgs(process.argv)
 
   if (targets.length === 0) {
@@ -214,4 +215,6 @@ function main() {
   }
 }
 
-main()
+/* v8 ignore next 2 */
+if (process.argv[1] === fileURLToPath(import.meta.url))
+  main()
