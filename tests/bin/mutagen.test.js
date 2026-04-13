@@ -15,6 +15,9 @@ vi.mock('node:fs', async (importOriginal) => {
 import { run } from '../../bin/mutagen.js'
 import { readFileSync, existsSync } from 'node:fs'
 
+const noop = () => {}
+const silent = { out: noop, err: noop }
+
 beforeEach(() => {
   vi.clearAllMocks()
   existsSync.mockReturnValue(false)
@@ -28,15 +31,11 @@ describe('bin/mutagen CLI', () => {
       return Buffer.from(sourceCode)
     })
 
-    const configPath = resolve('tests/bin/fixtures/test-config.js')
-    vi.spyOn(console, 'log').mockImplementation(() => {})
-
     const code = await run(['src/a.js'], {
-      configPath,
-      err: () => {}
+      ...silent,
+      configPath: resolve('tests/bin/fixtures/test-config.js')
     })
 
-    console.log.mockRestore()
     expect(code).toBe(0)
   })
 
@@ -47,21 +46,18 @@ describe('bin/mutagen CLI', () => {
       return Buffer.from(sourceCode)
     })
 
-    const configPath = resolve('tests/bin/fixtures/named-config.js')
-    vi.spyOn(console, 'log').mockImplementation(() => {})
-
     const code = await run(['src/a.js'], {
-      configPath,
-      err: () => {}
+      ...silent,
+      configPath: resolve('tests/bin/fixtures/named-config.js')
     })
 
-    console.log.mockRestore()
     expect(code).toBe(0)
   })
 
   it('exits 1 with error when no config file found', async () => {
     const lines = []
     const code = await run(['src/a.js'], {
+      out: noop,
       configPath: '/nonexistent/mutagen.config.js',
       err: msg => lines.push(msg)
     })
@@ -84,15 +80,13 @@ describe('bin/mutagen CLI', () => {
       close: vi.fn().mockResolvedValue(undefined)
     }
 
-    const config = {
-      patterns: [{ pattern: / === /g, replacement: ' !== ', name: '=== → !==' }],
-      sources: ['src/a.js'],
-      createRunner: vi.fn().mockResolvedValue(runner)
-    }
-
     const code = await run(['src/a.js'], {
-      config,
-      err: () => {}
+      ...silent,
+      config: {
+        patterns: [{ pattern: / === /g, replacement: ' !== ', name: '=== → !==' }],
+        sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner)
+      }
     })
 
     expect(code).toBe(0)
@@ -112,15 +106,13 @@ describe('bin/mutagen CLI', () => {
       close: vi.fn().mockResolvedValue(undefined)
     }
 
-    const config = {
-      patterns: [{ pattern: / === /g, replacement: ' !== ', name: '=== → !==' }],
-      sources: ['src/a.js'],
-      createRunner: vi.fn().mockResolvedValue(runner)
-    }
-
     const code = await run(['--all'], {
-      config,
-      err: () => {}
+      ...silent,
+      config: {
+        patterns: [{ pattern: / === /g, replacement: ' !== ', name: '=== → !==' }],
+        sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner)
+      }
     })
 
     expect(code).toBe(0)
@@ -140,15 +132,13 @@ describe('bin/mutagen CLI', () => {
       close: vi.fn().mockResolvedValue(undefined)
     }
 
-    const config = {
-      patterns: [{ pattern: / === /g, replacement: ' !== ', name: '=== → !==' }],
-      sources: ['src/a.js'],
-      createRunner: vi.fn().mockResolvedValue(runner)
-    }
-
     const code = await run(['src/a.js'], {
-      config,
-      err: () => {}
+      ...silent,
+      config: {
+        patterns: [{ pattern: / === /g, replacement: ' !== ', name: '=== → !==' }],
+        sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner)
+      }
     })
 
     expect(code).toBe(1)

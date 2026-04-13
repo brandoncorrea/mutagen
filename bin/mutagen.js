@@ -14,7 +14,7 @@ import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { createManualRunner } from '../cli/manual.js'
 
-export async function run(argv, { config, configPath, err = console.error } = {}) {
+export async function run(argv, { config, configPath, out = console.log, err = console.error } = {}) {
   if (!config) {
     const path = configPath || resolve('mutagen.config.js')
     try {
@@ -27,7 +27,7 @@ export async function run(argv, { config, configPath, err = console.error } = {}
     }
   }
 
-  const manual = createManualRunner({ out: console.log, ...config })
+  const manual = createManualRunner({ out, ...config })
   return manual.run(argv)
 }
 
