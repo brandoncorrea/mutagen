@@ -21,6 +21,44 @@ beforeEach(() => {
 })
 
 describe('bin/mutagen CLI', () => {
+  it('loads config from configPath via dynamic import', async () => {
+    const sourceCode = 'if (a === b) {}'
+    readFileSync.mockImplementation((path, enc) => {
+      if (enc === 'utf-8') return sourceCode
+      return Buffer.from(sourceCode)
+    })
+
+    const configPath = resolve('tests/bin/fixtures/test-config.js')
+    vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    const code = await run(['src/a.js'], {
+      configPath,
+      err: () => {}
+    })
+
+    console.log.mockRestore()
+    expect(code).toBe(0)
+  })
+
+  it('falls back to named exports when config has no default export', async () => {
+    const sourceCode = 'if (a === b) {}'
+    readFileSync.mockImplementation((path, enc) => {
+      if (enc === 'utf-8') return sourceCode
+      return Buffer.from(sourceCode)
+    })
+
+    const configPath = resolve('tests/bin/fixtures/named-config.js')
+    vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    const code = await run(['src/a.js'], {
+      configPath,
+      err: () => {}
+    })
+
+    console.log.mockRestore()
+    expect(code).toBe(0)
+  })
+
   it('exits 1 with error when no config file found', async () => {
     const lines = []
     const code = await run(['src/a.js'], {
