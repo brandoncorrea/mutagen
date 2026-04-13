@@ -15,6 +15,7 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { generateMutations, preparePatterns } from '../index.js'
 import { javascript } from '../core/patterns.js'
 
@@ -40,8 +41,7 @@ const TARGET_MODULES = [
   'stryker.js'
 ]
 
-function parseArgs(argv) {
-  const args = argv.slice(2)
+function parseArgs(args) {
   const dryRun = args.includes('--dry-run')
   const json = args.includes('--json')
   const files = args.filter(a => !a.startsWith('--'))
@@ -161,7 +161,7 @@ function printPerFileScores(allResults) {
 
   console.log('--- PER-FILE SCORES ---\n')
   for (const [file, counts] of byFile) {
-    const score = counts.total > 0 ? ((counts.killed + counts.timedOut) / counts.total * 100).toFixed(1) : '0.0'
+    const score = ((counts.killed + counts.timedOut) / counts.total * 100).toFixed(1)
     const flag = counts.survived > 0 ? ` ← ${counts.survived} SURVIVED` : ''
     console.log(`  ${file}: ${score}% (${counts.killed}/${counts.total})${flag}`)
   }
@@ -172,13 +172,13 @@ function printTextReport(allResults) {
   printPerFileScores(allResults)
 }
 
-function main() {
-  const { dryRun, json, targets } = parseArgs(process.argv)
+export function main(args) {
+  const { dryRun, json, targets } = parseArgs(args)
 
   if (targets.length === 0) {
     console.error('No valid target modules specified.')
     console.error('Valid targets:', TARGET_MODULES.join(', '))
-    process.exit(1)
+    return 1
   }
 
   if (!dryRun) {
@@ -186,7 +186,7 @@ function main() {
     const preflight = runTests()
     if (!preflight.passed) {
       console.error('FAILED — test suite is not green. Fix tests before mutating.')
-      process.exit(1)
+      return 1
     }
     process.stderr.write('OK\n\n')
   }
@@ -208,10 +208,14 @@ function main() {
     const safety = runTests()
     if (!safety.passed) {
       console.error('CRITICAL: Tests failing after mutation run! Source may be corrupted.')
-      process.exit(2)
+      return 2
     }
     process.stderr.write('OK\n')
   }
+
+  return 0
 }
 
-main()
+/* v8 ignore next 2 */
+if (process.argv[1] === fileURLToPath(import.meta.url))
+  process.exit(main(process.argv.slice(2)))

@@ -153,4 +153,10 @@ describe('isArrowOperator', () => {
     // At position 2: line[1]=' ', line[2]='>' => false (no = before)
     expect(isArrowOperator(line, 2)).toBeFalsy()
   })
+
+  it('returns true when arrow operator starts at position 1 (=> at index 0-1)', () => {
+    // '=' at index 0, '>' at index 1 — position 1 exercises the boundary
+    // position > 0 is true (1 > 0), but position > 1 would be false (1 > 1)
+    expect(isArrowOperator('=>', 1)).toBe(true)
+  })
 })

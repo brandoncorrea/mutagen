@@ -1,8 +1,31 @@
 {
-  "name": "mutagen",
+  "name": "@bwawan/mutagen",
   "version": "0.1.0",
+  "description": "Lightweight regex-based mutation testing for JavaScript",
+  "license": "MIT",
+  "author": "Brandon Correa",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/brandoncorrea/mutagen.git"
+  },
+  "keywords": [
+    "mutation-testing",
+    "mutation",
+    "testing",
+    "vitest",
+    "stryker"
+  ],
   "type": "module",
   "main": "index.js",
+  "files": [
+    "index.js",
+    "core/",
+    "cli/",
+    "runners/",
+    "stryker.js",
+    "LICENSE",
+    "README.md"
+  ],
   "exports": {
     ".": "./index.js",
     "./patterns": "./core/patterns.js",
