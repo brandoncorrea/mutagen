@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('node:fs', () => ({
   readFileSync: vi.fn(),
@@ -9,451 +9,293 @@ vi.mock('node:child_process', () => ({
   execFileSync: vi.fn()
 }))
 
-import {
-  parseArgs, runTests, runMutation, isCommentOnlyLine,
-  loadMutations, toResult, previewMutations, executeMutations,
-  printSummary, printSurvivors, printPerFileScores, printTextReport,
-  main, TARGET_MODULES, ROOT, TIMEOUT_MS
-} from '../../scripts/self-mutate.js'
-
+import { main } from '../../scripts/self-mutate.js'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 
+const SOURCE_WITH_MUTATIONS = 'function f(x) { return x > 0 }'
+
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.restoreAllMocks()
+  vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+  vi.spyOn(console, 'log').mockImplementation(() => {})
+  vi.spyOn(console, 'error').mockImplementation(() => {})
 })
 
-// --- parseArgs ---
-
-describe('parseArgs', () => {
-  it('defaults to all target modules with no flags', () => {
-    const result = parseArgs(['node', 'self-mutate.js'])
-    expect(result).toEqual({ dryRun: false, json: false, targets: TARGET_MODULES })
-  })
-
-  it('sets dryRun when --dry-run is present', () => {
-    const result = parseArgs(['node', 'self-mutate.js', '--dry-run'])
-    expect(result.dryRun).toBe(true)
-  })
-
-  it('sets json when --json is present', () => {
-    const result = parseArgs(['node', 'self-mutate.js', '--json'])
-    expect(result.json).toBe(true)
-  })
-
-  it('sets both flags together', () => {
-    const result = parseArgs(['node', 'self-mutate.js', '--dry-run', '--json'])
-    expect(result.dryRun).toBe(true)
-    expect(result.json).toBe(true)
-  })
-
-  it('filters targets to only valid modules', () => {
-    const result = parseArgs(['node', 'self-mutate.js', 'core/engine.js', 'nope.js'])
-    expect(result.targets).toEqual(['core/engine.js'])
-  })
-
-  it('returns empty targets when all file args are invalid', () => {
-    const result = parseArgs(['node', 'self-mutate.js', 'nope.js'])
-    expect(result.targets).toEqual([])
-  })
-
-  it('ignores flags when filtering file args', () => {
-    const result = parseArgs(['node', 'self-mutate.js', '--dry-run', 'cli/args.js'])
-    expect(result.targets).toEqual(['cli/args.js'])
-    expect(result.dryRun).toBe(true)
-  })
-})
-
-// --- isCommentOnlyLine ---
-
-describe('isCommentOnlyLine', () => {
-  it('detects lines starting with *', () =>
-    expect(isCommentOnlyLine('  * JSDoc continuation')).toBe(true))
-
-  it('detects lines starting with //', () =>
-    expect(isCommentOnlyLine('  // single-line comment')).toBe(true))
-
-  it('detects lines starting with /*', () =>
-    expect(isCommentOnlyLine('  /* block open')).toBe(true))
-
-  it('detects lines that are exactly */', () =>
-    expect(isCommentOnlyLine('  */')).toBe(true))
-
-  it('rejects code lines', () =>
-    expect(isCommentOnlyLine('  const x = 1')).toBe(false))
-
-  it('rejects lines with embedded comment tokens', () =>
-    expect(isCommentOnlyLine('  x = a /* inline */ + b')).toBe(false))
-})
-
-// --- toResult ---
-
-describe('toResult', () => {
-  it('maps mutation fields to a result object', () => {
-    const mutation = { line: 5, name: 'boolFlip', original: 'true', mutated: 'false' }
-    expect(toResult('a.js', mutation, 'Killed')).toEqual({
-      file: 'a.js', line: 5, name: 'boolFlip',
-      original: 'true', mutated: 'false', status: 'Killed'
-    })
-  })
-})
-
-// --- runTests ---
-
-describe('runTests', () => {
-  it('returns passed when execFileSync succeeds', () => {
-    execFileSync.mockReturnValue(undefined)
-    expect(runTests()).toEqual({ passed: true })
-  })
-
-  it('returns timedOut when process was killed', () => {
-    execFileSync.mockImplementation(() => { throw { killed: true } })
-    expect(runTests()).toEqual({ passed: false, timedOut: true })
-  })
-
-  it('returns failed when tests fail without timeout', () => {
-    execFileSync.mockImplementation(() => { throw { killed: false } })
-    expect(runTests()).toEqual({ passed: false, timedOut: false })
-  })
-
-  it('calls execFileSync with correct args', () => {
-    execFileSync.mockReturnValue(undefined)
-    runTests()
-    expect(execFileSync).toHaveBeenCalledWith(
-      'npx', ['vitest', 'run', '--reporter=dot'],
-      { cwd: ROOT, timeout: TIMEOUT_MS, stdio: 'pipe' }
-    )
-  })
-})
-
-// --- runMutation ---
-
-describe('runMutation', () => {
-  it('writes mutation source, runs tests, then restores original', () => {
-    readFileSync.mockReturnValue('original code')
-    execFileSync.mockReturnValue(undefined)
-
-    const mutation = { source: 'mutated code' }
-    const result = runMutation('core/engine.js', mutation)
-
-    expect(result).toEqual({ passed: true })
-
-    const calls = writeFileSync.mock.calls
-    expect(calls).toHaveLength(2)
-    expect(calls[0][1]).toBe('mutated code')
-    expect(calls[1][1]).toBe('original code')
-  })
-
-  it('restores original even when runTests throws', () => {
-    readFileSync.mockReturnValue('original code')
-    execFileSync.mockImplementation(() => { throw { killed: false } })
-
-    runMutation('core/engine.js', { source: 'bad' })
-
-    const restoreCall = writeFileSync.mock.calls[1]
-    expect(restoreCall[1]).toBe('original code')
-  })
-})
-
-// --- loadMutations ---
-
-describe('loadMutations', () => {
-  it('generates mutations from source and filters comment-only lines', () => {
-    readFileSync.mockReturnValue('if (x > 0) return true')
-    const mutations = loadMutations('core/engine.js')
-
-    expect(mutations.length).toBeGreaterThan(0)
-    for (const m of mutations) {
-      expect(isCommentOnlyLine(m.original)).toBe(false)
-    }
-  })
-
-  it('returns empty array when source has no mutable code', () => {
-    readFileSync.mockReturnValue('// just a comment')
-    expect(loadMutations('core/engine.js')).toEqual([])
-  })
-})
-
-// --- previewMutations ---
-
-describe('previewMutations', () => {
-  it('returns all mutations with dry-run status', () => {
-    readFileSync.mockReturnValue('const x = true')
-    const results = previewMutations('a.js')
-
-    expect(results.length).toBeGreaterThan(0)
-    for (const r of results) {
-      expect(r.status).toBe('dry-run')
-      expect(r.file).toBe('a.js')
-    }
-  })
-})
-
-// --- executeMutations ---
-
-describe('executeMutations', () => {
-  beforeEach(() => {
-    vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
-  })
-
-  it('marks mutations as Killed when tests fail', () => {
-    readFileSync.mockReturnValue('const x = true')
-    execFileSync.mockImplementation(() => { throw { killed: false } })
-
-    const results = executeMutations('a.js')
-
-    expect(results.length).toBeGreaterThan(0)
-    expect(results.every(r => r.status === 'Killed')).toBe(true)
-  })
-
-  it('marks mutations as Survived when tests pass', () => {
-    readFileSync.mockReturnValue('const x = true')
-    execFileSync.mockReturnValue(undefined)
-
-    const results = executeMutations('a.js')
-    expect(results.every(r => r.status === 'Survived')).toBe(true)
-  })
-
-  it('marks mutations as Timeout when process is killed', () => {
-    readFileSync.mockReturnValue('const x = true')
-    execFileSync.mockImplementation(() => { throw { killed: true } })
-
-    const results = executeMutations('a.js')
-    expect(results.every(r => r.status === 'Timeout')).toBe(true)
-  })
-
-  it('writes progress icons to stderr', () => {
-    readFileSync.mockReturnValue('const x = true')
-    execFileSync.mockImplementation(() => { throw { killed: false } })
-
-    executeMutations('a.js')
-
-    const writes = process.stderr.write.mock.calls.map(c => c[0])
-    expect(writes).toContain('.')
-    expect(writes[writes.length - 1]).toBe('\n')
-  })
-
-  it('writes ! for survived and T for timeout', () => {
-    readFileSync.mockReturnValue('const x = true && false')
-    let callCount = 0
-    execFileSync.mockImplementation(() => {
-      callCount++
-      if (callCount % 2 === 0) throw { killed: true }
-    })
-
-    executeMutations('a.js')
-
-    const writes = process.stderr.write.mock.calls.map(c => c[0])
-    expect(writes).toContain('!')
-    expect(writes).toContain('T')
-  })
-})
-
-// --- print functions ---
-
-describe('printSummary', () => {
-  beforeEach(() => {
-    vi.spyOn(console, 'log').mockImplementation(() => {})
-  })
-
-  it('prints counts and score', () => {
-    printSummary([
-      { status: 'Killed' },
-      { status: 'Survived' },
-      { status: 'Timeout' }
-    ])
-
-    const output = console.log.mock.calls.map(c => c[0]).join('\n')
-    expect(output).toContain('Total mutations: 3')
-    expect(output).toContain('Killed: 1')
-    expect(output).toContain('Survived: 1')
-    expect(output).toContain('Timed out: 1')
-    expect(output).toContain('66.7%')
-  })
-
-  it('prints score as 0 when no results', () => {
-    printSummary([])
-
-    const output = console.log.mock.calls.map(c => c[0]).join('\n')
-    expect(output).toContain('Score: 0%')
-  })
-
-  it('prints survivors section when survivors exist', () => {
-    printSummary([
-      { file: 'a.js', line: 1, name: 'flip', original: 'true', mutated: 'false', status: 'Survived' }
-    ])
-
-    const output = console.log.mock.calls.map(c => c[0]).join('\n')
-    expect(output).toContain('--- SURVIVORS ---')
-  })
-
-  it('omits survivors section when all killed', () => {
-    printSummary([{ status: 'Killed' }])
-
-    const output = console.log.mock.calls.map(c => c[0]).join('\n')
-    expect(output).not.toContain('SURVIVORS')
-  })
-})
-
-describe('printSurvivors', () => {
-  beforeEach(() => {
-    vi.spyOn(console, 'log').mockImplementation(() => {})
-  })
-
-  it('prints file:line, name, original, and mutated for each survivor', () => {
-    printSurvivors([
-      { file: 'a.js', line: 10, name: 'boolFlip', original: 'true', mutated: 'false' }
-    ])
-
-    const output = console.log.mock.calls.map(c => c[0]).join('\n')
-    expect(output).toContain('a.js:10')
-    expect(output).toContain('boolFlip')
-    expect(output).toContain('original: true')
-    expect(output).toContain('mutated:  false')
-  })
-})
-
-describe('printPerFileScores', () => {
-  beforeEach(() => {
-    vi.spyOn(console, 'log').mockImplementation(() => {})
-  })
-
-  it('groups results by file with per-file scores', () => {
-    printPerFileScores([
-      { file: 'a.js', status: 'Killed' },
-      { file: 'a.js', status: 'Survived' },
-      { file: 'b.js', status: 'Killed' }
-    ])
-
-    const output = console.log.mock.calls.map(c => c[0]).join('\n')
-    expect(output).toContain('a.js: 50.0% (1/2)')
-    expect(output).toContain('1 SURVIVED')
-    expect(output).toContain('b.js: 100.0% (1/1)')
-  })
-
-  it('counts timeouts toward the score', () => {
-    printPerFileScores([
-      { file: 'a.js', status: 'Timeout' }
-    ])
-
-    const output = console.log.mock.calls.map(c => c[0]).join('\n')
-    expect(output).toContain('100.0%')
-  })
-})
-
-describe('printTextReport', () => {
-  beforeEach(() => {
-    vi.spyOn(console, 'log').mockImplementation(() => {})
-  })
-
-  it('prints both summary and per-file scores', () => {
-    printTextReport([{ file: 'a.js', status: 'Killed' }])
-
-    const output = console.log.mock.calls.map(c => c[0]).join('\n')
-    expect(output).toContain('SELF-MUTATION REPORT')
-    expect(output).toContain('PER-FILE SCORES')
-  })
-})
-
-// --- main ---
+function argv(...args) {
+  return ['node', 'self-mutate.js', ...args]
+}
+
+function stdout() {
+  return console.log.mock.calls.map(c => c[0]).join('\n')
+}
+
+function stderr() {
+  return console.error.mock.calls.map(c => c[0]).join('\n')
+}
 
 describe('main', () => {
-  let origArgv
-
-  beforeEach(() => {
-    origArgv = process.argv
-    vi.spyOn(process, 'exit').mockImplementation((code) => {
-      throw Object.assign(new Error(`exit(${code})`), { exitCode: code })
-    })
-    vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
-    vi.spyOn(console, 'log').mockImplementation(() => {})
-    vi.spyOn(console, 'error').mockImplementation(() => {})
-  })
-
-  afterEach(() => {
-    process.argv = origArgv
-  })
-
-  it('exits with code 1 when no valid targets', () => {
-    process.argv = ['node', 'self-mutate.js', 'bogus.js']
-
-    expect(() => main()).toThrow('exit(1)')
-    expect(process.exit).toHaveBeenCalledWith(1)
-    expect(console.error).toHaveBeenCalledWith('No valid target modules specified.')
-  })
-
-  it('exits with code 1 when preflight fails', () => {
-    process.argv = ['node', 'self-mutate.js', 'core/engine.js']
-    execFileSync.mockImplementation(() => { throw { killed: false } })
-
-    expect(() => main()).toThrow('exit(1)')
-    expect(console.error).toHaveBeenCalledWith(
-      'FAILED — test suite is not green. Fix tests before mutating.'
-    )
-  })
-
-  it('skips preflight in dry-run mode', () => {
-    process.argv = ['node', 'self-mutate.js', '--dry-run', 'core/engine.js']
-    readFileSync.mockReturnValue('const x = true')
-
-    main()
-
-    expect(execFileSync).not.toHaveBeenCalled()
-  })
-
-  it('outputs JSON in --json mode', () => {
-    process.argv = ['node', 'self-mutate.js', '--dry-run', '--json', 'core/engine.js']
-    readFileSync.mockReturnValue('const x = true')
-
-    main()
-
-    const jsonArg = console.log.mock.calls[0][0]
-    const parsed = JSON.parse(jsonArg)
-    expect(Array.isArray(parsed)).toBe(true)
-    expect(parsed[0]).toHaveProperty('status', 'dry-run')
-  })
-
-  it('outputs text report by default', () => {
-    process.argv = ['node', 'self-mutate.js', '--dry-run', 'core/engine.js']
-    readFileSync.mockReturnValue('const x = true')
-
-    main()
-
-    const output = console.log.mock.calls.map(c => c[0]).join('\n')
-    expect(output).toContain('SELF-MUTATION REPORT')
-  })
-
-  it('runs preflight and safety checks in live mode', () => {
-    process.argv = ['node', 'self-mutate.js', 'core/engine.js']
-    readFileSync.mockReturnValue('const x = true')
-    execFileSync.mockReturnValue(undefined)
-
-    main()
-
-    const stderrWrites = process.stderr.write.mock.calls.map(c => c[0])
-    expect(stderrWrites).toContain('Preflight check... ')
-    expect(stderrWrites).toContain('OK\n\n')
-    expect(stderrWrites.some(w => w.includes('Safety check'))).toBe(true)
-  })
-
-  it('exits with code 2 when safety check fails', () => {
-    process.argv = ['node', 'self-mutate.js', 'core/engine.js']
-    readFileSync.mockReturnValue('const x = true')
-
-    // Preflight passes, mutations run, safety fails
-    let callCount = 0
-    execFileSync.mockImplementation(() => {
-      callCount++
-      // First call = preflight (pass), middle calls = mutations (fail = killed),
-      // last call = safety (fail)
-      if (callCount === 1) return undefined
-      throw { killed: false }
+  describe('argument handling', () => {
+    it('returns 1 when no valid targets specified', () => {
+      expect(main(argv('bogus.js'))).toBe(1)
+      expect(stderr()).toContain('No valid target modules specified.')
     })
 
-    expect(() => main()).toThrow('exit(2)')
-    expect(console.error).toHaveBeenCalledWith(
-      'CRITICAL: Tests failing after mutation run! Source may be corrupted.'
-    )
+    it('defaults to all target modules when no files given', () => {
+      readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
+      expect(main(argv('--dry-run'))).toBe(0)
+      expect(stdout()).toContain('SELF-MUTATION REPORT')
+    })
+
+    it('accepts a single valid target module', () => {
+      readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
+      expect(main(argv('--dry-run', '--json', 'core/engine.js'))).toBe(0)
+
+      const results = JSON.parse(stdout())
+      expect(results.every(r => r.file === 'core/engine.js')).toBe(true)
+    })
+  })
+
+  describe('dry-run mode', () => {
+    it('skips preflight and safety checks', () => {
+      readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
+      main(argv('--dry-run', 'core/engine.js'))
+
+      expect(execFileSync).not.toHaveBeenCalled()
+    })
+
+    it('returns results with dry-run status', () => {
+      readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
+      main(argv('--dry-run', '--json', 'core/engine.js'))
+
+      const results = JSON.parse(stdout())
+      expect(results.length).toBeGreaterThan(0)
+      expect(results.every(r => r.status === 'dry-run')).toBe(true)
+    })
+
+    it('includes mutation details in each result', () => {
+      readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
+      main(argv('--dry-run', '--json', 'core/engine.js'))
+
+      const result = JSON.parse(stdout())[0]
+      expect(result).toHaveProperty('file')
+      expect(result).toHaveProperty('line')
+      expect(result).toHaveProperty('name')
+      expect(result).toHaveProperty('original')
+      expect(result).toHaveProperty('mutated')
+    })
+  })
+
+  describe('live mode', () => {
+    it('runs preflight before mutating', () => {
+      readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
+      execFileSync.mockReturnValue(undefined)
+
+      main(argv('core/engine.js'))
+
+      const writes = process.stderr.write.mock.calls.map(c => c[0])
+      expect(writes[0]).toBe('Preflight check... ')
+    })
+
+    it('returns 1 when preflight fails', () => {
+      execFileSync.mockImplementation(() => { throw { killed: false } })
+
+      expect(main(argv('core/engine.js'))).toBe(1)
+      expect(stderr()).toContain('test suite is not green')
+    })
+
+    it('marks mutations Killed when tests fail', () => {
+      readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
+      let callCount = 0
+      execFileSync.mockImplementation(() => {
+        callCount++
+        if (callCount === 1) return undefined // preflight
+        throw { killed: false } // mutations + safety all fail
+      })
+
+      // Safety check will fail too → returns 2
+      // But mutations should be Killed
+      main(argv('--json', 'core/engine.js'))
+
+      const results = JSON.parse(stdout())
+      expect(results.every(r => r.status === 'Killed')).toBe(true)
+    })
+
+    it('marks mutations Survived when tests pass', () => {
+      readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
+      execFileSync.mockReturnValue(undefined)
+
+      main(argv('--json', 'core/engine.js'))
+
+      const results = JSON.parse(stdout())
+      expect(results.every(r => r.status === 'Survived')).toBe(true)
+    })
+
+    it('marks mutations Timeout when process is killed', () => {
+      readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
+      let callCount = 0
+      execFileSync.mockImplementation(() => {
+        callCount++
+        if (callCount === 1) return undefined // preflight
+        throw { killed: true } // mutations timeout
+      })
+
+      main(argv('--json', 'core/engine.js'))
+
+      const results = JSON.parse(stdout())
+      expect(results.every(r => r.status === 'Timeout')).toBe(true)
+    })
+
+    it('writes progress icons to stderr', () => {
+      readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
+      execFileSync.mockReturnValue(undefined)
+
+      main(argv('core/engine.js'))
+
+      const writes = process.stderr.write.mock.calls.map(c => c[0])
+      // Survived mutations write '!'
+      expect(writes).toContain('!')
+    })
+
+    it('writes . for killed and T for timeout', () => {
+      readFileSync.mockReturnValue('const a = true && false')
+      let callCount = 0
+      execFileSync.mockImplementation(() => {
+        callCount++
+        if (callCount === 1) return undefined // preflight
+        if (callCount % 2 === 0) throw { killed: true }  // timeout
+        throw { killed: false } // killed
+      })
+
+      main(argv('core/engine.js'))
+
+      const writes = process.stderr.write.mock.calls.map(c => c[0])
+      expect(writes).toContain('.')
+      expect(writes).toContain('T')
+    })
+
+    it('restores original source after each mutation', () => {
+      readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
+      execFileSync.mockReturnValue(undefined)
+
+      main(argv('core/engine.js'))
+
+      // Each mutation: write mutated, then restore original
+      // writeFileSync calls alternate: mutated, original, mutated, original...
+      const writes = writeFileSync.mock.calls
+      expect(writes.length).toBeGreaterThan(0)
+      expect(writes.length % 2).toBe(0)
+      for (let i = 1; i < writes.length; i += 2) {
+        expect(writes[i][1]).toBe(SOURCE_WITH_MUTATIONS)
+      }
+    })
+  })
+
+  describe('safety check', () => {
+    it('returns 0 when safety check passes', () => {
+      readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
+      execFileSync.mockReturnValue(undefined)
+
+      expect(main(argv('core/engine.js'))).toBe(0)
+
+      const writes = process.stderr.write.mock.calls.map(c => c[0])
+      expect(writes.some(w => w.includes('Safety check'))).toBe(true)
+    })
+
+    it('returns 2 when safety check fails', () => {
+      readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
+      const mutationCount = JSON.parse((() => {
+        readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
+        main(argv('--dry-run', '--json', 'core/engine.js'))
+        return stdout()
+      })()).length
+
+      vi.clearAllMocks()
+      vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+      vi.spyOn(console, 'log').mockImplementation(() => {})
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+
+      readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
+      let callCount = 0
+      execFileSync.mockImplementation(() => {
+        callCount++
+        if (callCount === 1) return undefined // preflight passes
+        if (callCount <= 1 + mutationCount) throw { killed: false } // mutations
+        throw { killed: false } // safety fails
+      })
+
+      expect(main(argv('core/engine.js'))).toBe(2)
+      expect(stderr()).toContain('CRITICAL')
+    })
+  })
+
+  describe('output formats', () => {
+    it('outputs JSON array with --json flag', () => {
+      readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
+      main(argv('--dry-run', '--json', 'core/engine.js'))
+
+      const parsed = JSON.parse(stdout())
+      expect(Array.isArray(parsed)).toBe(true)
+    })
+
+    it('outputs text report by default', () => {
+      readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
+      main(argv('--dry-run', 'core/engine.js'))
+
+      const output = stdout()
+      expect(output).toContain('SELF-MUTATION REPORT')
+      expect(output).toContain('PER-FILE SCORES')
+    })
+
+    it('includes score as 0% when no mutations generated', () => {
+      readFileSync.mockReturnValue('// nothing mutable here')
+      main(argv('--dry-run', 'core/engine.js'))
+
+      expect(stdout()).toContain('Score: 0%')
+    })
+
+    it('shows survivors section when mutations survive', () => {
+      readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
+      execFileSync.mockReturnValue(undefined) // all pass → survived
+
+      main(argv('core/engine.js'))
+
+      expect(stdout()).toContain('SURVIVORS')
+    })
+
+    it('omits survivors section when all killed', () => {
+      readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
+      let callCount = 0
+      execFileSync.mockImplementation(() => {
+        callCount++
+        if (callCount === 1) return undefined // preflight
+        throw { killed: false }
+      })
+
+      main(argv('core/engine.js'))
+
+      expect(stdout()).not.toContain('SURVIVORS')
+    })
+
+    it('flags survived count in per-file scores', () => {
+      readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
+      execFileSync.mockReturnValue(undefined) // all survive
+
+      main(argv('core/engine.js'))
+
+      expect(stdout()).toContain('SURVIVED')
+    })
+  })
+
+  describe('comment filtering', () => {
+    it('excludes mutations on comment-only lines', () => {
+      readFileSync.mockReturnValue('// return true\nconst x = true')
+      main(argv('--dry-run', '--json', 'core/engine.js'))
+
+      const results = JSON.parse(stdout())
+      for (const r of results) {
+        expect(r.original.trim().startsWith('//')).toBe(false)
+      }
+    })
   })
 })

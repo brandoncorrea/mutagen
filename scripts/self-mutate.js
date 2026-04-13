@@ -19,11 +19,11 @@ import { fileURLToPath } from 'node:url'
 import { generateMutations, preparePatterns } from '../index.js'
 import { javascript } from '../core/patterns.js'
 
-export const ROOT = resolve(import.meta.dirname, '..')
-export const TIMEOUT_MS = 30_000
+const ROOT = resolve(import.meta.dirname, '..')
+const TIMEOUT_MS = 30_000
 
 // All release code under mutation — no exclusions
-export const TARGET_MODULES = [
+const TARGET_MODULES = [
   'index.js',
   'core/engine.js',
   'core/token-context.js',
@@ -41,7 +41,7 @@ export const TARGET_MODULES = [
   'stryker.js'
 ]
 
-export function parseArgs(argv) {
+function parseArgs(argv) {
   const args = argv.slice(2)
   const dryRun = args.includes('--dry-run')
   const json = args.includes('--json')
@@ -52,7 +52,7 @@ export function parseArgs(argv) {
   return { dryRun, json, targets }
 }
 
-export function runTests() {
+function runTests() {
   try {
     execFileSync('npx', ['vitest', 'run', '--reporter=dot'], {
       cwd: ROOT,
@@ -66,7 +66,7 @@ export function runTests() {
   }
 }
 
-export function runMutation(sourceFile, mutation) {
+function runMutation(sourceFile, mutation) {
   const absPath = resolve(ROOT, sourceFile)
   const original = readFileSync(absPath, 'utf8')
   try {
@@ -77,12 +77,12 @@ export function runMutation(sourceFile, mutation) {
   }
 }
 
-export function isCommentOnlyLine(original) {
+function isCommentOnlyLine(original) {
   const t = original.trim()
   return t.startsWith('*') || t.startsWith('//') || t.startsWith('/*') || t === '*/'
 }
 
-export function loadMutations(sourceFile) {
+function loadMutations(sourceFile) {
   const absPath = resolve(ROOT, sourceFile)
   const source = readFileSync(absPath, 'utf8')
   const prepared = preparePatterns(javascript)
@@ -90,7 +90,7 @@ export function loadMutations(sourceFile) {
     .filter(m => !isCommentOnlyLine(m.original))
 }
 
-export function toResult(sourceFile, mutation, status) {
+function toResult(sourceFile, mutation, status) {
   return {
     file: sourceFile,
     line: mutation.line,
@@ -101,12 +101,12 @@ export function toResult(sourceFile, mutation, status) {
   }
 }
 
-export function previewMutations(sourceFile) {
+function previewMutations(sourceFile) {
   return loadMutations(sourceFile)
     .map(m => toResult(sourceFile, m, 'dry-run'))
 }
 
-export function executeMutations(sourceFile) {
+function executeMutations(sourceFile) {
   const mutations = loadMutations(sourceFile)
   const results = []
   for (const mutation of mutations) {
@@ -121,7 +121,7 @@ export function executeMutations(sourceFile) {
   return results
 }
 
-export function printSummary(allResults) {
+function printSummary(allResults) {
   const survived = allResults.filter(r => r.status === 'Survived')
   const killed = allResults.filter(r => r.status === 'Killed')
   const timedOut = allResults.filter(r => r.status === 'Timeout')
@@ -139,7 +139,7 @@ export function printSummary(allResults) {
     printSurvivors(survived)
 }
 
-export function printSurvivors(survived) {
+function printSurvivors(survived) {
   console.log('\n--- SURVIVORS ---\n')
   for (const r of survived) {
     console.log(`${r.file}:${r.line} — ${r.name}`)
@@ -149,7 +149,7 @@ export function printSurvivors(survived) {
   }
 }
 
-export function printPerFileScores(allResults) {
+function printPerFileScores(allResults) {
   const byFile = new Map()
   for (const r of allResults) {
     if (!byFile.has(r.file)) byFile.set(r.file, { killed: 0, survived: 0, timedOut: 0, total: 0 })
@@ -168,18 +168,18 @@ export function printPerFileScores(allResults) {
   }
 }
 
-export function printTextReport(allResults) {
+function printTextReport(allResults) {
   printSummary(allResults)
   printPerFileScores(allResults)
 }
 
-export function main() {
-  const { dryRun, json, targets } = parseArgs(process.argv)
+export function main(argv) {
+  const { dryRun, json, targets } = parseArgs(argv)
 
   if (targets.length === 0) {
     console.error('No valid target modules specified.')
     console.error('Valid targets:', TARGET_MODULES.join(', '))
-    process.exit(1)
+    return 1
   }
 
   if (!dryRun) {
@@ -187,7 +187,7 @@ export function main() {
     const preflight = runTests()
     if (!preflight.passed) {
       console.error('FAILED — test suite is not green. Fix tests before mutating.')
-      process.exit(1)
+      return 1
     }
     process.stderr.write('OK\n\n')
   }
@@ -209,12 +209,14 @@ export function main() {
     const safety = runTests()
     if (!safety.passed) {
       console.error('CRITICAL: Tests failing after mutation run! Source may be corrupted.')
-      process.exit(2)
+      return 2
     }
     process.stderr.write('OK\n')
   }
+
+  return 0
 }
 
 /* v8 ignore next 2 */
 if (process.argv[1] === fileURLToPath(import.meta.url))
-  main()
+  process.exit(main(process.argv))
