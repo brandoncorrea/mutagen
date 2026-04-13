@@ -79,21 +79,21 @@ function applyMutation(line, match, mut) {
 
 function lineMutationsForPattern(lines, line, lineNum, mutation) {
   const matches = [...line.matchAll(mutation.globalPattern)]
-  const total = matches.length
+  const matchCount = matches.length
   const options = { lines, line, lineNum, mutation }
   return matches
-    .map((match, matchIdx) => compileMutation(total, matchIdx, match, options))
+    .map((match, matchIdx) => compileMutation(matchCount, matchIdx, match, options))
     .filter(Boolean)
 }
 
-function compileMutation(total, matchIdx, match, options) {
+function compileMutation(matchCount, matchIdx, match, options) {
   const { lines, line, lineNum, mutation } = options
   if (shouldSkipMatch(line, match, mutation)) return
 
   const mutatedLine = applyMutation(line, match, mutation)
   if (mutatedLine === line) return
 
-  const suffix = total > 1 ? ` (match ${matchIdx + 1}/${total})` : ''
+  const suffix = matchCount > 1 ? ` (match ${matchIdx + 1}/${matchCount})` : ''
   const mutatedSource = lines
     .slice(0, lineNum - 1)
     .concat(mutatedLine, lines.slice(lineNum))
