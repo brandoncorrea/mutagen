@@ -37,8 +37,8 @@ function printDiffSummary(out, before, after) {
 function printCategory(out, label, results) {
   if (!results.length) return
   out(`\n${label} (${results.length})`)
-  for (const { after: a } of results)
-    out(`  ${a.file}:${a.line} ${a.mutatorName}`)
+  for (const { after } of results)
+    out(`  ${after.file}:${after.line} ${after.mutatorName}`)
 }
 
 function printNewMutants(out, newMutants) {
