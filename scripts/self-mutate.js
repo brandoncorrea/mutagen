@@ -41,8 +41,7 @@ const TARGET_MODULES = [
   'stryker.js'
 ]
 
-function parseArgs(argv) {
-  const args = argv.slice(2)
+function parseArgs(args) {
   const dryRun = args.includes('--dry-run')
   const json = args.includes('--json')
   const files = args.filter(a => !a.startsWith('--'))
@@ -173,8 +172,8 @@ function printTextReport(allResults) {
   printPerFileScores(allResults)
 }
 
-export function main(argv) {
-  const { dryRun, json, targets } = parseArgs(argv)
+export function main(args) {
+  const { dryRun, json, targets } = parseArgs(args)
 
   if (targets.length === 0) {
     console.error('No valid target modules specified.')
@@ -219,4 +218,4 @@ export function main(argv) {
 
 /* v8 ignore next 2 */
 if (process.argv[1] === fileURLToPath(import.meta.url))
-  process.exit(main(process.argv))
+  process.exit(main(process.argv.slice(2)))

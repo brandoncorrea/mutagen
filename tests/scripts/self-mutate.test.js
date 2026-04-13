@@ -23,7 +23,7 @@ beforeEach(() => {
 })
 
 function argv(...args) {
-  return ['node', 'self-mutate.js', ...args]
+  return args
 }
 
 function stdout() {
@@ -37,7 +37,7 @@ function stderr() {
 describe('main', () => {
   describe('argument handling', () => {
     it('returns 1 when no valid targets specified', () => {
-      expect(main(argv('bogus.js'))).toBe(1)
+      expect(main(['bogus.js'])).toBe(1)
       expect(stderr()).toContain('No valid target modules specified.')
     })
 
