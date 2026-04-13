@@ -24,6 +24,24 @@ beforeEach(() => {
 })
 
 describe('bin/mutagen CLI', () => {
+  it('resolves mutagen.config.js from cwd when no configPath given', async () => {
+    const sourceCode = 'if (a === b) {}'
+    readFileSync.mockImplementation((path, enc) => {
+      if (enc === 'utf-8') return sourceCode
+      return Buffer.from(sourceCode)
+    })
+
+    const originalCwd = process.cwd()
+    process.chdir(resolve('tests/bin/fixtures/default-config'))
+
+    try {
+      const code = await run(['src/a.js'], silent)
+      expect(code).toBe(0)
+    } finally {
+      process.chdir(originalCwd)
+    }
+  })
+
   it('loads config from configPath via dynamic import', async () => {
     const sourceCode = 'if (a === b) {}'
     readFileSync.mockImplementation((path, enc) => {
