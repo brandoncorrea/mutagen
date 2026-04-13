@@ -21,11 +21,13 @@ import { javascript } from '../core/patterns.js'
 const ROOT = resolve(import.meta.dirname, '..')
 const TIMEOUT_MS = 30_000
 
-// Modules safe to self-mutate (no runner infrastructure)
+// All release code under mutation — no exclusions
 const TARGET_MODULES = [
+  'index.js',
   'core/engine.js',
   'core/token-context.js',
   'core/report-data.js',
+  'core/patterns.js',
   'cli/args.js',
   'cli/diff.js',
   'cli/diff-print.js',
@@ -34,10 +36,9 @@ const TARGET_MODULES = [
   'cli/runner.js',
   'cli/report.js',
   'cli/manual.js',
+  'runners/vitest.js',
   'stryker.js'
 ]
-
-// Excluded: runners/vitest.js — mutating the test runner itself corrupts execution
 
 function parseArgs(argv) {
   const args = argv.slice(2)
