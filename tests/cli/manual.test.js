@@ -437,9 +437,13 @@ describe('createManualRunner', () => {
         patterns, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
-      const result = await manual.runIncremental(false, null)
+      const result = await manual.runIncremental(true, null)
 
       expect(result.totalSurvived).toBe(1)
+      const reportCalls = writeFileSync.mock.calls.filter(([p]) => p === reportPath)
+      expect(reportCalls).toHaveLength(1)
+      const report = JSON.parse(reportCalls[0][1])
+      expect(report.files['src/a.js']).toBeDefined()
     })
 
     it('invalidates source files when test files change', async () => {

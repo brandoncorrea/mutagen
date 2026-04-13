@@ -4,7 +4,6 @@
  */
 
 import { writeFileSync } from 'node:fs'
-import { resolve, relative } from 'node:path'
 
 import { HEADER_SEPARATOR, isKilled, createReport, writeReportFile } from '../core/report-data.js'
 
@@ -82,7 +81,7 @@ export function handleAllCached(out, config, previous, classification, jsonOutpu
 }
 
 export function writeMergedReport(out, config, previous, classification, fileResults) {
-  const { sources, reportDir, reportPath } = config
+  const { reportDir, reportPath } = config
   const { unchangedSources, currentHashes, currentTestHashes } = classification
   const mergedFiles = { ...fileResults }
 
@@ -90,11 +89,6 @@ export function writeMergedReport(out, config, previous, classification, fileRes
     for (const relPath of unchangedSources)
       if (previous.previousReport.files[relPath])
         mergedFiles[relPath] = previous.previousReport.files[relPath]
-
-  const currentRelPaths = new Set(sources.map(s => relative(process.cwd(), resolve(s))))
-  for (const key of Object.keys(mergedFiles))
-    if (!currentRelPaths.has(key))
-      delete mergedFiles[key]
 
   const report = createReport(mergedFiles, { sourceHashes: currentHashes, testHashes: currentTestHashes })
   writeReportFile(reportDir, reportPath, report, out)
