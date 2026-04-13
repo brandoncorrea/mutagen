@@ -36,6 +36,13 @@ describe('mutantKey', () => {
     const m = { location: { start: { line: 5 } } }
     expect(mutantKey('file.js', m)).toBe('file.js:5::')
   })
+
+  it('defaults to line 0 when location.start is null (optional chaining boundary)', () => {
+    // location exists but start is null — location?.start?.line safely returns undefined
+    // Without optional chaining on start (location?.start.line), this would throw TypeError
+    const m = { location: { start: null }, mutatorName: 'x', replacement: 'y' }
+    expect(mutantKey('file.js', m)).toBe('file.js:0:x:y')
+  })
 })
 
 describe('countStatuses', () => {
