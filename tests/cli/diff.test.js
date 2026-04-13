@@ -36,18 +36,18 @@ describe('diffReports', () => {
 
   function output() { return lines.join('\n') }
 
-  it('detects newly killed mutants (Survived → Killed)', () => {
-    const before = makeReport({
-      'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Survived', 5)] }
-    })
-    const after = makeReport({
-      'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Killed', 5)] }
-    })
+  function runDiff(beforeFiles, afterFiles) {
     readFileSync
-      .mockReturnValueOnce(JSON.stringify(before))
-      .mockReturnValueOnce(JSON.stringify(after))
+      .mockReturnValueOnce(JSON.stringify(makeReport(beforeFiles)))
+      .mockReturnValueOnce(JSON.stringify(makeReport(afterFiles)))
+    return diffReports('before.json', 'after.json', out)
+  }
 
-    const result = diffReports('before.json', 'after.json', out)
+  it('detects newly killed mutants (Survived → Killed)', () => {
+    const result = runDiff(
+      { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Survived', 5)] } },
+      { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Killed', 5)] } }
+    )
 
     expect(result.newlyKilled).toBe(1)
     expect(result.regressions).toBe(0)
@@ -55,17 +55,10 @@ describe('diffReports', () => {
   })
 
   it('detects regressions (Killed → Survived)', () => {
-    const before = makeReport({
-      'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Killed', 5)] }
-    })
-    const after = makeReport({
-      'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Survived', 5)] }
-    })
-    readFileSync
-      .mockReturnValueOnce(JSON.stringify(before))
-      .mockReturnValueOnce(JSON.stringify(after))
-
-    const result = diffReports('before.json', 'after.json', out)
+    const result = runDiff(
+      { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Killed', 5)] } },
+      { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Survived', 5)] } }
+    )
 
     expect(result.regressions).toBe(1)
     expect(result.newlyKilled).toBe(0)
@@ -73,67 +66,46 @@ describe('diffReports', () => {
   })
 
   it('detects new mutants (present only in after)', () => {
-    const before = makeReport({
-      'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Killed', 5)] }
-    })
-    const after = makeReport({
-      'a.js': {
+    const result = runDiff(
+      { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Killed', 5)] } },
+      { 'a.js': {
         mutants: [
           makeMutant('m1', 'EqualityOperator', 'Killed', 5),
           makeMutant('m2', 'ArithmeticOperator', 'Survived', 10)
         ]
-      }
-    })
-    readFileSync
-      .mockReturnValueOnce(JSON.stringify(before))
-      .mockReturnValueOnce(JSON.stringify(after))
-
-    const result = diffReports('before.json', 'after.json', out)
+      } }
+    )
 
     expect(result.newMutants).toBe(1)
     expect(output()).toContain('NEW MUTANTS')
   })
 
   it('detects removed mutants (present only in before)', () => {
-    const before = makeReport({
-      'a.js': {
+    const result = runDiff(
+      { 'a.js': {
         mutants: [
           makeMutant('m1', 'EqualityOperator', 'Killed', 5),
           makeMutant('m2', 'ArithmeticOperator', 'Survived', 10)
         ]
-      }
-    })
-    const after = makeReport({
-      'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Killed', 5)] }
-    })
-    readFileSync
-      .mockReturnValueOnce(JSON.stringify(before))
-      .mockReturnValueOnce(JSON.stringify(after))
-
-    const result = diffReports('before.json', 'after.json', out)
+      } },
+      { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Killed', 5)] } }
+    )
 
     expect(result.removedMutants).toBe(1)
     expect(output()).toContain('REMOVED MUTANTS')
   })
 
   it('prints overall score delta', () => {
-    const before = makeReport({
-      'a.js': { mutants: [
+    runDiff(
+      { 'a.js': { mutants: [
         makeMutant('m1', 'x', 'Killed'),
         makeMutant('m2', 'y', 'Survived')
-      ] }
-    })
-    const after = makeReport({
-      'a.js': { mutants: [
+      ] } },
+      { 'a.js': { mutants: [
         makeMutant('m1', 'x', 'Killed'),
         makeMutant('m2', 'y', 'Killed')
-      ] }
-    })
-    readFileSync
-      .mockReturnValueOnce(JSON.stringify(before))
-      .mockReturnValueOnce(JSON.stringify(after))
-
-    diffReports('before.json', 'after.json', out)
+      ] } }
+    )
 
     expect(output()).toContain('50.0%')
     expect(output()).toContain('100.0%')
@@ -141,56 +113,36 @@ describe('diffReports', () => {
   })
 
   it('shows per-file score changes', () => {
-    const before = makeReport({
-      'a.js': { mutants: [makeMutant('m1', 'x', 'Survived')] }
-    })
-    const after = makeReport({
-      'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] }
-    })
-    readFileSync
-      .mockReturnValueOnce(JSON.stringify(before))
-      .mockReturnValueOnce(JSON.stringify(after))
-
-    diffReports('before.json', 'after.json', out)
+    runDiff(
+      { 'a.js': { mutants: [makeMutant('m1', 'x', 'Survived')] } },
+      { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } }
+    )
 
     expect(output()).toContain('PER-FILE CHANGES')
     expect(output()).toContain('a.js')
   })
 
   it('formats per-file delta to one decimal place', () => {
-    const before = makeReport({
-      'a.js': { mutants: [
+    runDiff(
+      { 'a.js': { mutants: [
         makeMutant('m1', 'x', 'Killed'),
         makeMutant('m2', 'y', 'Survived'),
         makeMutant('m3', 'z', 'Survived')
-      ] }
-    })
-    const after = makeReport({
-      'a.js': { mutants: [
+      ] } },
+      { 'a.js': { mutants: [
         makeMutant('m1', 'x', 'Killed'),
         makeMutant('m2', 'y', 'Killed'),
         makeMutant('m3', 'z', 'Survived')
-      ] }
-    })
-    readFileSync
-      .mockReturnValueOnce(JSON.stringify(before))
-      .mockReturnValueOnce(JSON.stringify(after))
-
-    diffReports('before.json', 'after.json', out)
+      ] } }
+    )
 
     expect(output()).toContain('+33.3%')
     expect(output()).not.toMatch(/\+33\.33/)
   })
 
   it('reports identical reports with no changes', () => {
-    const report = makeReport({
-      'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] }
-    })
-    readFileSync
-      .mockReturnValueOnce(JSON.stringify(report))
-      .mockReturnValueOnce(JSON.stringify(report))
-
-    const result = diffReports('before.json', 'after.json', out)
+    const files = { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } }
+    const result = runDiff(files, files)
 
     expect(result.newlyKilled).toBe(0)
     expect(result.regressions).toBe(0)
@@ -199,18 +151,11 @@ describe('diffReports', () => {
   })
 
   it('handles new files in after report', () => {
-    const before = makeReport({
-      'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] }
-    })
-    const after = makeReport({
-      'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] },
-      'b.js': { mutants: [makeMutant('m2', 'y', 'Survived')] }
-    })
-    readFileSync
-      .mockReturnValueOnce(JSON.stringify(before))
-      .mockReturnValueOnce(JSON.stringify(after))
-
-    diffReports('before.json', 'after.json', out)
+    runDiff(
+      { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } },
+      { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] },
+        'b.js': { mutants: [makeMutant('m2', 'y', 'Survived')] } }
+    )
 
     expect(output()).toContain('PER-FILE CHANGES')
     expect(output()).toContain('b.js')
@@ -218,103 +163,64 @@ describe('diffReports', () => {
   })
 
   it('handles removed files in after report', () => {
-    const before = makeReport({
-      'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] },
-      'b.js': { mutants: [makeMutant('m2', 'y', 'Survived')] }
-    })
-    const after = makeReport({
-      'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] }
-    })
-    readFileSync
-      .mockReturnValueOnce(JSON.stringify(before))
-      .mockReturnValueOnce(JSON.stringify(after))
-
-    diffReports('before.json', 'after.json', out)
+    runDiff(
+      { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] },
+        'b.js': { mutants: [makeMutant('m2', 'y', 'Survived')] } },
+      { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } }
+    )
 
     expect(output()).toContain('PER-FILE CHANGES')
     expect(output()).toContain('REMOVED')
   })
 
   it('treats NoCoverage as alive for regression detection', () => {
-    const before = makeReport({
-      'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] }
-    })
-    const after = makeReport({
-      'a.js': { mutants: [makeMutant('m1', 'x', 'NoCoverage')] }
-    })
-    readFileSync
-      .mockReturnValueOnce(JSON.stringify(before))
-      .mockReturnValueOnce(JSON.stringify(after))
-
-    const result = diffReports('before.json', 'after.json', out)
+    const result = runDiff(
+      { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } },
+      { 'a.js': { mutants: [makeMutant('m1', 'x', 'NoCoverage')] } }
+    )
 
     expect(result.regressions).toBe(1)
   })
 
   it('scores 100% when both reports have zero mutations', () => {
-    const before = makeReport({ 'a.js': { mutants: [] } })
-    const after = makeReport({ 'a.js': { mutants: [] } })
-    readFileSync
-      .mockReturnValueOnce(JSON.stringify(before))
-      .mockReturnValueOnce(JSON.stringify(after))
-
-    diffReports('before.json', 'after.json', out)
+    runDiff(
+      { 'a.js': { mutants: [] } },
+      { 'a.js': { mutants: [] } }
+    )
 
     expect(output()).toContain('100.0%')
   })
 
   it('prints new mutants section when all new mutants are killed', () => {
-    const before = makeReport({
-      'a.js': { mutants: [] }
-    })
-    const after = makeReport({
-      'a.js': { mutants: [makeMutant('m1', 'x', 'Killed', 5)] }
-    })
-    readFileSync
-      .mockReturnValueOnce(JSON.stringify(before))
-      .mockReturnValueOnce(JSON.stringify(after))
-
-    const result = diffReports('before.json', 'after.json', out)
+    const result = runDiff(
+      { 'a.js': { mutants: [] } },
+      { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed', 5)] } }
+    )
 
     expect(result.newMutants).toBe(1)
     expect(output()).toContain('NEW MUTANTS')
-    // No "SURVIVED" lines since all new mutants are killed
     expect(output()).not.toContain('SURVIVED')
   })
 
   it('sorts REMOVED files after positive-delta files via || 0 fallback', () => {
-    const before = makeReport({
-      'removed.js': { mutants: [makeMutant('m1', 'x', 'Killed')] },
-      'changed.js': { mutants: [makeMutant('m2', 'y', 'Survived')] }
-    })
-    const after = makeReport({
-      'changed.js': { mutants: [makeMutant('m2', 'y', 'Killed')] }
-    })
-    readFileSync
-      .mockReturnValueOnce(JSON.stringify(before))
-      .mockReturnValueOnce(JSON.stringify(after))
-
-    diffReports('before.json', 'after.json', out)
+    runDiff(
+      { 'removed.js': { mutants: [makeMutant('m1', 'x', 'Killed')] },
+        'changed.js': { mutants: [makeMutant('m2', 'y', 'Survived')] } },
+      { 'changed.js': { mutants: [makeMutant('m2', 'y', 'Killed')] } }
+    )
 
     const perFileSection = output().slice(output().indexOf('PER-FILE CHANGES'))
     expect(perFileSection.indexOf('changed.js')).toBeLessThan(perFileSection.indexOf('removed.js'))
   })
 
   it('sorts per-file deltas descending, using 0 for NEW files', () => {
-    const before = makeReport({
-      'a.js': { mutants: [makeMutant('m1', 'x', 'Survived'), makeMutant('m2', 'y', 'Survived')] },
-      'c.js': { mutants: [makeMutant('m4', 'w', 'Survived')] }
-    })
-    const after = makeReport({
-      'a.js': { mutants: [makeMutant('m1', 'x', 'Killed'), makeMutant('m2', 'y', 'Survived')] },
-      'b.js': { mutants: [makeMutant('m3', 'z', 'Killed')] },
-      'c.js': { mutants: [makeMutant('m4', 'w', 'Killed')] }
-    })
-    readFileSync
-      .mockReturnValueOnce(JSON.stringify(before))
-      .mockReturnValueOnce(JSON.stringify(after))
-
-    diffReports('before.json', 'after.json', out)
+    runDiff(
+      { 'a.js': { mutants: [makeMutant('m1', 'x', 'Survived'), makeMutant('m2', 'y', 'Survived')] },
+        'c.js': { mutants: [makeMutant('m4', 'w', 'Survived')] } },
+      { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed'), makeMutant('m2', 'y', 'Survived')] },
+        'b.js': { mutants: [makeMutant('m3', 'z', 'Killed')] },
+        'c.js': { mutants: [makeMutant('m4', 'w', 'Killed')] } }
+    )
 
     const perFileSection = output().slice(output().indexOf('PER-FILE CHANGES'))
     const cIdx = perFileSection.indexOf('c.js')
@@ -325,49 +231,29 @@ describe('diffReports', () => {
   })
 
   it('sorts NEW files before negative-delta files (delta: 0 vs undefined)', () => {
-    const before = makeReport({
-      'worsened.js': { mutants: [makeMutant('m1', 'x', 'Killed'), makeMutant('m2', 'y', 'Killed')] }
-    })
-    const after = makeReport({
-      'worsened.js': { mutants: [makeMutant('m1', 'x', 'Survived'), makeMutant('m2', 'y', 'Killed')] },
-      'new.js': { mutants: [makeMutant('m3', 'z', 'Killed')] }
-    })
-    readFileSync
-      .mockReturnValueOnce(JSON.stringify(before))
-      .mockReturnValueOnce(JSON.stringify(after))
-
-    diffReports('before.json', 'after.json', out)
+    runDiff(
+      { 'worsened.js': { mutants: [makeMutant('m1', 'x', 'Killed'), makeMutant('m2', 'y', 'Killed')] } },
+      { 'worsened.js': { mutants: [makeMutant('m1', 'x', 'Survived'), makeMutant('m2', 'y', 'Killed')] },
+        'new.js': { mutants: [makeMutant('m3', 'z', 'Killed')] } }
+    )
 
     const perFileSection = output().slice(output().indexOf('PER-FILE CHANGES'))
     expect(perFileSection.indexOf('new.js')).toBeLessThan(perFileSection.indexOf('worsened.js'))
   })
 
   it('skips per-file section when no file scores changed', () => {
-    const report = makeReport({
-      'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] }
-    })
-    readFileSync
-      .mockReturnValueOnce(JSON.stringify(report))
-      .mockReturnValueOnce(JSON.stringify(report))
-
-    diffReports('before.json', 'after.json', out)
+    const files = { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } }
+    runDiff(files, files)
 
     expect(output()).not.toContain('PER-FILE CHANGES')
   })
 
   it('handles mutants with no location object', () => {
     const mutant = { id: 'm1', mutatorName: 'x', status: 'Killed', replacement: 'y' }
-    const before = makeReport({
-      'a.js': { mutants: [mutant] }
-    })
-    const after = makeReport({
-      'a.js': { mutants: [{ ...mutant, status: 'Survived' }] }
-    })
-    readFileSync
-      .mockReturnValueOnce(JSON.stringify(before))
-      .mockReturnValueOnce(JSON.stringify(after))
-
-    const result = diffReports('before.json', 'after.json', out)
+    const result = runDiff(
+      { 'a.js': { mutants: [mutant] } },
+      { 'a.js': { mutants: [{ ...mutant, status: 'Survived' }] } }
+    )
 
     expect(result.regressions).toBe(1)
   })
@@ -382,65 +268,44 @@ describe('diffReports', () => {
   })
 
   it('prints negative score delta when score decreases', () => {
-    const before = makeReport({
-      'a.js': { mutants: [
+    runDiff(
+      { 'a.js': { mutants: [
         makeMutant('m1', 'a', 'Killed'),
         makeMutant('m2', 'b', 'Killed'),
         makeMutant('m3', 'c', 'Killed'),
         makeMutant('m4', 'd', 'Killed'),
         makeMutant('m5', 'e', 'Survived')
-      ] }
-    })
-    const after = makeReport({
-      'a.js': { mutants: [
+      ] } },
+      { 'a.js': { mutants: [
         makeMutant('m1', 'a', 'Killed'),
         makeMutant('m2', 'b', 'Killed'),
         makeMutant('m3', 'c', 'Killed'),
         makeMutant('m4', 'd', 'Survived'),
         makeMutant('m5', 'e', 'Survived')
-      ] }
-    })
-    readFileSync
-      .mockReturnValueOnce(JSON.stringify(before))
-      .mockReturnValueOnce(JSON.stringify(after))
-
-    diffReports('before.json', 'after.json', out)
+      ] } }
+    )
 
     expect(output()).toContain('Overall: 80.0% → 60.0% (-20.0%)')
   })
 
   it('prints correct killed count among new mutants', () => {
-    const before = makeReport({
-      'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] }
-    })
-    const after = makeReport({
-      'a.js': { mutants: [
+    runDiff(
+      { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } },
+      { 'a.js': { mutants: [
         makeMutant('m1', 'x', 'Killed'),
         makeMutant('m2', 'y', 'Killed', 10),
         makeMutant('m3', 'z', 'Survived', 20)
-      ] }
-    })
-    readFileSync
-      .mockReturnValueOnce(JSON.stringify(before))
-      .mockReturnValueOnce(JSON.stringify(after))
-
-    diffReports('before.json', 'after.json', out)
+      ] } }
+    )
 
     expect(output()).toContain('NEW MUTANTS: 2 (1 killed, 1 survived)')
   })
 
   it('hides REMOVED MUTANTS section when no mutants were removed', () => {
-    const before = makeReport({
-      'a.js': { mutants: [makeMutant('m1', 'x', 'Survived')] }
-    })
-    const after = makeReport({
-      'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] }
-    })
-    readFileSync
-      .mockReturnValueOnce(JSON.stringify(before))
-      .mockReturnValueOnce(JSON.stringify(after))
-
-    diffReports('before.json', 'after.json', out)
+    runDiff(
+      { 'a.js': { mutants: [makeMutant('m1', 'x', 'Survived')] } },
+      { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } }
+    )
 
     expect(output()).not.toContain('REMOVED MUTANTS')
   })
@@ -452,17 +317,10 @@ describe('diffReports', () => {
       location: { start: { line: 5 } },
       replacement: '!=='
     }
-    const before = makeReport({
-      'a.js': { mutants: [mutantNoId] }
-    })
-    const after = makeReport({
-      'a.js': { mutants: [{ ...mutantNoId, status: 'Killed' }] }
-    })
-    readFileSync
-      .mockReturnValueOnce(JSON.stringify(before))
-      .mockReturnValueOnce(JSON.stringify(after))
-
-    const result = diffReports('before.json', 'after.json', out)
+    const result = runDiff(
+      { 'a.js': { mutants: [mutantNoId] } },
+      { 'a.js': { mutants: [{ ...mutantNoId, status: 'Killed' }] } }
+    )
 
     expect(result.newlyKilled).toBe(1)
   })
