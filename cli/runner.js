@@ -38,7 +38,10 @@ function mutationsByLine(mutations) {
 }
 
 function withTimeout(fn, ms) {
-  if (!ms) return fn()
+  return ms ? makeTimeout(fn, ms) : fn()
+}
+
+function makeTimeout(fn, ms) {
   return Promise.race([
     fn(),
     new Promise((_, reject) =>
@@ -98,7 +101,7 @@ async function runMutation(opts, total, outcomes, mutation) {
   const { out, runner, timeout, sourceFile, original } = opts
   try {
     writeFileSync(sourceFile, mutation.source)
-    const result = await withTimeout(() => runner.run(), timeout)
+    const result = await withTimeout(runner.run, timeout)
 
     if (result.passed) {
       outcomes.survived.push(mutation)

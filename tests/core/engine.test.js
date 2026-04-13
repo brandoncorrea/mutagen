@@ -125,13 +125,9 @@ describe('generateMutations', () => {
       pattern: /\btrue\b/g,
       replacement: 'false',
       name: 'true → false',
-      guard: /^\s*\/\//
+      guard: /return/
     }])
-    // guard matches comment prefix — but shouldSkipLine already skips comment lines.
-    // guard applies to the *rest* of the line (before + after the match, excluding the match).
-    // A line like `// return true` is already skipped by shouldSkipLine.
-    // Test guard on a non-comment line where guard pattern matches context:
-    const source = '// return true'
+    const source = 'return true'
     expect(generateMutations(source, patterns)).toHaveLength(0)
   })
 
