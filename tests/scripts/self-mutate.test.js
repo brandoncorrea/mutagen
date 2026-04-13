@@ -22,10 +22,6 @@ beforeEach(() => {
   vi.spyOn(console, 'error').mockImplementation(() => {})
 })
 
-function argv(...args) {
-  return args
-}
-
 function stdout() {
   return console.log.mock.calls.map(c => c[0]).join('\n')
 }
@@ -43,13 +39,13 @@ describe('main', () => {
 
     it('defaults to all target modules when no files given', () => {
       readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
-      expect(main(argv('--dry-run'))).toBe(0)
+      expect(main(['--dry-run'])).toBe(0)
       expect(stdout()).toContain('SELF-MUTATION REPORT')
     })
 
     it('accepts a single valid target module', () => {
       readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
-      expect(main(argv('--dry-run', '--json', 'core/engine.js'))).toBe(0)
+      expect(main(['--dry-run', '--json', 'core/engine.js'])).toBe(0)
 
       const results = JSON.parse(stdout())
       expect(results.every(r => r.file === 'core/engine.js')).toBe(true)
@@ -59,14 +55,14 @@ describe('main', () => {
   describe('dry-run mode', () => {
     it('skips preflight and safety checks', () => {
       readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
-      main(argv('--dry-run', 'core/engine.js'))
+      main(['--dry-run', 'core/engine.js'])
 
       expect(execFileSync).not.toHaveBeenCalled()
     })
 
     it('returns results with dry-run status', () => {
       readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
-      main(argv('--dry-run', '--json', 'core/engine.js'))
+      main(['--dry-run', '--json', 'core/engine.js'])
 
       const results = JSON.parse(stdout())
       expect(results.length).toBeGreaterThan(0)
@@ -75,7 +71,7 @@ describe('main', () => {
 
     it('includes mutation details in each result', () => {
       readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
-      main(argv('--dry-run', '--json', 'core/engine.js'))
+      main(['--dry-run', '--json', 'core/engine.js'])
 
       const result = JSON.parse(stdout())[0]
       expect(result).toHaveProperty('file')
@@ -91,7 +87,7 @@ describe('main', () => {
       readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
       execFileSync.mockReturnValue(undefined)
 
-      main(argv('core/engine.js'))
+      main(['core/engine.js'])
 
       const writes = process.stderr.write.mock.calls.map(c => c[0])
       expect(writes[0]).toBe('Preflight check... ')
@@ -100,7 +96,7 @@ describe('main', () => {
     it('returns 1 when preflight fails', () => {
       execFileSync.mockImplementation(() => { throw { killed: false } })
 
-      expect(main(argv('core/engine.js'))).toBe(1)
+      expect(main(['core/engine.js'])).toBe(1)
       expect(stderr()).toContain('test suite is not green')
     })
 
@@ -113,9 +109,7 @@ describe('main', () => {
         throw { killed: false } // mutations + safety all fail
       })
 
-      // Safety check will fail too → returns 2
-      // But mutations should be Killed
-      main(argv('--json', 'core/engine.js'))
+      main(['--json', 'core/engine.js'])
 
       const results = JSON.parse(stdout())
       expect(results.every(r => r.status === 'Killed')).toBe(true)
@@ -125,7 +119,7 @@ describe('main', () => {
       readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
       execFileSync.mockReturnValue(undefined)
 
-      main(argv('--json', 'core/engine.js'))
+      main(['--json', 'core/engine.js'])
 
       const results = JSON.parse(stdout())
       expect(results.every(r => r.status === 'Survived')).toBe(true)
@@ -140,7 +134,7 @@ describe('main', () => {
         throw { killed: true } // mutations timeout
       })
 
-      main(argv('--json', 'core/engine.js'))
+      main(['--json', 'core/engine.js'])
 
       const results = JSON.parse(stdout())
       expect(results.every(r => r.status === 'Timeout')).toBe(true)
@@ -150,10 +144,9 @@ describe('main', () => {
       readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
       execFileSync.mockReturnValue(undefined)
 
-      main(argv('core/engine.js'))
+      main(['core/engine.js'])
 
       const writes = process.stderr.write.mock.calls.map(c => c[0])
-      // Survived mutations write '!'
       expect(writes).toContain('!')
     })
 
@@ -167,7 +160,7 @@ describe('main', () => {
         throw { killed: false } // killed
       })
 
-      main(argv('core/engine.js'))
+      main(['core/engine.js'])
 
       const writes = process.stderr.write.mock.calls.map(c => c[0])
       expect(writes).toContain('.')
@@ -178,10 +171,8 @@ describe('main', () => {
       readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
       execFileSync.mockReturnValue(undefined)
 
-      main(argv('core/engine.js'))
+      main(['core/engine.js'])
 
-      // Each mutation: write mutated, then restore original
-      // writeFileSync calls alternate: mutated, original, mutated, original...
       const writes = writeFileSync.mock.calls
       expect(writes.length).toBeGreaterThan(0)
       expect(writes.length % 2).toBe(0)
@@ -196,7 +187,7 @@ describe('main', () => {
       readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
       execFileSync.mockReturnValue(undefined)
 
-      expect(main(argv('core/engine.js'))).toBe(0)
+      expect(main(['core/engine.js'])).toBe(0)
 
       const writes = process.stderr.write.mock.calls.map(c => c[0])
       expect(writes.some(w => w.includes('Safety check'))).toBe(true)
@@ -206,7 +197,7 @@ describe('main', () => {
       readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
       const mutationCount = JSON.parse((() => {
         readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
-        main(argv('--dry-run', '--json', 'core/engine.js'))
+        main(['--dry-run', '--json', 'core/engine.js'])
         return stdout()
       })()).length
 
@@ -224,7 +215,7 @@ describe('main', () => {
         throw { killed: false } // safety fails
       })
 
-      expect(main(argv('core/engine.js'))).toBe(2)
+      expect(main(['core/engine.js'])).toBe(2)
       expect(stderr()).toContain('CRITICAL')
     })
   })
@@ -232,7 +223,7 @@ describe('main', () => {
   describe('output formats', () => {
     it('outputs JSON array with --json flag', () => {
       readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
-      main(argv('--dry-run', '--json', 'core/engine.js'))
+      main(['--dry-run', '--json', 'core/engine.js'])
 
       const parsed = JSON.parse(stdout())
       expect(Array.isArray(parsed)).toBe(true)
@@ -240,7 +231,7 @@ describe('main', () => {
 
     it('outputs text report by default', () => {
       readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
-      main(argv('--dry-run', 'core/engine.js'))
+      main(['--dry-run', 'core/engine.js'])
 
       const output = stdout()
       expect(output).toContain('SELF-MUTATION REPORT')
@@ -249,16 +240,16 @@ describe('main', () => {
 
     it('includes score as 0% when no mutations generated', () => {
       readFileSync.mockReturnValue('// nothing mutable here')
-      main(argv('--dry-run', 'core/engine.js'))
+      main(['--dry-run', 'core/engine.js'])
 
       expect(stdout()).toContain('Score: 0%')
     })
 
     it('shows survivors section when mutations survive', () => {
       readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
-      execFileSync.mockReturnValue(undefined) // all pass → survived
+      execFileSync.mockReturnValue(undefined)
 
-      main(argv('core/engine.js'))
+      main(['core/engine.js'])
 
       expect(stdout()).toContain('SURVIVORS')
     })
@@ -272,16 +263,16 @@ describe('main', () => {
         throw { killed: false }
       })
 
-      main(argv('core/engine.js'))
+      main(['core/engine.js'])
 
       expect(stdout()).not.toContain('SURVIVORS')
     })
 
     it('flags survived count in per-file scores', () => {
       readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
-      execFileSync.mockReturnValue(undefined) // all survive
+      execFileSync.mockReturnValue(undefined)
 
-      main(argv('core/engine.js'))
+      main(['core/engine.js'])
 
       expect(stdout()).toContain('SURVIVED')
     })
@@ -290,7 +281,7 @@ describe('main', () => {
   describe('comment filtering', () => {
     it('excludes mutations on comment-only lines', () => {
       readFileSync.mockReturnValue('// return true\nconst x = true')
-      main(argv('--dry-run', '--json', 'core/engine.js'))
+      main(['--dry-run', '--json', 'core/engine.js'])
 
       const results = JSON.parse(stdout())
       for (const r of results) {
