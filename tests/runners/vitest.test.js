@@ -63,6 +63,19 @@ describe('createVitestRunner', () => {
       expect(mock.close).toHaveBeenCalled()
     })
 
+    it('passes a no-op onFinished reporter that vitest can call safely', async () => {
+      const mock = createMockVitest()
+      startVitest.mockResolvedValue(mock)
+
+      const runner = await createVitestRunner('src/a.js', { warm: false })
+      await runner.run()
+
+      const opts = startVitest.mock.calls[0][2]
+      const onFinished = opts.reporters[0].onFinished
+      expect(onFinished).toBeTypeOf('function')
+      expect(() => onFinished()).not.toThrow()
+    })
+
     it('close is a safe no-op (runner contract)', async () => {
       const mock = createMockVitest()
       startVitest.mockResolvedValue(mock)
