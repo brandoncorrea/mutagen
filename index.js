@@ -1,9 +1,9 @@
 // Core
 export { generateMutations, preparePatterns } from './core/engine.js'
-export { tokenizeLine, getTokenContextAt, isInJsxTag, isArrowOperator } from './core/tokenContext.js'
+export { tokenizeLine, getTokenContextAt, isInJsxTag, isArrowOperator } from './core/token-context.js'
 
 // Built-in pattern sets
-export * as patterns from './core/patterns/index.js'
+export * as patterns from './core/patterns.js'
 
 // Runner
 export { createVitestRunner } from './runners/vitest.js'

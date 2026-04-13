@@ -4,7 +4,7 @@ import {
   getTokenContextAt,
   isInJsxTag,
   isArrowOperator
-} from '../../core/tokenContext.js'
+} from '../../core/token-context.js'
 
 describe('tokenizeLine', () => {
   it('tokenizes a single identifier', () => {

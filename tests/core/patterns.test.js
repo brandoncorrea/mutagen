@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { preparePatterns, generateMutations } from '../../core/engine.js'
-import { javascript } from '../../core/patterns/javascript.js'
+import { javascript } from '../../core/patterns.js'
 
 function findPattern(name) {
   const p = javascript.find(p => p.name === name)

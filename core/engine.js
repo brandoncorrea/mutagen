@@ -4,7 +4,7 @@
  * guard logic to skip comments, strings, JSX, and arrow operators.
  */
 
-import { getTokenContextAt, isInJsxTag, isArrowOperator } from './tokenContext.js'
+import { getTokenContextAt, isInJsxTag, isArrowOperator } from './token-context.js'
 
 export function preparePatterns(patterns) {
   return patterns.map(mut => ({

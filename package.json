@@ -5,8 +5,7 @@
   "main": "index.js",
   "exports": {
     ".": "./index.js",
-    "./patterns": "./core/patterns/index.js",
-    "./patterns/*": "./core/patterns/*.js",
+    "./patterns": "./core/patterns.js",
     "./runners/vitest": "./runners/vitest.js",
     "./stryker": "./stryker.js"
   },

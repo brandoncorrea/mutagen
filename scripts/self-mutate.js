@@ -16,7 +16,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { resolve } from 'node:path'
 import { generateMutations, preparePatterns } from '../index.js'
-import { javascript } from '../core/patterns/javascript.js'
+import { javascript } from '../core/patterns.js'
 
 const ROOT = resolve(import.meta.dirname, '..')
 const TIMEOUT_MS = 30_000
@@ -24,7 +24,7 @@ const TIMEOUT_MS = 30_000
 // Modules safe to self-mutate (no runner infrastructure)
 const TARGET_MODULES = [
   'core/engine.js',
-  'core/tokenContext.js',
+  'core/token-context.js',
   'core/report-data.js',
   'cli/args.js',
   'cli/diff.js',
