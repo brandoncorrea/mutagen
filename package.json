@@ -18,7 +18,7 @@
   "type": "module",
   "main": "index.js",
   "bin": {
-    "mutagen": "./bin/mutagen.js"
+    "mutagen": "bin/mutagen.js"
   },
   "files": [
     "index.js",
