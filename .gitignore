@@ -4,6 +4,7 @@ coverage/
 .claude/
 .runtime/
 CLAUDE.md
+state.json
 
 # Beads / Dolt files (added by bd init)
 .dolt/
