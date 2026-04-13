@@ -68,6 +68,17 @@ async function runBatch(ctx, jsonOutput, timeout, sourcesToRun) {
   out(`MUTAGEN — BATCH MODE`)
   out(`   Sources: ${filesToRun.length} file(s)\n`)
 
+  const result = await accumulateResults(filesToRun, { prepared, createRunner, timeout, out })
+
+  if (jsonOutput)
+    writeReport(out, reportDir, reportPath, result.fileResults)
+
+  printBatchSummary(out, filesToRun.length, result)
+
+  return result
+}
+
+async function accumulateResults(filesToRun, { prepared, createRunner, timeout, out }) {
   let totalSurvived = 0
   let totalKilled = 0
   let totalTimedOut = 0
@@ -86,13 +97,7 @@ async function runBatch(ctx, jsonOutput, timeout, sourcesToRun) {
     }
   }
 
-  if (jsonOutput)
-    writeReport(out, reportDir, reportPath, fileResults)
-
-  const result = { totalSurvived, totalKilled, totalTimedOut, failures, fileResults }
-  printBatchSummary(out, filesToRun.length, result)
-
-  return result
+  return { totalSurvived, totalKilled, totalTimedOut, failures, fileResults }
 }
 
 function writeReport(out, reportDir, reportPath, fileResults) {
