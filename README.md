@@ -1,57 +1,62 @@
-# mutagen
+# @bwawan/mutagen
 
-A pluggable mutation testing engine for JavaScript/JSX projects.
-
-Not yet published to npm — use as a git submodule:
+A lightweight, regex-based mutation testing engine for JavaScript/JSX projects.
 
 ```bash
-git submodule add <repo-url> mutagen
+npm install @bwawan/mutagen
 ```
 
-## Usage
+## Quick start
+
+Create a mutation runner script in your project:
 
 ```js
-import { createManualRunner, patterns, createVitestRunner } from './mutagen/index.js'
+import { createManualRunner, patterns, createVitestRunner } from '@bwawan/mutagen'
 
 const runner = createManualRunner({
   patterns: [...patterns.javascript],
   sources: ['src/foo.js', 'src/bar.js'],
-  createRunner: (sourceFile) => createVitestRunner(sourceFile, {
-    config: 'vitest.config.js',  // optional: workspace config path
-    root: '.',                    // optional: workspace root
-  })
+  createRunner: sourceFile => createVitestRunner(sourceFile)
 })
 
 runner.main()
 ```
 
-## CLI
+Then run it:
 
-```
-node scripts/mutate.js <source>                        # Mutate a single file
-node scripts/mutate.js <source> --line 42              # Target a single line
-node scripts/mutate.js <source> --dry-run              # List mutations without running
-node scripts/mutate.js <source> --json                 # JSON report output
-node scripts/mutate.js <source> --timeout 10000        # 10s timeout per mutation
-node scripts/mutate.js --all                           # Batch all sources
-node scripts/mutate.js --all --dry-run                 # Dry-run across all sources
-node scripts/mutate.js --incremental                   # Skip unchanged files (hash-based)
-node scripts/mutate.js --incremental --json            # Incremental + JSON report
-node scripts/mutate.js --diff before.json after.json   # Compare two report files
+```bash
+node mutate.js src/foo.js              # Single file
+node mutate.js --all                   # All sources
+node mutate.js --incremental           # Skip unchanged files
+node mutate.js --diff a.json b.json    # Compare two reports
 ```
 
-Flags `--json` and `--timeout` work across single-file, `--all`, and `--incremental` modes.
+## CLI flags
+
+```
+<source>                        Mutate a single file
+<source> --line 42              Target a single line
+<source> --dry-run              List mutations without running
+<source> --json                 JSON report output
+<source> --timeout 10000        10s timeout per mutation
+--all                           Batch all sources
+--all --dry-run                 Preview across all sources
+--incremental                   Hash-based caching, skip unchanged
+--incremental --json            Incremental + JSON report
+--diff <before> <after>         Compare two JSON report files
+```
+
+`--json` and `--timeout` work across single-file, `--all`, and `--incremental` modes.
 
 ## Runner interface
 
-The `createRunner` function receives a source file path and returns a runner:
+The `createRunner` callback receives a source file path and returns a runner object:
 
 ```js
 async function createRunner(sourceFile) {
   return {
     async run() {
-      // Run the test suite. Return { passed: boolean }.
-      // The suite should cover the source file — directly or transitively.
+      // Run the test suite. Return { passed: boolean, killedBy?: string[] }.
       return { passed: true }
     },
     async close() {
@@ -63,21 +68,19 @@ async function createRunner(sourceFile) {
 
 ## Vitest runner
 
-Built-in adapter for vitest. Supports monorepo workspaces and automatic
-warm/cold fallback for vitest v4 compatibility.
+Built-in adapter for Vitest with warm/cold fallback and module-graph-based test narrowing:
 
 ```js
-import { createVitestRunner } from './mutagen/runners/vitest.js'
+import { createVitestRunner } from '@bwawan/mutagen/runners/vitest'
 
-// Run entire test suite against mutations
 createVitestRunner(sourceFile)
 
-// With workspace options
+// With options
 createVitestRunner(sourceFile, {
   config: 'frontend/vitest.config.js',
   root: 'frontend',
-  testFile: 'tests/specific.test.js',  // optional: restrict to one test file
-  warm: true,                           // default: try warm rerun, fall back to cold
+  testFile: 'tests/specific.test.js',
+  warm: true   // default: warm rerun, falls back to cold
 })
 ```
 
@@ -94,22 +97,29 @@ createVitestRunner(sourceFile, {
 }
 ```
 
-## Self-mutation
+The built-in `patterns.javascript` set covers equality, logical, arithmetic, boolean, method, string, array, object, bitwise, and control-flow operators.
 
-Mutagen can test itself using `scripts/self-mutate.js`. This runs mutagen's
-own patterns against its source code, using a cold subprocess runner to avoid
-corrupting the running process.
+## Incremental mode
 
-```
-node scripts/self-mutate.js                    # All target modules
-node scripts/self-mutate.js core/engine.js     # Single module
-node scripts/self-mutate.js --dry-run          # Preview mutations only
-node scripts/self-mutate.js --json             # JSON output
+Incremental mode tracks SHA-256 hashes of source and test files between runs. Only changed files (or files whose tests changed) are re-mutated. Cached results from the previous report carry forward.
+
+```bash
+node mutate.js --incremental --json    # Writes merged report with hashes
 ```
 
-## Stryker integration (optional)
+## Diff mode
 
-For projects that use Stryker alongside mutagen's own engine:
+Compare two JSON reports to find regressions, improvements, and new/removed mutants:
+
+```bash
+node mutate.js --diff before.json after.json
+```
+
+Returns exit code 1 if regressions are found.
+
+## Stryker integration
+
+Optional utilities for projects using Stryker alongside mutagen:
 
 ```js
 import {
@@ -117,17 +127,14 @@ import {
   clearIncrementalCache,
   runStrykerScope,
   mergeReports
-} from './mutagen/stryker.js'
+} from '@bwawan/mutagen/stryker'
 
-// Clean up leftover Stryker sandbox directories
 cleanStaleSandboxes()
-
-// Clear the incremental cache between scoped runs
 clearIncrementalCache()
-
-// Run Stryker on a subset of files
 const reportFile = runStrykerScope('core', ['src/a.js', 'src/b.js'])
-
-// Merge multiple scoped reports into one; returns survived count
-const survived = mergeReports([reportFile, otherReportFile])
+const survived = mergeReports([reportFile])
 ```
+
+## License
+
+MIT

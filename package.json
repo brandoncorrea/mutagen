@@ -6,7 +6,7 @@
   "author": "Brandon Correa",
   "repository": {
     "type": "git",
-    "url": "https://github.com/brandoncorrea/mutagen.git"
+    "url": "git+https://github.com/brandoncorrea/mutagen.git"
   },
   "keywords": [
     "mutation-testing",
