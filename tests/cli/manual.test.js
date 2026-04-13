@@ -361,6 +361,27 @@ describe('createManualRunner', () => {
       expect(result.totalTimedOut).toBe(1)
       expect(result.totalSurvived).toBe(0)
     }, 5000)
+
+    it('does not time out when runner resolves before timeout', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const runner = {
+        // Resolve after one microtask tick — not already-settled.
+        // Guards setTimeout: an immediate reject() would win this race.
+        run: vi.fn()
+          .mockImplementationOnce(async () => ({ passed: true }))  // preflight
+          .mockImplementationOnce(async () => { await Promise.resolve(); return { passed: true } }),
+        close: vi.fn().mockResolvedValue(undefined),
+      }
+
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner)
+      })
+      const result = await manual.runBatch(false, 60000)
+
+      expect(result.totalSurvived).toBe(1)
+      expect(result.totalTimedOut).toBe(0)
+    })
   })
 
   describe('runIncremental', () => {
