@@ -82,13 +82,13 @@ function computeFileDeltas(before, after) {
 }
 
 function computeFileDelta(beforeScores, afterScores, file) {
-  const bs = beforeScores[file]
-  const as = afterScores[file]
-  const before = bs?.score
-  const after = as?.score
-  if (!bs)
+  const beforeScore = beforeScores[file]
+  const afterScore = afterScores[file]
+  const before = beforeScore?.score
+  const after = afterScore?.score
+  if (!beforeScore)
     return { file, after, delta: 0, label: 'NEW' }
-  else if (!as)
+  else if (!afterScore)
     return { file, before, delta: 0, label: 'REMOVED' }
 
   const delta = after - before
