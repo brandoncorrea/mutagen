@@ -77,26 +77,26 @@ function applyMutation(line, match, mut) {
   return before + replaced + after
 }
 
-function lineMutationsForPattern(lines, line, lineNum, mutation) {
+function lineMutationsForPattern(sourceLines, line, lineNum, mutation) {
   const matches = [...line.matchAll(mutation.globalPattern)]
-  const total = matches.length
-  const options = { lines, line, lineNum, mutation }
+  const matchCount = matches.length
+  const options = { sourceLines, line, lineNum, mutation }
   return matches
-    .map((match, matchIdx) => compileMutation(total, matchIdx, match, options))
+    .map((match, matchIdx) => compileMutation(matchCount, matchIdx, match, options))
     .filter(Boolean)
 }
 
-function compileMutation(total, matchIdx, match, options) {
-  const { lines, line, lineNum, mutation } = options
+function compileMutation(matchCount, matchIdx, match, options) {
+  const { sourceLines, line, lineNum, mutation } = options
   if (shouldSkipMatch(line, match, mutation)) return
 
   const mutatedLine = applyMutation(line, match, mutation)
   if (mutatedLine === line) return
 
-  const suffix = total > 1 ? ` (match ${matchIdx + 1}/${total})` : ''
-  const mutatedSource = lines
+  const suffix = matchCount > 1 ? ` (match ${matchIdx + 1}/${matchCount})` : ''
+  const mutatedSource = sourceLines
     .slice(0, lineNum - 1)
-    .concat(mutatedLine, lines.slice(lineNum))
+    .concat(mutatedLine, sourceLines.slice(lineNum))
     .join('\n')
 
   return {
@@ -115,10 +115,10 @@ function compileMutation(total, matchIdx, match, options) {
  * @param {number} [targetLine] - optional line number to restrict mutations to
  */
 export function generateMutations(source, prepared, targetLine) {
-  const lines = source.split('\n')
-  return lines
+  const sourceLines = source.split('\n')
+  return sourceLines
     .map((line, index) => [line, index + 1])
     .filter(([line, lineNum]) => !shouldSkipLine(line, lineNum, targetLine))
     .flatMap(([line, lineNum]) =>
-      prepared.flatMap(mut => lineMutationsForPattern(lines, line, lineNum, mut)))
+      prepared.flatMap(mut => lineMutationsForPattern(sourceLines, line, lineNum, mut)))
 }

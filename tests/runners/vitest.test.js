@@ -226,6 +226,18 @@ describe('createVitestRunner', () => {
         'test', ['test/a.test.js'], expect.any(Object)
       )
     })
+
+    it('sets bail to 1 to stop on first failure', async () => {
+      const mock = createMockVitest()
+      startVitest.mockResolvedValue(mock)
+
+      const runner = await createVitestRunner('src/a.js', { warm: false })
+      await runner.run()
+
+      expect(startVitest).toHaveBeenCalledWith(
+        'test', [], expect.objectContaining({ bail: 1 })
+      )
+    })
   })
 
   describe('related specs via module graph', () => {
@@ -409,6 +421,188 @@ describe('createVitestRunner', () => {
       await runner.run()
 
       expect(mock.runTestSpecifications).toHaveBeenLastCalledWith(specs)
+    })
+
+    it('handles project with undefined _vite gracefully', async () => {
+      const specs = [
+        { moduleId: 'test/a.test.js' }
+      ]
+      const mock = createMockVitest()
+      mock.globTestSpecifications.mockResolvedValue(specs)
+      mock.projects = [{}]
+      startVitest.mockResolvedValue(mock)
+
+      const runner = await createVitestRunner('src/a.js')
+      await runner.run()
+
+      expect(mock.runTestSpecifications).toHaveBeenLastCalledWith(specs)
+    })
+  })
+
+  describe('result optional chaining', () => {
+    it('treats files with undefined result as not passing', async () => {
+      const mock = createMockVitest()
+      mock.state.getFiles.mockReturnValue([
+        { filepath: 'a.test.js' },
+        { result: { state: 'pass' }, filepath: 'b.test.js' }
+      ])
+      startVitest.mockResolvedValue(mock)
+
+      const runner = await createVitestRunner('src/a.js', { warm: false })
+      const result = await runner.run()
+
+      expect(result.passed).toBe(false)
+      expect(result.killedBy).toEqual([])
+    })
+  })
+
+  describe('async correctness (await mutation guards)', () => {
+    function deferred() {
+      let resolve
+      const promise = new Promise(r => { resolve = r })
+      return { promise, resolve }
+    }
+
+    async function flushMicrotasks() {
+      for (let i = 0; i < 10; i++) await Promise.resolve()
+    }
+
+    it('warm startup awaits waitForTestRunEnd before checking warm rerun', async () => {
+      const mock = createMockVitest()
+      const d = deferred()
+      mock.waitForTestRunEnd.mockReturnValue(d.promise)
+
+      let warmRerunStarted = false
+      mock.globTestSpecifications.mockImplementation(async () => {
+        warmRerunStarted = true
+        return []
+      })
+      startVitest.mockResolvedValue(mock)
+
+      const promise = createVitestRunner('src/a.js')
+      await flushMicrotasks()
+      expect(warmRerunStarted).toBe(false)
+
+      d.resolve()
+      await promise
+      expect(warmRerunStarted).toBe(true)
+    })
+
+    it('warm-to-cold fallback awaits close before returning cold runner', async () => {
+      const warmMock = createMockVitest()
+      warmMock.globTestSpecifications.mockRejectedValue(new Error('crash'))
+
+      const d = deferred()
+      warmMock.close.mockReturnValue(d.promise)
+
+      const coldMock = createMockVitest()
+      startVitest
+        .mockResolvedValueOnce(warmMock)
+        .mockResolvedValue(coldMock)
+
+      let runnerCreated = false
+      const promise = createVitestRunner('src/a.js').then(r => {
+        runnerCreated = true
+        return r
+      })
+
+      await flushMicrotasks()
+      expect(runnerCreated).toBe(false)
+
+      d.resolve()
+      await promise
+      expect(runnerCreated).toBe(true)
+    })
+
+    it('warm run awaits runTestSpecifications before compiling results', async () => {
+      const mock = createMockVitest()
+      const d = deferred()
+      const specs = [{ moduleId: 'test/a.test.js' }]
+      mock.globTestSpecifications.mockResolvedValue(specs)
+      mock.runTestSpecifications
+        .mockResolvedValueOnce(undefined)
+        .mockReturnValueOnce(d.promise)
+      mock.state.getFiles.mockReturnValue([
+        { result: { state: 'pass' }, filepath: 'a.test.js' }
+      ])
+      startVitest.mockResolvedValue(mock)
+
+      const runner = await createVitestRunner('src/a.js')
+
+      let runDone = false
+      const runPromise = runner.run().then(r => { runDone = true; return r })
+
+      await flushMicrotasks()
+      expect(runDone).toBe(false)
+
+      d.resolve()
+      await runPromise
+      expect(runDone).toBe(true)
+    })
+
+    it('warm close awaits vitest.close before resolving', async () => {
+      const mock = createMockVitest()
+      const d = deferred()
+      mock.close.mockReturnValue(d.promise)
+      startVitest.mockResolvedValue(mock)
+
+      const runner = await createVitestRunner('src/a.js')
+
+      let closeDone = false
+      const closePromise = runner.close().then(() => { closeDone = true })
+
+      await flushMicrotasks()
+      expect(closeDone).toBe(false)
+
+      d.resolve()
+      await closePromise
+      expect(closeDone).toBe(true)
+    })
+
+    it('warmRerunFailed awaits runTestSpecifications before reading state', async () => {
+      const mock = createMockVitest()
+      const d = deferred()
+      mock.runTestSpecifications.mockReturnValue(d.promise)
+      mock.state.getFiles.mockReturnValue([
+        { result: { state: 'pass' }, filepath: 'a.test.js' }
+      ])
+      startVitest.mockResolvedValue(mock)
+
+      let factoryDone = false
+      const promise = createVitestRunner('src/a.js').then(r => {
+        factoryDone = true
+        return r
+      })
+
+      await flushMicrotasks()
+      expect(factoryDone).toBe(false)
+
+      d.resolve()
+      await promise
+      expect(factoryDone).toBe(true)
+    })
+
+    it('cold run awaits vitest.close in finally block', async () => {
+      const mock = createMockVitest()
+      const d = deferred()
+      mock.close.mockReturnValue(d.promise)
+      mock.state.getFiles.mockReturnValue([
+        { result: { state: 'pass' }, filepath: 'a.test.js' }
+      ])
+      startVitest.mockResolvedValue(mock)
+
+      const runner = await createVitestRunner('src/a.js', { warm: false })
+
+      let runDone = false
+      const runPromise = runner.run().then(r => { runDone = true; return r })
+
+      await flushMicrotasks()
+      expect(runDone).toBe(false)
+
+      d.resolve()
+      const result = await runPromise
+      expect(runDone).toBe(true)
+      expect(result.passed).toBe(true)
     })
   })
 })

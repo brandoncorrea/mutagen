@@ -5,7 +5,14 @@ export default defineConfig({
     fileParallelism: false,
     coverage: {
       provider: 'v8',
-      include: ['core/**/*.js', 'cli/**/*.js', 'runners/**/*.js', 'stryker.js']
+      include: [
+        'core/**/*.js',
+        'cli/**/*.js',
+        'runners/**/*.js',
+        'scripts/**/*.js',
+        'stryker.js',
+        'index.js'
+      ]
     }
   }
 })

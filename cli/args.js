@@ -83,7 +83,7 @@ function argsToOptions(args) {
       timeout = Number(args[++i])
       if (isInvalidNumber(timeout))
         return { error: '--timeout requires a numeric value' }
-    } else if (isNotFlag(arg)) {
+    } else if (isPositionalArg(arg)) {
       filtered.push(arg)
     }
   }
@@ -108,6 +108,6 @@ function isInvalidNumber(value) {
 }
 
 const FLAG_OPTIONS = new Set(['--json', '--dry-run'])
-function isNotFlag(arg) {
+function isPositionalArg(arg) {
   return !FLAG_OPTIONS.has(arg)
 }

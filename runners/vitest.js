@@ -32,7 +32,7 @@ export async function createVitestRunner(sourceFile, options = {}) {
   await vitest.waitForTestRunEnd()
 
   // Verify warm rerun works by re-running without changes
-  if (await noWarmRerun(vitest)) {
+  if (await warmRerunFailed(vitest)) {
     await vitest.close()
     return coldRunner(startVitest, testFilter, vitestOpts)
   }
@@ -102,7 +102,7 @@ function enqueueModule({ graph, queue }, moduleId) {
         queue.push(id)
 }
 
-async function noWarmRerun(vitest) {
+async function warmRerunFailed(vitest) {
   try {
     const specs = await vitest.globTestSpecifications()
     await vitest.runTestSpecifications(specs)
