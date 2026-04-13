@@ -22,12 +22,13 @@ const patterns = [
 
 // Exactly one mutation site
 const sourceCode = 'if (a === b) {}'
+const HASH_PREFIX_LENGTH = 16
 
 function hashOf(content) {
   return createHash('sha256')
     .update(Buffer.from(content))
     .digest('hex')
-    .slice(0, 16)
+    .slice(0, HASH_PREFIX_LENGTH)
 }
 
 function mockFs(files) {

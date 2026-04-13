@@ -70,8 +70,8 @@ function countStatus(statuses, { status }) {
     statuses.timeout++
 }
 
-export function combineReportData(files, out = console.log) {
-  const { mergedFiles, duplicates } = deduplicateMutants(loadAllEntries(files, out))
+export function combineReportData(reports, out = console.log) {
+  const { mergedFiles, duplicates } = deduplicateMutants(loadAllEntries(reports, out))
 
   if (duplicates)
     out(`  Deduplicated: ${duplicates} duplicate mutant(s) removed`)
@@ -79,8 +79,8 @@ export function combineReportData(files, out = console.log) {
   return createReport(mergedFiles)
 }
 
-function loadAllEntries(files, out) {
-  return files
+function loadAllEntries(reports, out) {
+  return reports
     .map(f => tryLoadJson(f, out))
     .filter(Boolean)
     .flatMap(({ files }) => Object.entries(files))

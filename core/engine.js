@@ -33,10 +33,13 @@ function isStaticImport(trimmed) {
     && !trimmed.includes('import(')
 }
 
+const NEAR_GUARD_WINDOW = 5
 function isNearGuardBlocked(line, match, mut) {
   if (!mut.nearGuard) return
-  const windowStart = Math.max(0, match.index - 5)
-  const windowEnd = Math.min(line.length, match.index + match[0].length + 5)
+  const lower = match.index - NEAR_GUARD_WINDOW
+  const upper = match.index + match[0].length + NEAR_GUARD_WINDOW
+  const windowStart = Math.max(0, lower)
+  const windowEnd = Math.min(line.length, upper)
   const win = line.slice(windowStart, windowEnd)
   const matchInWin = match.index - windowStart
   const adjacentCtx = win.slice(0, matchInWin) + win.slice(matchInWin + match[0].length)

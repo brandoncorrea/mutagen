@@ -94,8 +94,8 @@ function visitSourceFile(state, id) {
     enqueueModule(state, id)
 }
 
-function enqueueModule({ graph, queue }, id) {
-  const mod = graph.getModuleById(id)
+function enqueueModule({ graph, queue }, moduleId) {
+  const mod = graph.getModuleById(moduleId)
   if (mod)
     for (const { id } of mod.importers)
       if (id)

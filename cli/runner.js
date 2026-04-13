@@ -74,13 +74,12 @@ async function runMutations(opts) {
   out(`Tests pass on original source. Beginning mutations.\n`)
 
   const mutations = generateMutations(original, prepared, targetLine)
-  const total = mutations.length
   out(`Found ${mutations.length} mutation(s) to run.\n`)
 
   const outcomes = { killed: [], survived: [], timedOut: [] }
 
   for (let i = 0; i < mutations.length; i++)
-    await runMutation(opts, total, outcomes, {
+    await runMutation(opts, mutations.length, outcomes, {
       number: i + 1,
       ...mutations[i]
     })

@@ -51,11 +51,11 @@ describe('printSummary', () => {
 describe('printRunReport', () => {
   it('prints mutation score for all-killed results', () => {
     const lines = []
-    const log = msg => lines.push(msg)
+    const out = msg => lines.push(msg)
     const mutations = [{ line: 1, name: 'test' }]
     const results = { killed: [{ line: 1, name: 'test' }], survived: [] }
 
-    printRunReport(mutations, results, log)
+    printRunReport(mutations, results, out)
 
     const output = lines.join('\n')
     expect(output).toContain('100.0%')
@@ -64,7 +64,7 @@ describe('printRunReport', () => {
 
   it('prints surviving mutations when some survive', () => {
     const lines = []
-    const log = msg => lines.push(msg)
+    const out = msg => lines.push(msg)
     const mutations = [
       { line: 1, name: 'a' },
       { line: 2, name: 'b' }
@@ -74,7 +74,7 @@ describe('printRunReport', () => {
       survived: [{ line: 2, name: 'b', original: 'x + y', mutated: 'x - y' }]
     }
 
-    printRunReport(mutations, results, log)
+    printRunReport(mutations, results, out)
 
     const output = lines.join('\n')
     expect(output).toContain('50.0%')
@@ -85,14 +85,14 @@ describe('printRunReport', () => {
 
   it('reports 100% for zero mutations', () => {
     const lines = []
-    const log = msg => lines.push(msg)
-    printRunReport([], { killed: [], survived: [] }, log)
+    const out = msg => lines.push(msg)
+    printRunReport([], { killed: [], survived: [] }, out)
     expect(lines.join('\n')).toContain('100.0%')
   })
 
   it('counts timed-out mutations as killed in score', () => {
     const lines = []
-    const log = msg => lines.push(msg)
+    const out = msg => lines.push(msg)
     const mutations = [
       { line: 1, name: 'a' },
       { line: 2, name: 'b' }
@@ -106,7 +106,7 @@ describe('printRunReport', () => {
       ]
     }
 
-    printRunReport(mutations, results, log)
+    printRunReport(mutations, results, out)
 
     const output = lines.join('\n')
     expect(output).toContain('100.0%')

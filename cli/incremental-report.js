@@ -77,7 +77,11 @@ export function handleAllCached(out, config, previous, classification, jsonOutpu
   out(HEADER_SEPARATOR)
   out(`Files: ${sources.length}  |  Killed: ${cachedCounts.killed}  |  Survived: ${cachedCounts.survived}  |  Rerun: 0`)
   out(`${HEADER_SEPARATOR}\n`)
-  return { totalSurvived: cachedCounts.survived, totalKilled: cachedCounts.killed, failures: 0 }
+  return {
+    totalSurvived: cachedCounts.survived,
+    totalKilled: cachedCounts.killed,
+    failures: 0
+  }
 }
 
 export function writeMergedReport(out, config, previous, classification, fileResults) {

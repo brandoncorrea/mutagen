@@ -30,11 +30,10 @@ export function runStrykerScope(name, scope, { reportDir = 'reports/mutation', s
   const outputJson = strykerJson || `${reportDir}/report.json`
   const mutateArg = scope.join(',')
   const targetFile = `${reportDir}/${name}-report.json`
-  const sep = HEADER_SEPARATOR
 
-  out(`\n${sep}`)
+  out(`\n${HEADER_SEPARATOR}`)
   out(`STRYKER — ${name.toUpperCase()}`)
-  out(`${sep}\n`)
+  out(`${HEADER_SEPARATOR}\n`)
 
   try {
     execFileSync(
