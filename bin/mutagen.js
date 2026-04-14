@@ -14,7 +14,7 @@ import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { createManualRunner } from '../cli/manual.js'
 
-export async function run(argv, { config, configPath, out = console.log, err = console.error } = {}) {
+export async function run(args, { config, configPath, out = console.log, err = console.error } = {}) {
   if (!config) {
     const path = configPath || resolve('mutagen.config.js')
     try {
@@ -27,9 +27,16 @@ export async function run(argv, { config, configPath, out = console.log, err = c
     }
   }
 
-  return createManualRunner({ out, ...config }).run(argv)
+  return createManualRunner({ out, ...config }).run(args)
+}
+
+function isMain(argv) {
+  const arg = argv[1]
+  if (!arg) return
+  const FIXME = arg.replace(/.*[\\/]/, '')
+  return import.meta.url.endsWith(FIXME)
 }
 
 /* v8 ignore next 2 */
-if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/.*[\\/]/, '')))
+if (isMain(process.argv))
   process.exit(await run(process.argv.slice(2)))

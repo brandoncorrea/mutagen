@@ -28,10 +28,19 @@ export async function runParallel(options) {
   printBanner(out, `MUTAGEN (parallel — ${workerCount} workers)`, sourceFile, targetLine, timeout)
 
   const preflightRunner = await createRunner(sourceFile)
+  const runOptions = {
+    sourceFile,
+    prepared,
+    createRunner,
+    targetLine,
+    timeout,
+    workerCount,
+    original,
+    out
+  }
+
   try {
-    return await runAfterPreflight(preflightRunner, {
-      sourceFile, prepared, createRunner, targetLine, timeout, workerCount, original, out
-    })
+    return await runAfterPreflight(preflightRunner, runOptions)
   } finally {
     await preflightRunner.close()
   }
