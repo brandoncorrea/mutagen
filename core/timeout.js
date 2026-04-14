@@ -4,7 +4,10 @@
  */
 
 export function withTimeout(fn, ms) {
-  if (!ms) return fn()
+  return ms ? createTimeout(fn, ms) : fn()
+}
+
+function createTimeout(fn, ms) {
   return Promise.race([
     fn(),
     new Promise((_, reject) =>

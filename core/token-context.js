@@ -13,20 +13,25 @@ const jsTokens = require('js-tokens')
 const regex = jsTokens.default
 const matchToToken = jsTokens.matchToToken
 
-const STRING_TYPES = new Set(['string', 'template'])
-const COMMENT_TYPES = new Set(['comment'])
-const WHITESPACE_TYPES = new Set(['whitespace'])
+function isString(type) {
+  return type === 'string' || type === 'template'
+}
+
+function isComment(type) {
+  return type === 'comment'
+}
+
+function isWhitespace(type) {
+  return type === 'whitespace'
+}
 
 const pattern = new RegExp(regex.source, regex.flags)
 
 function spanType(type) {
-  if (STRING_TYPES.has(type))
-    return 'string'
-  else if (COMMENT_TYPES.has(type))
-    return 'comment'
-  else if (WHITESPACE_TYPES.has(type))
-    return 'whitespace'
-  return 'code'
+  return isString(type) ? 'string'
+    : isComment(type) ? 'comment'
+    : isWhitespace(type) ? 'whitespace'
+    : 'code'
 }
 
 export function tokenizeLine(line) {
@@ -37,9 +42,13 @@ export function tokenizeLine(line) {
   while (match = pattern.exec(line)) {
     const token = matchToToken(match)
     const start = match.index
-    const end = start + token.value.length
-    const type = spanType(token.type)
-    spans.push({ type, start, end, value: token.value, tokenType: token.type })
+    spans.push({
+      start,
+      end: start + token.value.length,
+      type: spanType(token.type),
+      value: token.value,
+      tokenType: token.type
+    })
   }
 
   return spans
@@ -49,18 +58,22 @@ export function getTokenContextAt(line, position) {
   const spans = tokenizeLine(line)
   for (const { start, end, type } of spans)
     if (position >= start && position < end)
-      return type === 'whitespace' ? 'code' : type
+      return isWhitespace(type) ? 'code' : type
   return 'code'
 }
 
 export function isInJsxTag(line, position) {
   const spans = tokenizeLine(line)
   for (let i = spans.length - 1; i >= 0; i--) {
-    const { start, type, value } = spans[i]
-    if (start >= position || type === 'whitespace') continue
-    if (value === '>') return false
-    if (value === '<') return true
+    const span = spans[i]
+    if (shouldIgnoreSpan(span, position)) continue
+    if (span.value === '>') return false
+    if (span.value === '<') return true
   }
+}
+
+function shouldIgnoreSpan({ start, type }, position) {
+  return start >= position || isWhitespace(type)
 }
 
 export function isArrowOperator(line, position) {

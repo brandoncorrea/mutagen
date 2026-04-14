@@ -25,7 +25,7 @@ import { withTimeout } from './timeout.js'
  */
 export function createPool({ workerCount, createRunner }) {
   const runners = []
-  let closed = false
+  let closed
 
   return { run, close }
 
