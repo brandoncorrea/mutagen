@@ -8,12 +8,15 @@
  *   await pool.close()
  */
 
+import { withTimeout } from './timeout.js'
+
 /**
  * Create a worker pool for parallel mutation testing.
  *
- * Each worker holds its own runner instance (created via createRunner).
- * Mutations are distributed round-robin to idle workers. Results are
- * collected into killed/survived/timedOut arrays.
+ * Uses in-process async concurrency (not worker_threads). Workers are
+ * async functions that pull from a shared queue. The queue is safe to
+ * share because JavaScript is single-threaded — workers only yield at
+ * await boundaries, never during queue.pop().
  *
  * @param {Object} options
  * @param {number} options.workerCount - number of concurrent workers
@@ -34,7 +37,7 @@ export function createPool({ workerCount, createRunner }) {
 
     await ensureRunners()
 
-    const queue = mutations.slice()
+    const queue = mutations.slice().reverse()
     const workers = runners.map(runner => processQueue(runner, queue, timeout, outcomes, onResult))
     await Promise.all(workers)
 
@@ -57,7 +60,7 @@ export function createPool({ workerCount, createRunner }) {
 
 async function processQueue(runner, queue, timeout, outcomes, onResult) {
   while (queue.length) {
-    const mutation = queue.shift()
+    const mutation = queue.pop()
     await runOne(runner, mutation, timeout, outcomes, onResult)
   }
 }
@@ -71,8 +74,7 @@ async function runOne(runner, mutation, timeout, outcomes, onResult) {
       outcomes.survived.push(mutation)
       onResult?.({ mutation, status: 'survived' })
     } else {
-      mutation.killedBy = result.killedBy
-      outcomes.killed.push(mutation)
+      outcomes.killed.push({ ...mutation, killedBy: result.killedBy })
       onResult?.({ mutation, status: 'killed' })
     }
   } catch (err) {
@@ -88,11 +90,3 @@ async function runOne(runner, mutation, timeout, outcomes, onResult) {
   }
 }
 
-function withTimeout(fn, ms) {
-  if (!ms) return fn()
-  return Promise.race([
-    fn(),
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error(`Mutation timed out after ${ms}ms`)), ms))
-  ])
-}

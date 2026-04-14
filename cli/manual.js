@@ -88,7 +88,7 @@ async function accumulateResults(filesToRun, { prepared, createRunner, timeout, 
   for (const source of filesToRun) {
     const opts = { sourceFile: resolve(source), prepared, createRunner, timeout, out }
     const result = parallel
-      ? await runParallel({ ...opts, workerCount: toWorkerCount(parallel) })
+      ? await runParallel({ ...opts, workerCount: typeof parallel === 'number' ? parallel : undefined })
       : await runSingle(opts)
     if (result.error) {
       failures++
@@ -174,11 +174,8 @@ async function runSingleMode(ctx, parsed, timeout) {
     out: ctx.out
   }
   const { error, survived } = ctx.parallel
-    ? await runParallel({ ...opts, workerCount: toWorkerCount(ctx.parallel) })
+    ? await runParallel({ ...opts, workerCount: typeof ctx.parallel === 'number' ? ctx.parallel : undefined })
     : await runSingle(opts)
   return error || survived ? 1 : 0
 }
 
-function toWorkerCount(parallel) {
-  return typeof parallel === 'number' ? parallel : undefined
-}

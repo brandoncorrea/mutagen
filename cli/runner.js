@@ -1,6 +1,12 @@
 /**
  * Single-file mutation execution.
  * Runs all mutations against one source file and reports results.
+ *
+ * Runner interface:
+ *   { run, close }                       — file-I/O mode (writes mutated source to disk)
+ *   { run, close, setMutant, clearMutant } — in-memory mode (no file I/O per mutation)
+ *
+ * The runner is duck-typed: if setMutant exists, in-memory mode is used.
  */
 
 import { readFileSync, writeFileSync } from 'node:fs'
@@ -8,6 +14,7 @@ import { relative } from 'node:path'
 
 import { generateMutations } from '../core/engine.js'
 import { createPool } from '../core/pool.js'
+import { withTimeout } from '../core/timeout.js'
 import { toJsonMutants, HEADER_SEPARATOR } from '../core/report-data.js'
 import { printRunReport } from './report.js'
 
@@ -36,18 +43,6 @@ function mutationsByLine(mutations) {
     byLine[line] = names
   }
   return byLine
-}
-
-function withTimeout(fn, ms) {
-  return ms ? makeTimeout(fn, ms) : fn()
-}
-
-function makeTimeout(fn, ms) {
-  return Promise.race([
-    fn(),
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error(`Mutation timed out after ${ms}ms`)), ms))
-  ])
 }
 
 export async function runSingle(options) {
@@ -111,8 +106,7 @@ async function runMutation(opts, total, outcomes, mutation) {
       outcomes.survived.push(mutation)
       reportMutation(out, total, mutation, 'SURVIVED')
     } else {
-      mutation.killedBy = result.killedBy
-      outcomes.killed.push(mutation)
+      outcomes.killed.push({ ...mutation, killedBy: result.killedBy })
       reportMutation(out, total, mutation, 'killed')
     }
   } catch (err) {
