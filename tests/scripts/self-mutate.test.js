@@ -194,24 +194,13 @@ describe('main', () => {
     })
 
     it('returns 2 when safety check fails', () => {
-      readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
-      const mutationCount = JSON.parse((() => {
-        readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
-        main(['--dry-run', '--json', 'core/engine.js'])
-        return stdout()
-      })()).length
-
-      vi.clearAllMocks()
-      vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
-      vi.spyOn(console, 'log').mockImplementation(() => {})
-      vi.spyOn(console, 'error').mockImplementation(() => {})
-
-      readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
+      // Source with exactly 1 mutation (true → false) so call sequence is:
+      // call 1 = preflight, call 2 = mutation, call 3 = safety check
+      readFileSync.mockReturnValue('const x = true')
       let callCount = 0
       execFileSync.mockImplementation(() => {
         callCount++
-        if (callCount === 1) return undefined // preflight passes
-        if (callCount <= 1 + mutationCount) throw { killed: false } // mutations
+        if (callCount <= 2) return undefined // preflight + mutation pass
         throw { killed: false } // safety fails
       })
 
