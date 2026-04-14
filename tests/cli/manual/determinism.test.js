@@ -88,13 +88,13 @@ describe('runSingle vs runParallel result determinism', () => {
 
   it('processes the same total number of mutations', async () => {
     mockFs({ [sourceFile]: multiSource })
+
     const seqResult = await runSingle({
       sourceFile, prepared,
       createRunner: killedRunnerFactory(),
       out: noop
     })
 
-    mockFs({ [sourceFile]: multiSource })
     const parResult = await runParallel({
       sourceFile, prepared,
       createRunner: killedRunnerFactory(),
@@ -111,13 +111,13 @@ describe('runSingle vs runParallel result determinism', () => {
 
   it('produces same jsonData mutant IDs in both modes', async () => {
     mockFs({ [sourceFile]: multiSource })
+
     const seqResult = await runSingle({
       sourceFile, prepared,
       createRunner: killedRunnerFactory(),
       out: noop
     })
 
-    mockFs({ [sourceFile]: multiSource })
     const parResult = await runParallel({
       sourceFile, prepared,
       createRunner: killedRunnerFactory(),
@@ -134,7 +134,7 @@ describe('runSingle vs runParallel result determinism', () => {
     expect(seqIds).toEqual(parIds)
   })
 
-  it('produces consistent counts across different worker counts', async () => {
+  it('produces consistent counts across repeated runs with same worker count', async () => {
     const results = []
     for (const wc of [2, 2, 2]) {
       mockFs({ [sourceFile]: multiSource })
@@ -195,13 +195,13 @@ describe('runSingle vs runParallel result determinism', () => {
 
   it('preserves all jsonData fields in both modes', async () => {
     mockFs({ [sourceFile]: multiSource })
+
     const seqResult = await runSingle({
       sourceFile, prepared,
       createRunner: killedRunnerFactory(),
       out: noop
     })
 
-    mockFs({ [sourceFile]: multiSource })
     const parResult = await runParallel({
       sourceFile, prepared,
       createRunner: killedRunnerFactory(),

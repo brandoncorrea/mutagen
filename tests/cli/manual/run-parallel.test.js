@@ -18,22 +18,11 @@ import { runParallel } from '../../../cli/runner.js'
 import { preparePatterns } from '../../../core/engine.js'
 import { createPool } from '../../../core/pool.js'
 import { readFileSync } from 'node:fs'
-import { patterns, sourceCode, noop, mockFs as _mockFs } from './helpers.js'
+import { patterns, sourceCode, noop, fakePoolRunner, mockFs as _mockFs } from './helpers.js'
 
 const prepared = preparePatterns(patterns)
 
 function mockFs(files) { _mockFs(readFileSync, files) }
-
-function fakePoolRunner(results = []) {
-  const queue = [...results]
-  return {
-    run: vi.fn().mockImplementation(() =>
-      Promise.resolve(queue.shift() || { passed: true })),
-    close: vi.fn().mockResolvedValue(undefined),
-    setMutant: vi.fn(),
-    clearMutant: vi.fn()
-  }
-}
 
 beforeEach(() => {
   vi.clearAllMocks()

@@ -33,3 +33,26 @@ export function mockFs(readFileSync, files) {
     return enc === 'utf-8' ? content : Buffer.from(content)
   })
 }
+
+export function fakePoolRunner(results = []) {
+  const queue = [...results]
+  return {
+    run: vi.fn().mockImplementation(() =>
+      Promise.resolve(queue.shift() || { passed: true })),
+    close: vi.fn().mockResolvedValue(undefined),
+    setMutant: vi.fn(),
+    clearMutant: vi.fn()
+  }
+}
+
+export const killedMutation = {
+  line: 1, name: '=== → !==', original: 'a === b',
+  mutated: 'a !== b', source: 'if (a !== b) {}', killedBy: ['t.js']
+}
+
+export function setupPool(createPool, results = { killed: [], survived: [], timedOut: [] }) {
+  const poolRun = vi.fn().mockResolvedValue(results)
+  const poolClose = vi.fn().mockResolvedValue()
+  createPool.mockReturnValue({ run: poolRun, close: poolClose })
+  return { poolRun, poolClose }
+}

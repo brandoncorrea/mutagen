@@ -83,7 +83,7 @@ describe('createPool', () => {
       await pool.close()
 
       expect(results.killed).toHaveLength(4)
-      // With 2 workers, at least 2 runners should have been created
+      // With 2 workers, at most 2 runners should have been created
       expect(runners.length).toBeLessThanOrEqual(2)
     })
 

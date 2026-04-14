@@ -17,24 +17,13 @@ vi.mock('../../../core/pool.js')
 import { createManualRunner as _createManualRunner } from '../../../cli/manual.js'
 import { createPool } from '../../../core/pool.js'
 import { readFileSync, existsSync } from 'node:fs'
-import { patterns, sourceCode, fakeRunner, mockFs as _mockFs, noop } from './helpers.js'
+import { patterns, sourceCode, fakeRunner, killedMutation, setupPool as _setupPool, mockFs as _mockFs, noop } from './helpers.js'
 
 function mockFs(files) { _mockFs(readFileSync, files) }
 function createManualRunner(config) {
   return _createManualRunner({ out: noop, ...config })
 }
-
-function setupPool(results = { killed: [], survived: [], timedOut: [] }) {
-  const poolRun = vi.fn().mockResolvedValue(results)
-  const poolClose = vi.fn().mockResolvedValue()
-  createPool.mockReturnValue({ run: poolRun, close: poolClose })
-  return { poolRun, poolClose }
-}
-
-const killedMutation = {
-  line: 1, name: '=== → !==', original: 'a === b',
-  mutated: 'a !== b', source: 'if (a !== b) {}', killedBy: ['t.js']
-}
+function setupPool(results) { return _setupPool(createPool, results) }
 
 beforeEach(() => {
   vi.clearAllMocks()
