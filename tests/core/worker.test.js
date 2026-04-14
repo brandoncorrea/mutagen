@@ -143,4 +143,14 @@ describe('createWorkerHandler', () => {
       expect(mockRunner.close).not.toHaveBeenCalled()
     })
   })
+
+  describe('unknown messages', () => {
+    it('ignores unknown message types without crashing', async () => {
+      createWorkerHandler(port, runnerFactory)
+
+      port.emit('message', { type: 'unknown' })
+      await new Promise(r => setTimeout(r, 10))
+      expect(port.postMessage).not.toHaveBeenCalled()
+    })
+  })
 })

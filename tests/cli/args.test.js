@@ -135,8 +135,14 @@ describe('parseArgs', () => {
       expect(result.parallel).toBe(true)
     })
 
-    it('returns error when --parallel value is non-numeric', () =>
+    it('returns error when --parallel value is non-numeric (--all)', () =>
       expectErrorResult('--all', '--parallel', 'abc'))
+
+    it('returns error when --parallel value is non-numeric (--incremental)', () =>
+      expectErrorResult('--incremental', '--parallel', 'abc'))
+
+    it('returns error when --parallel value is non-numeric (source file)', () =>
+      expectErrorResult('source.js', '--parallel', 'abc'))
 
     it('returns error when --parallel value is negative', () =>
       expectErrorResult('--all', '--parallel', '-1'))

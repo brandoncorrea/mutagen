@@ -498,6 +498,20 @@ describe('createVitestRunner', () => {
       expect(runner.clearMutant).toBeTypeOf('function')
     })
 
+    it('cold runner clearMutant clears the plugin state', async () => {
+      const mock = createMockVitest()
+      startVitest.mockResolvedValue(mock)
+
+      const runner = await createVitestRunner('src/a.js', { warm: false })
+      runner.setMutant('mutated code')
+      runner.clearMutant()
+      await runner.run()
+
+      const opts = startVitest.mock.calls[0][2]
+      const plugin = opts.plugins?.find(p => p.name === 'mutagen-mutant')
+      expect(plugin.load('src/a.js')).toBeNull()
+    })
+
     it('cold runner injects plugin into each run', async () => {
       const mock = createMockVitest()
       startVitest.mockResolvedValue(mock)

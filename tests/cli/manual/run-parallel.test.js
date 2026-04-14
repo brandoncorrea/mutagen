@@ -181,6 +181,29 @@ describe('runParallel', () => {
     expect(progressLines.length).toBeGreaterThan(0)
   })
 
+  it('formats survived and timedOut statuses in progress output', async () => {
+    mockFs({ [resolve('src/a.js')]: sourceCode })
+    const preflightRunner = fakePoolRunner([{ passed: true }])
+    const poolRun = vi.fn().mockImplementation((mutations, opts) => {
+      opts.onResult?.({ mutation: mutations[0], status: 'survived' })
+      opts.onResult?.({ mutation: mutations[0], status: 'timedOut' })
+      return Promise.resolve({ killed: [], survived: [mutations[0]], timedOut: [mutations[0]] })
+    })
+    createPool.mockReturnValue({ run: poolRun, close: vi.fn().mockResolvedValue() })
+
+    const lines = []
+    await runParallel({
+      sourceFile: resolve('src/a.js'),
+      prepared,
+      createRunner: vi.fn().mockResolvedValue(preflightRunner),
+      workerCount: 2,
+      out: msg => lines.push(msg)
+    })
+
+    expect(lines.some(l => l.includes('SURVIVED'))).toBe(true)
+    expect(lines.some(l => l.includes('TIMEOUT (killed)'))).toBe(true)
+  })
+
   it('prints run report after pool completes', async () => {
     mockFs({ [resolve('src/a.js')]: sourceCode })
     const preflightRunner = fakePoolRunner([{ passed: true }])

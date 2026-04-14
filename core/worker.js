@@ -51,5 +51,6 @@ export function createWorkerHandler(port, runnerFactory = createVitestRunner) {
 }
 
 // Auto-start when used as worker thread entry point
+/* v8 ignore next 2 */
 if (parentPort)
   createWorkerHandler(parentPort)
