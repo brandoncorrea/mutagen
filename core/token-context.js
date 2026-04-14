@@ -4,6 +4,8 @@
  * falls within code, a string, a comment, or JSX markup.
  */
 
+// js-tokens v4 is CJS — createRequire is needed because vitest's ESM
+// transform handles CJS default interop differently from Node's native loader
 import { createRequire } from 'node:module'
 const require = createRequire(import.meta.url)
 const jsTokens = require('js-tokens')

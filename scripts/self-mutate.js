@@ -25,6 +25,7 @@ const TIMEOUT_MS = 30_000
 // All release code under mutation — no exclusions
 const TARGET_MODULES = [
   'index.js',
+  'bin/mutagen.js',
   'core/engine.js',
   'core/token-context.js',
   'core/report-data.js',
@@ -38,6 +39,7 @@ const TARGET_MODULES = [
   'cli/report.js',
   'cli/manual.js',
   'runners/vitest.js',
+  'scripts/self-mutate.js',
   'stryker.js'
 ]
 
@@ -81,12 +83,17 @@ function isCommentOnlyLine(original) {
   return t.startsWith('*') || t.startsWith('//') || t.startsWith('/*') || t === '*/'
 }
 
+function isMainGuardLine(original) {
+  const t = original.trim()
+  return t.includes('import.meta.url') || t.includes('process.exit')
+}
+
 function loadMutations(sourceFile) {
   const absPath = resolve(ROOT, sourceFile)
   const source = readFileSync(absPath, 'utf8')
   const prepared = preparePatterns(javascript)
   return generateMutations(source, prepared)
-    .filter(m => !isCommentOnlyLine(m.original))
+    .filter(m => !isCommentOnlyLine(m.original) && !isMainGuardLine(m.original))
 }
 
 function toResult(sourceFile, mutation, status) {

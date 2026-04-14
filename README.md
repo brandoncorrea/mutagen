@@ -8,7 +8,46 @@ npm install @bwawan/mutagen
 
 ## Quick start
 
-Create a mutation runner script in your project:
+1. Create `mutagen.config.js` in your project root:
+
+```js
+import { patterns, createVitestRunner } from '@bwawan/mutagen'
+
+export default {
+  patterns: [...patterns.javascript],
+  sources: ['src/foo.js', 'src/bar.js'],
+  createRunner: sourceFile => createVitestRunner(sourceFile)
+}
+```
+
+2. Run mutations:
+
+```bash
+npx mutagen src/foo.js              # Single file
+npx mutagen --all                   # All configured sources
+npx mutagen --incremental           # Skip unchanged files
+npx mutagen --diff a.json b.json    # Compare two reports
+```
+
+## Config file
+
+The `mutagen.config.js` default export is passed directly to `createManualRunner`:
+
+```js
+export default {
+  patterns: [...],            // Mutation patterns (see Pattern format)
+  sources: ['src/*.js'],      // Source files to mutate
+  testSources: [],            // Test files to track for incremental invalidation
+  createRunner: async (sourceFile) => runner,  // Test runner factory
+  reportDir: 'reports/mutation',               // Directory for JSON reports
+  reportFile: 'manual-report.json',            // Report filename
+  timeout: null               // Default per-mutation timeout in ms
+}
+```
+
+## Programmatic API
+
+For custom scripts, use `createManualRunner` directly:
 
 ```js
 import { createManualRunner, patterns, createVitestRunner } from '@bwawan/mutagen'
@@ -20,15 +59,6 @@ const runner = createManualRunner({
 })
 
 runner.main()
-```
-
-Then run it:
-
-```bash
-node mutate.js src/foo.js              # Single file
-node mutate.js --all                   # All sources
-node mutate.js --incremental           # Skip unchanged files
-node mutate.js --diff a.json b.json    # Compare two reports
 ```
 
 ## CLI flags
@@ -104,7 +134,7 @@ The built-in `patterns.javascript` set covers equality, logical, arithmetic, boo
 Incremental mode tracks SHA-256 hashes of source and test files between runs. Only changed files (or files whose tests changed) are re-mutated. Cached results from the previous report carry forward.
 
 ```bash
-node mutate.js --incremental --json    # Writes merged report with hashes
+npx mutagen --incremental --json    # Writes merged report with hashes
 ```
 
 ## Diff mode
@@ -112,7 +142,7 @@ node mutate.js --incremental --json    # Writes merged report with hashes
 Compare two JSON reports to find regressions, improvements, and new/removed mutants:
 
 ```bash
-node mutate.js --diff before.json after.json
+npx mutagen --diff before.json after.json
 ```
 
 Returns exit code 1 if regressions are found.
