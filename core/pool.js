@@ -23,58 +23,70 @@ import { withTimeout } from './timeout.js'
  * @param {Function} options.createRunner - async (sourceFile) => runner
  * @returns {{ run: Function, close: Function }}
  */
-export function createPool({ workerCount, createRunner }) {
-  const runners = []
-  let closed
+export function createPool(poolOptions) {
+  const pool = { runners: [] }
 
-  return { run, close }
-
-  async function run(mutations, options = {}) {
-    const { timeout, onResult } = options
-    const outcomes = { killed: [], survived: [], timedOut: [] }
-
-    if (!mutations.length) return outcomes
-
-    await ensureRunners()
-
-    const queue = mutations.slice().reverse()
-    const workers = runners.map(runner => processQueue(runner, queue, timeout, outcomes, onResult))
-    await Promise.all(workers)
-
-    return outcomes
-  }
-
-  async function ensureRunners() {
-    if (runners.length) return
-    const pending = Array.from({ length: workerCount }, () => createRunner())
-    const created = await Promise.all(pending)
-    runners.push(...created)
-  }
-
-  async function close() {
-    if (closed) return
-    closed = true
-    await Promise.all(runners.map(r => r.close()))
+  return {
+    async run(mutations, options) {
+      return await runPool(pool, mutations, poolOptions, options)
+    },
+    async close() {
+      await closePool(pool)
+    }
   }
 }
 
-async function processQueue(runner, queue, timeout, outcomes, onResult) {
-  while (queue.length) {
-    const mutation = queue.pop()
-    await runOne(runner, mutation, timeout, outcomes, onResult)
+async function runPool(pool, mutations, poolOptions, runOptions) {
+  const outcomes = {
+    killed: [],
+    survived: [],
+    timedOut: []
   }
+
+  if (mutations.length) {
+    await ensureRunners(pool, poolOptions)
+    await runMutationsParallel(pool.runners, mutations, outcomes, runOptions)
+  }
+
+  return outcomes
 }
 
-async function runOne(runner, mutation, timeout, outcomes, onResult) {
+async function closePool(pool) {
+  if (pool.closed) return
+  pool.closed = true
+  await Promise.all(pool.runners.map(r => r.close()))
+}
+
+async function ensureRunners(pool, { createRunner, workerCount }) {
+  if (pool.runners.length) return
+  const runners = Array.from({ length: workerCount }, createRunner)
+  const created = await Promise.all(runners)
+  pool.runners.push(...created)
+}
+
+async function runMutationsParallel(runners, mutations, outcomes, options) {
+  const queue = mutations.slice().reverse()
+  const workers = runners.map(runner =>
+    processQueue(runner, queue, outcomes, options))
+  await Promise.all(workers)
+}
+
+async function processQueue(runner, queue, outcomes, options) {
+  while (queue.length)
+    await runOne(runner, queue.pop(), outcomes, options)
+}
+
+async function runOne(runner, mutation, outcomes, options = {}) {
+  const { timeout, onResult } = options
   try {
     runner.setMutant(mutation.source)
-    const result = await withTimeout(runner.run, timeout)
+    const { passed, killedBy } = await withTimeout(runner.run, timeout)
 
-    if (result.passed) {
+    if (passed) {
       outcomes.survived.push(mutation)
       onResult?.({ mutation, status: 'SURVIVED' })
     } else {
-      outcomes.killed.push({ ...mutation, killedBy: result.killedBy })
+      outcomes.killed.push({ ...mutation, killedBy })
       onResult?.({ mutation, status: 'killed' })
     }
   } catch (err) {

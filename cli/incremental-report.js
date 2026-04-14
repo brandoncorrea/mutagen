@@ -22,7 +22,11 @@ export function printIncrementalSummary(out, batchResult, sources, previous, cla
   out(`Total: ${sources.length} files  |  Killed: ${grandKilled}  |  Survived: ${grandSurvived}`)
   out(`${HEADER_SEPARATOR}\n`)
 
-  return { totalSurvived: grandSurvived, totalKilled: grandKilled, failures }
+  return {
+    totalSurvived: grandSurvived,
+    totalKilled: grandKilled,
+    failures
+  }
 }
 
 function countCachedResults(report, relPaths) {

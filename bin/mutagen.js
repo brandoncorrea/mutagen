@@ -27,8 +27,7 @@ export async function run(argv, { config, configPath, out = console.log, err = c
     }
   }
 
-  const manual = createManualRunner({ out, ...config })
-  return manual.run(argv)
+  return createManualRunner({ out, ...config }).run(argv)
 }
 
 /* v8 ignore next 2 */

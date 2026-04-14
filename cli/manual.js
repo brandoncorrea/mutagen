@@ -46,13 +46,31 @@ export function createManualRunner(config) {
 
   const prepared = preparePatterns(patterns)
   const reportPath = `${reportDir}/${reportFile}`
-  const ctx = { prepared, sources, testSources, createRunner, reportDir, reportPath, configTimeout, out }
+
+  const ctx = {
+    prepared,
+    sources,
+    testSources,
+    createRunner,
+    reportDir,
+    reportPath,
+    configTimeout,
+    out
+  }
+
+  const incrementalConfig = {
+    sources,
+    testSources,
+    reportDir,
+    reportPath,
+    runBatch: runBatch.bind(null, ctx)
+  }
 
   return {
     runBatch: (jsonOutput, timeout, sourcesToRun) =>
       runBatch(ctx, jsonOutput, timeout, sourcesToRun),
     runIncremental: (jsonOutput, timeout) =>
-      runIncremental({ sources, testSources, reportDir, reportPath, runBatch: runBatch.bind(null, ctx) }, jsonOutput, timeout, out),
+      runIncremental(incrementalConfig, jsonOutput, timeout, out),
     run: argv => run(ctx, argv),
     async main() {
       process.exit(await run(ctx))

@@ -15,8 +15,13 @@ const DEFAULT_WORKER_COUNT = 2
 
 export async function runParallel(options) {
   const {
-    sourceFile, prepared, createRunner, targetLine,
-    timeout, workerCount = DEFAULT_WORKER_COUNT, out = console.log
+    sourceFile,
+    prepared,
+    createRunner,
+    targetLine,
+    timeout,
+    workerCount = DEFAULT_WORKER_COUNT,
+    out = console.log
   } = options
   const original = readFileSync(sourceFile, 'utf-8')
 
@@ -38,9 +43,11 @@ export async function runParallel(options) {
       let completed = 0
       const total = mutations.length
 
-      const onResult = ({ mutation, status }) => {
-        completed++
-        reportMutation(out, total, { number: completed, ...mutation }, status)
+      function onResult({ mutation, status }) {
+        reportMutation(out, total, {
+          number: ++completed,
+          ...mutation
+        }, status)
       }
 
       const outcomes = await pool.run(mutations, { timeout, onResult })

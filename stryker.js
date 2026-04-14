@@ -9,10 +9,6 @@ import { existsSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { countStatuses, HEADER_SEPARATOR, combineReportData } from './core/report-data.js'
 import { printSummary } from './cli/report.js'
 
-function isUnexpectedError(err) {
-  return !err.status || err.status > 1
-}
-
 export function cleanStaleSandboxes(out = console.log) {
   const strykerTmp = '.stryker-tmp'
   if (!existsSync(strykerTmp)) return
@@ -52,6 +48,10 @@ export function runStrykerScope(name, scope, { reportDir = 'reports/mutation', s
   }
 
   return targetFile
+}
+
+function isUnexpectedError(err) {
+  return !err.status || err.status > 1
 }
 
 export function mergeReports(files, { outputPath = 'reports/mutation/report.json', out = console.log } = {}) {

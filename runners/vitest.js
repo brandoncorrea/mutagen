@@ -12,23 +12,14 @@
 import { createMutantPlugin } from './mutagen-plugin.js'
 
 export async function createVitestRunner(sourceFile, options = {}) {
-  const { config, root, testFile, warm = true } = options
+  const { testFile, warm = true } = options
   const { startVitest } = await import('vitest/node')
-
-  const { plugin, setMutant, clearMutant } = createMutantPlugin()
-
-  const vitestOpts = {
-    reporters: [{ onFinished() {} }],
-    bail: 1,
-    plugins: [plugin],
-    ...(config && { config }),
-    ...(root && { root })
-  }
-
+  const mutantPlugin = createMutantPlugin()
+  const vitestOpts = createVitestOptions(mutantPlugin, options)
   const testFilter = testFile ? [testFile] : []
 
   if (!warm)
-    return coldRunner(startVitest, testFilter, vitestOpts, sourceFile, setMutant, clearMutant)
+    return coldRunner(startVitest, testFilter, vitestOpts, sourceFile, mutantPlugin)
 
   // Warm runner: start vitest in watch mode to keep the worker pool alive
   // between mutations. watch:true is required — watch:false shuts down the
@@ -39,7 +30,7 @@ export async function createVitestRunner(sourceFile, options = {}) {
   // Verify warm rerun works by re-running without changes
   if (await warmRerunFailed(vitest)) {
     await vitest.close()
-    return coldRunner(startVitest, testFilter, vitestOpts, sourceFile, setMutant, clearMutant)
+    return coldRunner(startVitest, testFilter, vitestOpts, sourceFile, mutantPlugin)
   }
 
   // Build related-test specs by walking the vite module graph.
@@ -57,18 +48,22 @@ export async function createVitestRunner(sourceFile, options = {}) {
       await vitest.close()
     },
     setMutant(source) {
-      setMutant(sourceFile, source)
+      mutantPlugin.setMutant(sourceFile, source)
     },
     clearMutant() {
-      clearMutant(sourceFile)
+      mutantPlugin.clearMutant(sourceFile)
     }
   }
 }
 
-function failedTestFiles(results) {
-  return results
-    .filter(isFailing)
-    .map(f => f.filepath)
+function createVitestOptions(plugin, { config, root }) {
+  return {
+    reporters: [{ onFinished() {} }],
+    bail: 1,
+    plugins: [plugin.plugin],
+    ...(config && { config }),
+    ...(root && { root })
+  }
 }
 
 async function findRelatedSpecs(vitest, sourceFile) {
@@ -126,7 +121,7 @@ async function warmRerunFailed(vitest) {
   }
 }
 
-function coldRunner(startVitest, testFilter, vitestOpts, sourceFile, setMutant, clearMutant) {
+function coldRunner(startVitest, testFilter, vitestOpts, sourceFile, plugin) {
   return {
     async run() {
       const vitest = await startVitest('test', testFilter, { ...vitestOpts, watch: false })
@@ -138,10 +133,10 @@ function coldRunner(startVitest, testFilter, vitestOpts, sourceFile, setMutant, 
     },
     async close() {},
     setMutant(source) {
-      setMutant(sourceFile, source)
+      plugin.setMutant(sourceFile, source)
     },
     clearMutant() {
-      clearMutant(sourceFile)
+      plugin.clearMutant(sourceFile)
     }
   }
 }
@@ -151,6 +146,12 @@ function compileResults(vitest) {
   const passed = results.every(isPassing)
   const killedBy = passed ? [] : failedTestFiles(results)
   return { passed, killedBy }
+}
+
+function failedTestFiles(results) {
+  return results
+    .filter(isFailing)
+    .map(f => f.filepath)
 }
 
 function isPassing(file) {

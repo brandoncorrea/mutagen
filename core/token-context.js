@@ -13,45 +13,12 @@ const jsTokens = require('js-tokens')
 const regex = jsTokens.default
 const matchToToken = jsTokens.matchToToken
 
-function isString(type) {
-  return type === 'string' || type === 'template'
-}
-
-function isComment(type) {
-  return type === 'comment'
-}
-
-function isWhitespace(type) {
-  return type === 'whitespace'
-}
-
 const pattern = new RegExp(regex.source, regex.flags)
 
-function spanType(type) {
-  return isString(type) ? 'string'
-    : isComment(type) ? 'comment'
-    : isWhitespace(type) ? 'whitespace'
-    : 'code'
-}
-
-function tokenizeLine(line) {
-  pattern.lastIndex = 0
-  const spans = []
-  let match
-
-  while (match = pattern.exec(line)) {
-    const token = matchToToken(match)
-    const start = match.index
-    spans.push({
-      start,
-      end: start + token.value.length,
-      type: spanType(token.type),
-      value: token.value,
-      tokenType: token.type
-    })
-  }
-
-  return spans
+export function isArrowOperator(line, position) {
+  return position > 0
+    && line[position - 1] === '='
+    && line[position] === '>'
 }
 
 export function getTokenContextAt(line, position) {
@@ -76,8 +43,41 @@ function shouldIgnoreSpan({ start, type }, position) {
   return start >= position || isWhitespace(type)
 }
 
-export function isArrowOperator(line, position) {
-  return position > 0
-    && line[position - 1] === '='
-    && line[position] === '>'
+function tokenizeLine(line) {
+  pattern.lastIndex = 0
+  const spans = []
+  let match
+
+  while (match = pattern.exec(line)) {
+    const token = matchToToken(match)
+    const start = match.index
+    spans.push({
+      start,
+      end: start + token.value.length,
+      type: spanType(token.type),
+      value: token.value,
+      tokenType: token.type
+    })
+  }
+
+  return spans
+}
+
+function spanType(type) {
+  return isString(type) ? 'string'
+    : isComment(type) ? 'comment'
+    : isWhitespace(type) ? 'whitespace'
+    : 'code'
+}
+
+function isString(type) {
+  return type === 'string' || type === 'template'
+}
+
+function isComment(type) {
+  return type === 'comment'
+}
+
+function isWhitespace(type) {
+  return type === 'whitespace'
 }

@@ -9,33 +9,10 @@ import { relative } from 'node:path'
 export const HEADER_SEPARATOR = '═'.repeat(60)
 export const SECTION_SEPARATOR = '─'.repeat(60)
 
-export function createReport(files, extra) {
-  return {
-    schemaVersion: '1',
-    thresholds: { high: 80, low: 60 },
-    files,
-    ...extra
-  }
-}
-
 export function writeReportFile(reportDir, reportPath, report, out = console.log) {
   mkdirSync(reportDir, { recursive: true })
   writeFileSync(reportPath, JSON.stringify(report, null, 2))
   out(`JSON report: ${reportPath}`)
-}
-
-export function tryLoadJson(path, out) {
-  try {
-    return JSON.parse(readFileSync(path, 'utf-8'))
-  } catch (err) {
-    if (out)
-      out(`Warning: could not read ${path}: ${err.message}`)
-  }
-}
-
-export function mutantKey(path, { location, mutatorName, replacement }) {
-  const line = location?.start?.line || 0
-  return `${path}:${line}:${mutatorName || ''}:${replacement || ''}`
 }
 
 export function isKilled({ status }) {
@@ -86,6 +63,15 @@ function loadAllEntries(reports, out) {
     .flatMap(({ files }) => Object.entries(files))
 }
 
+export function tryLoadJson(path, out) {
+  try {
+    return JSON.parse(readFileSync(path, 'utf-8'))
+  } catch (err) {
+    if (out)
+      out(`Warning: could not read ${path}: ${err.message}`)
+  }
+}
+
 function deduplicateMutants(entries) {
   const mergedFiles = {}
   const seen = new Set()
@@ -108,13 +94,27 @@ function deduplicateMutants(entries) {
   return { mergedFiles, duplicates }
 }
 
-export function totalMutants({ killed, survived, noCoverage, timeout }) {
-  return killed + survived + noCoverage + timeout
+export function mutantKey(path, { location, mutatorName, replacement }) {
+  const line = location?.start?.line || 0
+  return `${path}:${line}:${mutatorName || ''}:${replacement || ''}`
+}
+
+export function createReport(files, extra) {
+  return {
+    schemaVersion: '1',
+    thresholds: { high: 80, low: 60 },
+    files,
+    ...extra
+  }
 }
 
 export function mutationScore(counts) {
   const total = totalMutants(counts)
   return total ? (counts.killed + counts.timeout) / total * 100 : 100
+}
+
+export function totalMutants({ killed, survived, noCoverage, timeout }) {
+  return killed + survived + noCoverage + timeout
 }
 
 export function toJsonMutants(sourceFile, results) {

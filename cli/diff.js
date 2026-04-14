@@ -113,11 +113,14 @@ function buildMutantMap(report) {
 
 function fileScores(report) {
   const scores = {}
-  for (const [path, { mutants }] of Object.entries(report.files)) {
-    const total = mutants.length
-    const killed = mutants.filter(isKilled).length
-    const score = total ? (killed / total * 100) : 100
-    scores[path] = { killed, total, score }
-  }
+  for (const [path, { mutants }] of Object.entries(report.files))
+    scores[path] = evaluateMutants(mutants)
   return scores
+}
+
+function evaluateMutants(mutants) {
+  const total = mutants.length
+  const killed = mutants.filter(isKilled).length
+  const score = total ? (killed / total * 100) : 100
+  return { killed, total, score }
 }

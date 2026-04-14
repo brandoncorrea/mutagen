@@ -43,6 +43,50 @@ const TARGET_MODULES = [
   'stryker.js'
 ]
 
+export function main(args) {
+  const { dryRun, json, targets } = parseArgs(args)
+
+  if (targets.length === 0) {
+    console.error('No valid target modules specified.')
+    console.error('Valid targets:', TARGET_MODULES.join(', '))
+    return 1
+  }
+
+  if (!dryRun) {
+    process.stderr.write('Preflight check... ')
+    const preflight = runTests()
+    if (!preflight.passed) {
+      console.error('FAILED — test suite is not green. Fix tests before mutating.')
+      return 1
+    }
+    process.stderr.write('OK\n\n')
+  }
+
+  const mutateFile = dryRun ? previewMutations : executeMutations
+  const allResults = []
+  for (const target of targets) {
+    process.stderr.write(`Mutating: ${target} `)
+    allResults.push(...mutateFile(target))
+  }
+
+  if (json)
+    console.log(JSON.stringify(allResults, null, 2))
+  else
+    printTextReport(allResults)
+
+  if (!dryRun) {
+    process.stderr.write('\nSafety check: verifying clean source... ')
+    const safety = runTests()
+    if (!safety.passed) {
+      console.error('CRITICAL: Tests failing after mutation run! Source may be corrupted.')
+      return 2
+    }
+    process.stderr.write('OK\n')
+  }
+
+  return 0
+}
+
 function parseArgs(args) {
   const dryRun = args.includes('--dry-run')
   const json = args.includes('--json')
@@ -51,60 +95,6 @@ function parseArgs(args) {
     ? files.filter(f => TARGET_MODULES.includes(f))
     : TARGET_MODULES
   return { dryRun, json, targets }
-}
-
-function runTests() {
-  try {
-    execFileSync('npx', ['vitest', 'run', '--reporter=dot'], {
-      cwd: ROOT,
-      timeout: TIMEOUT_MS,
-      stdio: 'pipe'
-    })
-    return { passed: true }
-  } catch (err) {
-    if (err.killed) return { passed: false, timedOut: true }
-    return { passed: false, timedOut: false }
-  }
-}
-
-function runMutation(sourceFile, mutation) {
-  const absPath = resolve(ROOT, sourceFile)
-  const original = readFileSync(absPath, 'utf8')
-  try {
-    writeFileSync(absPath, mutation.source)
-    return runTests()
-  } finally {
-    writeFileSync(absPath, original)
-  }
-}
-
-function isCommentOnlyLine(original) {
-  const t = original.trim()
-  return t.startsWith('*') || t.startsWith('//') || t.startsWith('/*') || t === '*/'
-}
-
-function isMainGuardLine(original) {
-  const t = original.trim()
-  return t.includes('import.meta.url') || t.includes('process.exit')
-}
-
-function loadMutations(sourceFile) {
-  const absPath = resolve(ROOT, sourceFile)
-  const source = readFileSync(absPath, 'utf8')
-  const prepared = preparePatterns(javascript)
-  return generateMutations(source, prepared)
-    .filter(m => !isCommentOnlyLine(m.original) && !isMainGuardLine(m.original))
-}
-
-function toResult(sourceFile, mutation, status) {
-  return {
-    file: sourceFile,
-    line: mutation.line,
-    name: mutation.name,
-    original: mutation.original,
-    mutated: mutation.mutated,
-    status
-  }
 }
 
 function previewMutations(sourceFile) {
@@ -125,6 +115,72 @@ function executeMutations(sourceFile) {
   }
   process.stderr.write('\n')
   return results
+}
+
+function loadMutations(sourceFile) {
+  const absPath = resolve(ROOT, sourceFile)
+  const source = readFileSync(absPath, 'utf8')
+  const prepared = preparePatterns(javascript)
+  return generateMutations(source, prepared).filter(isValuableMutation)
+}
+
+function isValuableMutation({ original }) {
+  return !isCommentOnlyLine(original)
+    && !isMainGuardLine(original)
+}
+
+function runMutation(sourceFile, mutation) {
+  const absPath = resolve(ROOT, sourceFile)
+  const original = readFileSync(absPath, 'utf8')
+  try {
+    writeFileSync(absPath, mutation.source)
+    return runTests()
+  } finally {
+    writeFileSync(absPath, original)
+  }
+}
+
+function runTests() {
+  try {
+    execFileSync('npx', ['vitest', 'run', '--reporter=dot'], {
+      cwd: ROOT,
+      timeout: TIMEOUT_MS,
+      stdio: 'pipe'
+    })
+    return { passed: true }
+  } catch (err) {
+    if (err.killed) return { passed: false, timedOut: true }
+    return { passed: false, timedOut: false }
+  }
+}
+
+function isCommentOnlyLine(original) {
+  const t = original.trim()
+  return t.startsWith('*')
+    || t.startsWith('//')
+    || t.startsWith('/*')
+    || t === '*/'
+}
+
+function isMainGuardLine(original) {
+  const t = original.trim()
+  return t.includes('import.meta.url') || t.includes('process.exit')
+}
+
+function toResult(sourceFile, mutation, status) {
+  return {
+    file: sourceFile,
+    line: mutation.line,
+    name: mutation.name,
+    original: mutation.original,
+    mutated: mutation.mutated,
+    status
+  }
+}
+
+function printTextReport(allResults) {
+  printSummary(allResults)
+  printPerFileScores(allResults)
 }
 
 function printSummary(allResults) {
@@ -172,55 +228,6 @@ function printPerFileScores(allResults) {
     const flag = counts.survived > 0 ? ` ← ${counts.survived} SURVIVED` : ''
     console.log(`  ${file}: ${score}% (${counts.killed}/${counts.total})${flag}`)
   }
-}
-
-function printTextReport(allResults) {
-  printSummary(allResults)
-  printPerFileScores(allResults)
-}
-
-export function main(args) {
-  const { dryRun, json, targets } = parseArgs(args)
-
-  if (targets.length === 0) {
-    console.error('No valid target modules specified.')
-    console.error('Valid targets:', TARGET_MODULES.join(', '))
-    return 1
-  }
-
-  if (!dryRun) {
-    process.stderr.write('Preflight check... ')
-    const preflight = runTests()
-    if (!preflight.passed) {
-      console.error('FAILED — test suite is not green. Fix tests before mutating.')
-      return 1
-    }
-    process.stderr.write('OK\n\n')
-  }
-
-  const mutateFile = dryRun ? previewMutations : executeMutations
-  const allResults = []
-  for (const target of targets) {
-    process.stderr.write(`Mutating: ${target} `)
-    allResults.push(...mutateFile(target))
-  }
-
-  if (json)
-    console.log(JSON.stringify(allResults, null, 2))
-  else
-    printTextReport(allResults)
-
-  if (!dryRun) {
-    process.stderr.write('\nSafety check: verifying clean source... ')
-    const safety = runTests()
-    if (!safety.passed) {
-      console.error('CRITICAL: Tests failing after mutation run! Source may be corrupted.')
-      return 2
-    }
-    process.stderr.write('OK\n')
-  }
-
-  return 0
 }
 
 /* v8 ignore next 2 */

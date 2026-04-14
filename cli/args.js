@@ -12,13 +12,10 @@ Usage: <script> <source-file> [--line N] [--json] [--dry-run] [--timeout N] [--p
 const diffMessage = 'Usage: <script> --diff <before.json> <after.json>'
 
 export function parseArgs(argv = process.argv.slice(2)) {
-  if (argv.includes('--incremental'))
-    return incrementalOptions(argv)
-  if (argv.includes('--all'))
-    return allOptions(argv)
-  if (argv.includes('--diff'))
-    return diffOptions(argv)
-  return sourceFileOptions(argv)
+  return argv.includes('--incremental') ? incrementalOptions(argv)
+    : argv.includes('--all') ? allOptions(argv)
+    : argv.includes('--diff') ? diffOptions(argv)
+    : sourceFileOptions(argv)
 }
 
 function incrementalOptions(argv) {
@@ -109,7 +106,7 @@ function parseParallel(args) {
 
 function parseParallelValue(args, idx) {
   const next = args[idx + 1]
-  if (next === undefined || next.startsWith('--'))
+  if (!next || next.startsWith('--'))
     return true
   const value = Number(next)
   if (isInvalidNumber(value))

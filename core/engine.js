@@ -53,9 +53,9 @@ function isGuardBlocked(line, match, mut) {
 }
 
 function isInNonCodeContext(line, match, mut) {
-  const ctx = getTokenContextAt(line, match.index)
-  return ctx === 'comment'
-    || (ctx === 'string' && !mut.inStrings)
+  const context = getTokenContextAt(line, match.index)
+  return context === 'comment'
+    || (context === 'string' && !mut.inStrings)
 }
 
 function isAngleBracketSyntax(line, match) {
