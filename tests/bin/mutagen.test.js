@@ -8,12 +8,13 @@ vi.mock('node:fs', async (importOriginal) => {
     readFileSync: vi.fn(),
     writeFileSync: vi.fn(),
     mkdirSync: vi.fn(),
-    existsSync: vi.fn()
+    existsSync: vi.fn(),
+    readdirSync: vi.fn()
   }
 })
 
 import { run, isMain } from '../../bin/mutagen.js'
-import { readFileSync, existsSync } from 'node:fs'
+import { readFileSync, existsSync, readdirSync } from 'node:fs'
 
 const noop = () => {}
 const silent = { out: noop, err: noop }
@@ -134,6 +135,35 @@ describe('bin/mutagen CLI', () => {
     })
 
     expect(code).toBe(0)
+  })
+
+  it('forwards include/exclude from config to createManualRunner', async () => {
+    const sourceCode = 'if (a === b) {}'
+    readFileSync.mockImplementation((path, enc) => {
+      if (enc === 'utf-8') return sourceCode
+      return Buffer.from(sourceCode)
+    })
+    readdirSync.mockReturnValue(['src/a.js', 'src/vendor/v.js'])
+
+    const runner = {
+      run: vi.fn()
+        .mockResolvedValueOnce({ passed: true })
+        .mockResolvedValueOnce({ passed: false, killedBy: ['t.test.js'] }),
+      close: vi.fn().mockResolvedValue(undefined)
+    }
+
+    const code = await run(['--all'], {
+      ...silent,
+      config: {
+        patterns: [{ pattern: / === /g, replacement: ' !== ', name: '=== → !==' }],
+        include: ['src/**/*.js'],
+        exclude: ['src/vendor/**'],
+        createRunner: vi.fn().mockResolvedValue(runner)
+      }
+    })
+
+    expect(code).toBe(0)
+    expect(readdirSync).toHaveBeenCalled()
   })
 
   it('returns 1 when mutations survive', async () => {

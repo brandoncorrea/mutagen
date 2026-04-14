@@ -53,7 +53,8 @@ export default {
   patterns: [...],            // Mutation patterns (see Pattern format)
   include: ['src/**/*.js'],   // Glob patterns for source files to mutate
   exclude: ['**/*.test.js'],  // Glob patterns to exclude (optional)
-  sources: ['src/foo.js'],    // Explicit source files (fallback to include/exclude)
+  sources: ['src/foo.js'],    // Explicit source files (takes precedence over include/exclude)
+  cwd: process.cwd(),        // Base directory for glob resolution (default: cwd)
   testSources: [],            // Test files to track for incremental invalidation
   createRunner: async (sourceFile) => runner,  // Test runner factory
   reportDir: 'reports/mutation',               // Directory for JSON reports
@@ -62,7 +63,7 @@ export default {
 }
 ```
 
-Use `include`/`exclude` glob patterns to select source files dynamically. If both `include` and `sources` are provided, `include` takes precedence. Use `sources` when you need an explicit file list.
+Use `include`/`exclude` glob patterns to select source files dynamically. If `sources` is provided (non-empty), it takes precedence over `include`/`exclude`. Use `sources` when you need an explicit file list.
 
 ## Programmatic API
 
