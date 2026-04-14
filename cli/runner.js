@@ -7,6 +7,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { relative } from 'node:path'
 
 import { generateMutations } from '../core/engine.js'
+import { createPool } from '../core/pool.js'
 import { toJsonMutants, HEADER_SEPARATOR } from '../core/report-data.js'
 import { printRunReport } from './report.js'
 
@@ -138,4 +139,65 @@ async function runPreflightTests(out, runner) {
 
 function reportMutation(out, total, { number, line, name }, status) {
   out(`[${number}/${total}] Line ${line}: ${name} ... ${status}`)
+}
+
+const DEFAULT_WORKER_COUNT = 2
+
+export async function runParallel(options) {
+  const {
+    sourceFile, prepared, createRunner, targetLine,
+    timeout, workerCount = DEFAULT_WORKER_COUNT, out = console.log
+  } = options
+  const original = readFileSync(sourceFile, 'utf-8')
+
+  out(`\n${HEADER_SEPARATOR}`)
+  out(`MUTAGEN (parallel — ${workerCount} workers)`)
+  out(HEADER_SEPARATOR)
+  out(`Source: ${sourceFile}`)
+  if (targetLine) out(`Target: line ${targetLine}`)
+  if (timeout) out(`Timeout: ${timeout}ms per mutation`)
+
+  const preflightRunner = await createRunner(sourceFile)
+
+  try {
+    const preflight = await runPreflightTests(out, preflightRunner)
+    if (preflight.error) return preflight
+    out(`Tests pass on original source. Beginning mutations.\n`)
+
+    const mutations = generateMutations(original, prepared, targetLine)
+    out(`Found ${mutations.length} mutation(s) to run.\n`)
+
+    const pool = createPool({ workerCount, createRunner })
+
+    try {
+      let completed = 0
+      const total = mutations.length
+
+      const onResult = ({ mutation, status }) => {
+        completed++
+        reportMutation(out, total, { number: completed, ...mutation }, formatStatus(status))
+      }
+
+      const outcomes = await pool.run(mutations, { timeout, onResult })
+
+      printRunReport(mutations, outcomes, out)
+
+      return {
+        survived: outcomes.survived.length,
+        killed: outcomes.killed.length + outcomes.timedOut.length,
+        timedOut: outcomes.timedOut.length,
+        jsonData: toJsonMutants(sourceFile, outcomes)
+      }
+    } finally {
+      await pool.close()
+    }
+  } finally {
+    await preflightRunner.close()
+  }
+}
+
+function formatStatus(status) {
+  if (status === 'survived') return 'SURVIVED'
+  if (status === 'timedOut') return 'TIMEOUT (killed)'
+  return 'killed'
 }

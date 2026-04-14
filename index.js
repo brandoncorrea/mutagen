@@ -13,6 +13,7 @@ export { createWorkerHandler } from './core/worker.js'
 
 // CLI harness
 export { createManualRunner } from './cli/manual.js'
+export { runParallel } from './cli/runner.js'
 
 // Report utilities
 export { combineReportData } from './core/report-data.js'
