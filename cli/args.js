@@ -138,4 +138,3 @@ const FLAG_OPTIONS = new Set(['--json', '--dry-run', '--parallel'])
 function isPositionalArg(arg) {
   return !FLAG_OPTIONS.has(arg)
 }
-

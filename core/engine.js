@@ -122,4 +122,3 @@ export function generateMutations(source, prepared, targetLine) {
     .flatMap(([line, lineNum]) =>
       prepared.flatMap(mut => lineMutationsForPattern(sourceLines, line, lineNum, mut)))
 }
-

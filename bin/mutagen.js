@@ -34,4 +34,3 @@ export async function run(argv, { config, configPath, out = console.log, err = c
 /* v8 ignore next 2 */
 if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/.*[\\/]/, '')))
   run(process.argv.slice(2)).then(code => process.exit(code))
-

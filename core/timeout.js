@@ -11,4 +11,3 @@ export function withTimeout(fn, ms) {
       setTimeout(() => reject(new Error(`Mutation timed out after ${ms}ms`)), ms))
   ])
 }
-

@@ -88,4 +88,3 @@ async function runMutation(opts, total, outcomes, mutation) {
     else writeFileSync(sourceFile, original)
   }
 }
-

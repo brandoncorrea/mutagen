@@ -121,4 +121,3 @@ function fileScores(report) {
   }
   return scores
 }
-

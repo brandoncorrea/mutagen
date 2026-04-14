@@ -178,4 +178,3 @@ async function runSingleMode(ctx, parsed, timeout) {
     : await runSingle(opts)
   return error || survived ? 1 : 0
 }
-

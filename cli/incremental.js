@@ -128,4 +128,3 @@ function isInvalidatedMutant({ killedBy, status }, changedTestAbs) {
   return killedBy?.some(t => changedTestAbs.has(t))
     || status === 'Survived'
 }
-

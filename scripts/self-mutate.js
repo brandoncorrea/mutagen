@@ -226,4 +226,3 @@ export function main(args) {
 /* v8 ignore next 2 */
 if (process.argv[1] === fileURLToPath(import.meta.url))
   process.exit(main(process.argv.slice(2)))
-

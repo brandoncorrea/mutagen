@@ -24,4 +24,3 @@ export function printBanner(out, label, sourceFile, targetLine, timeout) {
   if (targetLine) out(`Target: line ${targetLine}`)
   if (timeout) out(`Timeout: ${timeout}ms per mutation`)
 }
-

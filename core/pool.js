@@ -89,4 +89,3 @@ async function runOne(runner, mutation, timeout, outcomes, onResult) {
     runner.clearMutant()
   }
 }
-
