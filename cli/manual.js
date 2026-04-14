@@ -78,6 +78,72 @@ export function createManualRunner(config) {
   }
 }
 
+async function run(ctx, argv) {
+  const parsed = parseArgs(argv)
+  if (parsed.error) {
+    ctx.out(parsed.error)
+    return 1
+  }
+
+  const timeout = parsed.timeout || ctx.configTimeout
+
+  if (parsed.diffMode)
+    return runDiffMode(ctx, parsed)
+  if (parsed.dryRunMode && parsed.allMode)
+    return runAllDryRun(ctx)
+  if (parsed.dryRunMode)
+    return dryRun(parsed.sourceFile, ctx.prepared, parsed.targetLine, ctx.out) && 0
+
+  const parallel = parsed.parallel
+  const runCtx = parallel ? { ...ctx, parallel } : ctx
+
+  if (parsed.incrementalMode)
+    return runIncrementalMode(runCtx, parsed.jsonOutput, timeout)
+  if (parsed.allMode)
+    return runBatchMode(runCtx, parsed.jsonOutput, timeout)
+  return runSingleMode(runCtx, parsed, timeout)
+}
+
+function runDiffMode(ctx, parsed) {
+  const result = diffReports(parsed.beforeFile, parsed.afterFile, ctx.out)
+  return !result || result.regressions ? 1 : 0
+}
+
+function runAllDryRun({ sources, prepared, out }) {
+  let total = 0
+  for (const source of sources)
+    total += dryRun(resolve(source), prepared, null, out)
+  out(`\n  Grand total: ${total} mutations across ${sources.length} files`)
+  return 0
+}
+
+async function runIncrementalMode(ctx, jsonOutput, timeout) {
+  const { sources, testSources, reportDir, reportPath, out } = ctx
+  const incrementalConfig = { sources, testSources, reportDir, reportPath, runBatch: runBatch.bind(null, ctx) }
+  const { totalSurvived, failures } = await runIncremental(incrementalConfig, jsonOutput, timeout, out)
+  return (totalSurvived + failures) ? 1 : 0
+}
+
+async function runBatchMode(ctx, jsonOutput, timeout) {
+  const { totalSurvived, failures } = await runBatch(ctx, jsonOutput, timeout)
+  return (totalSurvived + failures) ? 1 : 0
+}
+
+async function runSingleMode(ctx, parsed, timeout) {
+  const opts = {
+    sourceFile: parsed.sourceFile,
+    prepared: ctx.prepared,
+    createRunner: ctx.createRunner,
+    targetLine: parsed.targetLine,
+    timeout,
+    out: ctx.out
+  }
+  const { error, survived } = ctx.parallel
+    ? await runParallel({ ...opts, workerCount: typeof ctx.parallel === 'number' ? ctx.parallel : undefined })
+    : await runSingle(opts)
+  return error || survived ? 1 : 0
+}
+
 async function runBatch(ctx, jsonOutput, timeout, sourcesToRun) {
   const { prepared, createRunner, reportDir, reportPath, sources, out } = ctx
   const filesToRun = sourcesToRun || sources
@@ -133,66 +199,4 @@ function printBatchSummary(out, fileCount, { totalKilled, totalSurvived, totalTi
   if (totalTimedOut)
     out(`Timed out: ${totalTimedOut} (counted as killed)`)
   out(`${HEADER_SEPARATOR}\n`)
-}
-
-async function run(ctx, argv) {
-  const parsed = parseArgs(argv)
-  if (parsed.error) {
-    ctx.out(parsed.error)
-    return 1
-  }
-
-  const timeout = parsed.timeout || ctx.configTimeout
-
-  if (parsed.diffMode) {
-    const result = diffReports(parsed.beforeFile, parsed.afterFile, ctx.out)
-    return !result || result.regressions ? 1 : 0
-  }
-  if (parsed.dryRunMode && parsed.allMode)
-    return runAllDryRun(ctx)
-  if (parsed.dryRunMode)
-    return dryRun(parsed.sourceFile, ctx.prepared, parsed.targetLine, ctx.out) && 0
-  const parallel = parsed.parallel
-  const runCtx = parallel ? { ...ctx, parallel } : ctx
-
-  if (parsed.incrementalMode)
-    return runIncrementalMode(runCtx, parsed.jsonOutput, timeout)
-  if (parsed.allMode)
-    return runBatchMode(runCtx, parsed.jsonOutput, timeout)
-  return runSingleMode(runCtx, parsed, timeout)
-}
-
-function runAllDryRun({ sources, prepared, out }) {
-  let total = 0
-  for (const source of sources)
-    total += dryRun(resolve(source), prepared, null, out)
-  out(`\n  Grand total: ${total} mutations across ${sources.length} files`)
-  return 0
-}
-
-async function runIncrementalMode(ctx, jsonOutput, timeout) {
-  const { sources, testSources, reportDir, reportPath, out } = ctx
-  const incrementalConfig = { sources, testSources, reportDir, reportPath, runBatch: runBatch.bind(null, ctx) }
-  const { totalSurvived, failures } = await runIncremental(incrementalConfig, jsonOutput, timeout, out)
-  return (totalSurvived + failures) ? 1 : 0
-}
-
-async function runBatchMode(ctx, jsonOutput, timeout) {
-  const { totalSurvived, failures } = await runBatch(ctx, jsonOutput, timeout)
-  return (totalSurvived + failures) ? 1 : 0
-}
-
-async function runSingleMode(ctx, parsed, timeout) {
-  const opts = {
-    sourceFile: parsed.sourceFile,
-    prepared: ctx.prepared,
-    createRunner: ctx.createRunner,
-    targetLine: parsed.targetLine,
-    timeout,
-    out: ctx.out
-  }
-  const { error, survived } = ctx.parallel
-    ? await runParallel({ ...opts, workerCount: typeof ctx.parallel === 'number' ? ctx.parallel : undefined })
-    : await runSingle(opts)
-  return error || survived ? 1 : 0
 }
