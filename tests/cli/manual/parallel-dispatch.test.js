@@ -17,7 +17,7 @@ vi.mock('../../../core/pool.js')
 import { createManualRunner as _createManualRunner } from '../../../cli/manual.js'
 import { createPool } from '../../../core/pool.js'
 import { readFileSync, existsSync } from 'node:fs'
-import { patterns, sourceCode, fakeRunner, killedMutation, setupPool as _setupPool, mockFs as _mockFs, noop } from './helpers.js'
+import { patterns, sourceCode, fakeRunner, killedMutation, setupPool as _setupPool, mockFs as _mockFs, noop } from '../helpers.js'
 
 function mockFs(files) { _mockFs(readFileSync, files) }
 function createManualRunner(config) {

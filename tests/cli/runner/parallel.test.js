@@ -18,7 +18,7 @@ import { runParallel } from '../../../cli/runner/index.js'
 import { preparePatterns } from '../../../core/engine.js'
 import { createPool } from '../../../core/pool.js'
 import { readFileSync } from 'node:fs'
-import { patterns, sourceCode, noop, fakePoolRunner, mockFs as _mockFs } from './helpers.js'
+import { patterns, sourceCode, noop, fakePoolRunner, mockFs as _mockFs } from '../helpers.js'
 
 const prepared = preparePatterns(patterns)
 

@@ -25,7 +25,7 @@ vi.mock('node:fs', async (importOriginal) => {
 import { runSingle, runParallel } from '../../../cli/runner/index.js'
 import { preparePatterns } from '../../../core/engine.js'
 import { readFileSync } from 'node:fs'
-import { noop, mockFs as _mockFs } from './helpers.js'
+import { noop, mockFs as _mockFs } from '../helpers.js'
 
 const patterns = [
   { pattern: / === /g, replacement: ' !== ', name: '=== → !==' },
