@@ -68,5 +68,63 @@ describe('parseArgs', () => {
       const result = parseArgs(['source.js', '--line', '42'])
       expect(result.targetLine).toBe(42)
     })
+
+    it('accepts --line 0 as valid', () => {
+      const result = parseArgs(['source.js', '--line', '0'])
+      expect(result.targetLine).toBe(0)
+      expect(result).not.toHaveProperty('error')
+    })
+  })
+
+  describe('error message content', () => {
+    it('returns usage message containing flag names when no source file given', () => {
+      const result = parseArgs([])
+      expect(result.error).toContain('--line')
+      expect(result.error).toContain('--json')
+      expect(result.error).toContain('--dry-run')
+      expect(result.error).toContain('--timeout')
+      expect(result.error).toContain('--all')
+      expect(result.error).toContain('--incremental')
+    })
+
+    it('returns diff usage message containing --diff flag', () => {
+      const result = parseArgs(['--diff'])
+      expect(result.error).toContain('--diff')
+      expect(result.error).toContain('<before.json>')
+      expect(result.error).toContain('<after.json>')
+    })
+  })
+
+  describe('default argv from process.argv', () => {
+    it('uses process.argv.slice(2) when no argv argument provided', () => {
+      const original = process.argv
+      try {
+        process.argv = ['node', 'script.js', '--incremental', '--json']
+        const result = parseArgs()
+        expect(result.incrementalMode).toBe(true)
+        expect(result.jsonOutput).toBe(true)
+      } finally {
+        process.argv = original
+      }
+    })
+  })
+
+  describe('--timeout at index 0', () => {
+    it('parses --timeout when it appears first in argv', () => {
+      const result = parseArgs(['--timeout', '5000', '--incremental'])
+      expect(result.timeout).toBe(5000)
+    })
+
+    it('accepts --timeout 0 as valid', () => {
+      const result = parseArgs(['--incremental', '--timeout', '0'])
+      expect(result.timeout).toBe(0)
+      expect(result).not.toHaveProperty('error')
+    })
+
+    it('accepts --timeout 0 in source file mode', () => {
+      const result = parseArgs(['source.js', '--timeout', '0'])
+      expect(result.timeout).toBe(0)
+      expect(result).not.toHaveProperty('error')
+    })
   })
 })
