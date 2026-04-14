@@ -47,7 +47,7 @@ function printNewMutants(out, newMutants) {
   const newKilled = newMutants.length - newSurvived.length
   out(`\n+ NEW MUTANTS: ${newMutants.length} (${newKilled} killed, ${newSurvived.length} survived)`)
   for (const { file, line, mutatorName } of newSurvived)
-      out(`  ${file}:${line} ${mutatorName} — SURVIVED`)
+    out(`  ${file}:${line} ${mutatorName} — SURVIVED`)
 }
 
 function printRemovedMutants(out, removedMutants) {

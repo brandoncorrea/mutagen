@@ -59,11 +59,11 @@ function classifyChange(changes, beforeMap, afterMap, key) {
   } else if (!after) {
     changes.removedMutants.push(before)
   } else {
-    const bAlive = isAlive(before)
-    const aAlive = isAlive(after)
-    if (bAlive && !aAlive)
+    const beforeAlive = isAlive(before)
+    const afterAlive = isAlive(after)
+    if (beforeAlive && !afterAlive)
       changes.newlyKilled.push({ before, after })
-    else if (!bAlive && aAlive)
+    else if (!beforeAlive && afterAlive)
       changes.regressions.push({ before, after })
   }
 }

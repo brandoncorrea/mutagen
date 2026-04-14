@@ -1,6 +1,6 @@
 /**
  * Vitest test runner adapter.
- * Runner interface: { run: async () => { passed: boolean }, close: async () => {} }
+ * Runner interface: { run, close, setMutant, clearMutant }
  *
  * Options:
  *   config  - path to vitest config file (for monorepo workspaces)
@@ -9,13 +9,18 @@
  *   warm    - attempt warm rerun (default: true). Falls back to cold if warm fails.
  */
 
+import { createMutantPlugin } from './mutagen-plugin.js'
+
 export async function createVitestRunner(sourceFile, options = {}) {
   const { config, root, testFile, warm = true } = options
   const { startVitest } = await import('vitest/node')
 
+  const { plugin, setMutant, clearMutant } = createMutantPlugin()
+
   const vitestOpts = {
     reporters: [{ onFinished() {} }],
     bail: 1,
+    plugins: [plugin],
     ...(config && { config }),
     ...(root && { root })
   }
@@ -23,7 +28,7 @@ export async function createVitestRunner(sourceFile, options = {}) {
   const testFilter = testFile ? [testFile] : []
 
   if (!warm)
-    return coldRunner(startVitest, testFilter, vitestOpts)
+    return coldRunner(startVitest, testFilter, vitestOpts, sourceFile, setMutant, clearMutant)
 
   // Warm runner: start vitest in watch mode to keep the worker pool alive
   // between mutations. watch:true is required — watch:false shuts down the
@@ -34,7 +39,7 @@ export async function createVitestRunner(sourceFile, options = {}) {
   // Verify warm rerun works by re-running without changes
   if (await warmRerunFailed(vitest)) {
     await vitest.close()
-    return coldRunner(startVitest, testFilter, vitestOpts)
+    return coldRunner(startVitest, testFilter, vitestOpts, sourceFile, setMutant, clearMutant)
   }
 
   // Build related-test specs by walking the vite module graph.
@@ -50,6 +55,12 @@ export async function createVitestRunner(sourceFile, options = {}) {
     },
     async close() {
       await vitest.close()
+    },
+    setMutant(source) {
+      setMutant(sourceFile, source)
+    },
+    clearMutant() {
+      clearMutant(sourceFile)
     }
   }
 }
@@ -115,7 +126,7 @@ async function warmRerunFailed(vitest) {
   }
 }
 
-function coldRunner(startVitest, testFilter, vitestOpts) {
+function coldRunner(startVitest, testFilter, vitestOpts, sourceFile, setMutant, clearMutant) {
   return {
     async run() {
       const vitest = await startVitest('test', testFilter, { ...vitestOpts, watch: false })
@@ -125,7 +136,13 @@ function coldRunner(startVitest, testFilter, vitestOpts) {
         await vitest.close()
       }
     },
-    async close() {}
+    async close() {},
+    setMutant(source) {
+      setMutant(sourceFile, source)
+    },
+    clearMutant() {
+      clearMutant(sourceFile)
+    }
   }
 }
 

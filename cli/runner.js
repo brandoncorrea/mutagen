@@ -99,8 +99,11 @@ async function runMutations(opts) {
 
 async function runMutation(opts, total, outcomes, mutation) {
   const { out, runner, timeout, sourceFile, original } = opts
+  const inMemory = typeof runner.setMutant === 'function'
   try {
-    writeFileSync(sourceFile, mutation.source)
+    if (inMemory) runner.setMutant(mutation.source)
+    else writeFileSync(sourceFile, mutation.source)
+
     const result = await withTimeout(runner.run, timeout)
 
     if (result.passed) {
@@ -120,7 +123,8 @@ async function runMutation(opts, total, outcomes, mutation) {
       reportMutation(out, total, mutation, 'killed (error)')
     }
   } finally {
-    writeFileSync(sourceFile, original)
+    if (inMemory) runner.clearMutant()
+    else writeFileSync(sourceFile, original)
   }
 }
 
