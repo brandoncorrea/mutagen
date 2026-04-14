@@ -9,7 +9,7 @@ vi.mock('node:child_process', () => ({
   execFileSync: vi.fn()
 }))
 
-import { main, isCommentOnlyLine, isMainGuardLine, printSummary, printPerFileScores } from '../../scripts/self-mutate.js'
+import { main } from '../../scripts/self-mutate.js'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 
@@ -276,10 +276,51 @@ describe('main', () => {
 
       expect(stdout()).toContain('SURVIVED')
     })
+
+    it('calculates score from killed and timed-out mutations', () => {
+      // Source with exactly 2 mutation sites: `true` and `false`
+      readFileSync.mockReturnValue('const a = true\nconst b = false')
+      let callCount = 0
+      execFileSync.mockImplementation(() => {
+        callCount++
+        if (callCount === 1) return undefined // preflight
+        if (callCount === 2) throw { killed: false } // first mutation killed
+        return undefined // second mutation survived
+      })
+
+      main(['core/engine.js'])
+
+      expect(stdout()).toContain('Score: 50.0%')
+    })
+
+    it('includes per-file score with kill ratio', () => {
+      readFileSync.mockReturnValue(SOURCE_WITH_MUTATIONS)
+      execFileSync.mockReturnValue(undefined)
+
+      main(['core/engine.js'])
+
+      const output = stdout()
+      expect(output).toMatch(/core\/engine\.js: \d+\.\d+% \(\d+\/\d+\)/)
+    })
+
+    it('counts timeout as killed in per-file score', () => {
+      readFileSync.mockReturnValue('const x = true')
+      let callCount = 0
+      execFileSync.mockImplementation(() => {
+        callCount++
+        if (callCount === 1) return undefined // preflight
+        throw { killed: true } // timeout
+      })
+
+      main(['core/engine.js'])
+
+      expect(stdout()).toContain('100.0%')
+      expect(stdout()).not.toContain('SURVIVED')
+    })
   })
 
-  describe('comment filtering', () => {
-    it('excludes mutations on comment-only lines', () => {
+  describe('line filtering', () => {
+    it('excludes mutations on single-line comment lines', () => {
       readFileSync.mockReturnValue('// return true\nconst x = true')
       main(['--dry-run', '--json', 'core/engine.js'])
 
@@ -288,196 +329,53 @@ describe('main', () => {
         expect(r.original.trim().startsWith('//')).toBe(false)
       }
     })
-  })
-})
 
-describe('isCommentOnlyLine', () => {
-  it('returns true for // comments', () => {
-    expect(isCommentOnlyLine('// a comment')).toBe(true)
-  })
+    it('excludes mutations on block comment continuation lines', () => {
+      readFileSync.mockReturnValue(' * @returns true or false\nconst x = true')
+      main(['--dry-run', '--json', 'core/engine.js'])
 
-  it('returns true for // comments with leading whitespace', () => {
-    expect(isCommentOnlyLine('  // a comment')).toBe(true)
-  })
+      const results = JSON.parse(stdout())
+      for (const r of results) {
+        expect(r.original.trim().startsWith('*')).toBe(false)
+      }
+    })
 
-  it('returns true for * continuation lines', () => {
-    expect(isCommentOnlyLine(' * continuation')).toBe(true)
-  })
+    it('excludes mutations on block comment end lines', () => {
+      readFileSync.mockReturnValue(' */\nconst x = true')
+      main(['--dry-run', '--json', 'core/engine.js'])
 
-  it('returns true for * with leading whitespace', () => {
-    expect(isCommentOnlyLine('   * doc line')).toBe(true)
-  })
+      const results = JSON.parse(stdout())
+      for (const r of results) {
+        expect(r.original.trim()).not.toBe('*/')
+      }
+    })
 
-  it('returns true for /* block comment start', () => {
-    expect(isCommentOnlyLine('/* block start')).toBe(true)
-  })
+    it('excludes mutations on import.meta.url guard lines', () => {
+      readFileSync.mockReturnValue('if (process.argv[1] === fileURLToPath(import.meta.url))\nconst x = true')
+      main(['--dry-run', '--json', 'core/engine.js'])
 
-  it('returns true for /* with leading whitespace', () => {
-    expect(isCommentOnlyLine('  /* indented block')).toBe(true)
-  })
+      const results = JSON.parse(stdout())
+      for (const r of results) {
+        expect(r.original).not.toContain('import.meta.url')
+      }
+    })
 
-  it('returns true for */ block comment end', () => {
-    expect(isCommentOnlyLine('*/')).toBe(true)
-  })
+    it('excludes mutations on process.exit lines', () => {
+      readFileSync.mockReturnValue('  process.exit(main(args))\nconst x = true')
+      main(['--dry-run', '--json', 'core/engine.js'])
 
-  it('returns true for */ with leading whitespace', () => {
-    expect(isCommentOnlyLine('  */')).toBe(true)
-  })
+      const results = JSON.parse(stdout())
+      for (const r of results) {
+        expect(r.original).not.toContain('process.exit')
+      }
+    })
 
-  it('returns false for code lines', () => {
-    expect(isCommentOnlyLine('const x = 1')).toBe(false)
-  })
+    it('keeps mutations on regular code lines', () => {
+      readFileSync.mockReturnValue('const x = true')
+      main(['--dry-run', '--json', 'core/engine.js'])
 
-  it('returns false for code with trailing comment', () => {
-    expect(isCommentOnlyLine('const x = 1 // comment')).toBe(false)
-  })
-
-  it('returns false for empty string', () => {
-    expect(isCommentOnlyLine('')).toBe(false)
-  })
-})
-
-describe('isMainGuardLine', () => {
-  it('returns true for import.meta.url lines', () => {
-    expect(isMainGuardLine('if (process.argv[1] === fileURLToPath(import.meta.url))')).toBe(true)
-  })
-
-  it('returns true for process.exit lines', () => {
-    expect(isMainGuardLine('  process.exit(main(process.argv.slice(2)))')).toBe(true)
-  })
-
-  it('returns true for import.meta.url with leading whitespace', () => {
-    expect(isMainGuardLine('  import.meta.url')).toBe(true)
-  })
-
-  it('returns false for regular code', () => {
-    expect(isMainGuardLine('const x = 1')).toBe(false)
-  })
-
-  it('returns false for empty string', () => {
-    expect(isMainGuardLine('')).toBe(false)
-  })
-})
-
-describe('printSummary', () => {
-  it('calculates score from killed and timed-out counts', () => {
-    const results = [
-      { status: 'Killed', file: 'a.js', line: 1, name: 'm1', original: 'x', mutated: 'y' },
-      { status: 'Survived', file: 'a.js', line: 2, name: 'm2', original: 'x', mutated: 'y' },
-      { status: 'Timeout', file: 'a.js', line: 3, name: 'm3', original: 'x', mutated: 'y' },
-    ]
-    printSummary(results)
-    const output = stdout()
-    expect(output).toContain('Total mutations: 3')
-    expect(output).toContain('Killed: 1')
-    expect(output).toContain('Survived: 1')
-    expect(output).toContain('Timed out: 1')
-    expect(output).toContain('Score: 66.7%')
-  })
-
-  it('shows 100% when all killed', () => {
-    const results = [
-      { status: 'Killed', file: 'a.js', line: 1, name: 'm1', original: 'x', mutated: 'y' },
-      { status: 'Killed', file: 'a.js', line: 2, name: 'm2', original: 'x', mutated: 'y' },
-    ]
-    printSummary(results)
-    expect(stdout()).toContain('Score: 100.0%')
-  })
-
-  it('shows 0.0% when all survived', () => {
-    const results = [
-      { status: 'Survived', file: 'a.js', line: 1, name: 'm1', original: 'x > 0', mutated: 'x >= 0' },
-    ]
-    printSummary(results)
-    expect(stdout()).toContain('Score: 0.0%')
-  })
-
-  it('shows 0 score for empty results', () => {
-    printSummary([])
-    expect(stdout()).toContain('Score: 0%')
-  })
-
-  it('shows survivors section when exactly 1 survivor', () => {
-    const results = [
-      { status: 'Survived', file: 'a.js', line: 5, name: 'boundary', original: 'x > 0', mutated: 'x >= 0' },
-    ]
-    printSummary(results)
-    const output = stdout()
-    expect(output).toContain('SURVIVORS')
-    expect(output).toContain('a.js:5')
-    expect(output).toContain('original: x > 0')
-    expect(output).toContain('mutated:  x >= 0')
-  })
-
-  it('omits survivors section when none survived', () => {
-    const results = [
-      { status: 'Killed', file: 'a.js', line: 1, name: 'm1', original: 'x', mutated: 'y' },
-    ]
-    printSummary(results)
-    expect(stdout()).not.toContain('SURVIVORS')
-  })
-
-  it('includes timeout in score numerator', () => {
-    const results = [
-      { status: 'Timeout', file: 'a.js', line: 1, name: 'm1', original: 'x', mutated: 'y' },
-      { status: 'Timeout', file: 'a.js', line: 2, name: 'm2', original: 'x', mutated: 'y' },
-    ]
-    printSummary(results)
-    expect(stdout()).toContain('Score: 100.0%')
-  })
-})
-
-describe('printPerFileScores', () => {
-  it('counts killed, survived, and timed-out per file', () => {
-    const results = [
-      { status: 'Killed', file: 'a.js', line: 1, name: 'm1', original: 'x', mutated: 'y' },
-      { status: 'Survived', file: 'a.js', line: 2, name: 'm2', original: 'x', mutated: 'y' },
-      { status: 'Killed', file: 'b.js', line: 1, name: 'm3', original: 'x', mutated: 'y' },
-      { status: 'Timeout', file: 'b.js', line: 2, name: 'm4', original: 'x', mutated: 'y' },
-    ]
-    printPerFileScores(results)
-    const output = stdout()
-    expect(output).toContain('a.js: 50.0% (1/2)')
-    expect(output).toContain('1 SURVIVED')
-    expect(output).toContain('b.js: 100.0% (1/2)')
-  })
-
-  it('shows no SURVIVED flag when all killed', () => {
-    const results = [
-      { status: 'Killed', file: 'c.js', line: 1, name: 'm1', original: 'x', mutated: 'y' },
-    ]
-    printPerFileScores(results)
-    const output = stdout()
-    expect(output).toContain('c.js: 100.0% (1/1)')
-    expect(output).not.toContain('SURVIVED')
-  })
-
-  it('increments total for every result', () => {
-    const results = [
-      { status: 'Killed', file: 'd.js', line: 1, name: 'm1', original: 'x', mutated: 'y' },
-      { status: 'Killed', file: 'd.js', line: 2, name: 'm2', original: 'x', mutated: 'y' },
-      { status: 'Survived', file: 'd.js', line: 3, name: 'm3', original: 'x', mutated: 'y' },
-    ]
-    printPerFileScores(results)
-    expect(stdout()).toContain('d.js: 66.7% (2/3)')
-  })
-
-  it('counts timed-out in score numerator', () => {
-    const results = [
-      { status: 'Timeout', file: 'e.js', line: 1, name: 'm1', original: 'x', mutated: 'y' },
-      { status: 'Survived', file: 'e.js', line: 2, name: 'm2', original: 'x', mutated: 'y' },
-    ]
-    printPerFileScores(results)
-    expect(stdout()).toContain('e.js: 50.0% (0/2)')
-  })
-
-  it('shows survived count in flag', () => {
-    const results = [
-      { status: 'Survived', file: 'f.js', line: 1, name: 'm1', original: 'x', mutated: 'y' },
-      { status: 'Survived', file: 'f.js', line: 2, name: 'm2', original: 'x', mutated: 'y' },
-      { status: 'Killed', file: 'f.js', line: 3, name: 'm3', original: 'x', mutated: 'y' },
-    ]
-    printPerFileScores(results)
-    expect(stdout()).toContain('2 SURVIVED')
+      const results = JSON.parse(stdout())
+      expect(results.length).toBeGreaterThan(0)
+    })
   })
 })

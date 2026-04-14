@@ -78,12 +78,12 @@ function runMutation(sourceFile, mutation) {
   }
 }
 
-export function isCommentOnlyLine(original) {
+function isCommentOnlyLine(original) {
   const t = original.trim()
   return t.startsWith('*') || t.startsWith('//') || t.startsWith('/*') || t === '*/'
 }
 
-export function isMainGuardLine(original) {
+function isMainGuardLine(original) {
   const t = original.trim()
   return t.includes('import.meta.url') || t.includes('process.exit')
 }
@@ -127,7 +127,7 @@ function executeMutations(sourceFile) {
   return results
 }
 
-export function printSummary(allResults) {
+function printSummary(allResults) {
   const survived = allResults.filter(r => r.status === 'Survived')
   const killed = allResults.filter(r => r.status === 'Killed')
   const timedOut = allResults.filter(r => r.status === 'Timeout')
@@ -155,7 +155,7 @@ function printSurvivors(survived) {
   }
 }
 
-export function printPerFileScores(allResults) {
+function printPerFileScores(allResults) {
   const byFile = new Map()
   for (const r of allResults) {
     if (!byFile.has(r.file)) byFile.set(r.file, { killed: 0, survived: 0, timedOut: 0, total: 0 })
