@@ -12,9 +12,10 @@ export { createMutantPlugin } from './runners/mutagen-plugin.js'
 
 // CLI harness
 export { createManualRunner } from './cli/manual.js'
-export { runParallel } from './cli/runner.js'
+export { runParallel } from './cli/runner/index.js'
 
 // Report utilities
 export { combineReportData } from './core/report-data.js'
 export { printSummary, printRunReport } from './cli/report.js'
 export { diffReports } from './cli/diff.js'
+

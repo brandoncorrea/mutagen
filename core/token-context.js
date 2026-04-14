@@ -68,3 +68,4 @@ export function isArrowOperator(line, position) {
     && line[position - 1] === '='
     && line[position] === '>'
 }
+

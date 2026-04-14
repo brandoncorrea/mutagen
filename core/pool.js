@@ -72,7 +72,7 @@ async function runOne(runner, mutation, timeout, outcomes, onResult) {
 
     if (result.passed) {
       outcomes.survived.push(mutation)
-      onResult?.({ mutation, status: 'survived' })
+      onResult?.({ mutation, status: 'SURVIVED' })
     } else {
       outcomes.killed.push({ ...mutation, killedBy: result.killedBy })
       onResult?.({ mutation, status: 'killed' })
@@ -80,7 +80,7 @@ async function runOne(runner, mutation, timeout, outcomes, onResult) {
   } catch (err) {
     if (err.message?.includes('timed out')) {
       outcomes.timedOut.push(mutation)
-      onResult?.({ mutation, status: 'timedOut' })
+      onResult?.({ mutation, status: 'TIMEOUT (killed)' })
     } else {
       outcomes.killed.push(mutation)
       onResult?.({ mutation, status: 'killed' })

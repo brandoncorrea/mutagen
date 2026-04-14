@@ -22,7 +22,7 @@ vi.mock('node:fs', async (importOriginal) => {
 
 // NOTE: pool.js is NOT mocked — we use the real pool for determinism verification
 
-import { runSingle, runParallel } from '../../../cli/runner.js'
+import { runSingle, runParallel } from '../../../cli/runner/index.js'
 import { preparePatterns } from '../../../core/engine.js'
 import { readFileSync } from 'node:fs'
 import { noop, mockFs as _mockFs } from './helpers.js'

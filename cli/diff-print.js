@@ -80,3 +80,4 @@ function formatSigned(value) {
 function formatTenth(value) {
   return value.toFixed(1)
 }
+

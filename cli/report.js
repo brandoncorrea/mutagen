@@ -64,3 +64,4 @@ function writeMutation(out, mut) {
   out(`  Original: ${mut.original}`)
   out(`  Mutated:  ${mut.mutated}`)
 }
+

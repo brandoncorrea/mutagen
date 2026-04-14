@@ -142,3 +142,4 @@ export const javascript = [
   // --- Property access mutations ---
   { pattern: /\.length\b/g, replacement: '.length + 1', name: '.length → .length + 1', guard: /['"`]/ }
 ]
+

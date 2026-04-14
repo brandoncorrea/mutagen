@@ -63,3 +63,4 @@ export function mergeReports(files, { outputPath = 'reports/mutation/report.json
 
   return counts.survived
 }
+

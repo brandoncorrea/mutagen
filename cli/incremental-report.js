@@ -95,3 +95,4 @@ export function writeMergedReport(out, { config, previous, classification, fileR
   const report = createReport(mergedFiles, { sourceHashes: currentHashes, testHashes: currentTestHashes })
   writeReportFile(reportDir, reportPath, report, out)
 }
+

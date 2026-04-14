@@ -14,7 +14,7 @@ vi.mock('node:fs', async (importOriginal) => {
 
 vi.mock('../../../core/pool.js')
 
-import { runParallel } from '../../../cli/runner.js'
+import { runParallel } from '../../../cli/runner/index.js'
 import { preparePatterns } from '../../../core/engine.js'
 import { createPool } from '../../../core/pool.js'
 import { readFileSync } from 'node:fs'
@@ -148,11 +148,7 @@ describe('runParallel', () => {
     const poolRun = vi.fn().mockImplementation((mutations, opts) => {
       // Simulate pool calling onResult for each mutation
       opts.onResult?.({ mutation: mutations[0], status: 'killed' })
-      return Promise.resolve({
-        killed: [mutations[0]],
-        survived: [],
-        timedOut: []
-      })
+      return { killed: [mutations[0]], survived: [], timedOut: [] }
     })
     createPool.mockReturnValue({ run: poolRun, close: vi.fn().mockResolvedValue() })
 
@@ -174,8 +170,8 @@ describe('runParallel', () => {
     mockFs({ [resolve('src/a.js')]: sourceCode })
     const preflightRunner = fakePoolRunner([{ passed: true }])
     const poolRun = vi.fn().mockImplementation((mutations, opts) => {
-      opts.onResult?.({ mutation: mutations[0], status: 'survived' })
-      opts.onResult?.({ mutation: mutations[0], status: 'timedOut' })
+      opts.onResult?.({ mutation: mutations[0], status: 'SURVIVED' })
+      opts.onResult?.({ mutation: mutations[0], status: 'TIMEOUT (killed)' })
       return Promise.resolve({ killed: [], survived: [mutations[0]], timedOut: [mutations[0]] })
     })
     createPool.mockReturnValue({ run: poolRun, close: vi.fn().mockResolvedValue() })

@@ -160,3 +160,4 @@ function isPassing(file) {
 function isFailing(file) {
   return file.result?.state === 'fail'
 }
+

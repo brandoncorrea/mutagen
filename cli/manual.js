@@ -18,7 +18,7 @@ import { preparePatterns } from '../core/engine.js'
 import { HEADER_SEPARATOR, createReport, writeReportFile } from '../core/report-data.js'
 import { diffReports } from './diff.js'
 import { parseArgs } from './args.js'
-import { runSingle, runParallel, dryRun } from './runner.js'
+import { runSingle, runParallel, dryRun } from './runner/index.js'
 import { runIncremental } from './incremental.js'
 
 /**
@@ -120,7 +120,7 @@ function printBatchSummary(out, fileCount, { totalKilled, totalSurvived, totalTi
 async function run(ctx, argv) {
   const parsed = parseArgs(argv)
   if (parsed.error) {
-    console.error(parsed.error)
+    ctx.out(parsed.error)
     return 1
   }
 
