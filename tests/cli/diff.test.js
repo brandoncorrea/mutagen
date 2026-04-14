@@ -324,4 +324,89 @@ describe('diffReports', () => {
 
     expect(result.newlyKilled).toBe(1)
   })
+
+  it('returns undefined when only before file is unreadable', () => {
+    readFileSync
+      .mockImplementationOnce(() => { throw new Error('ENOENT') })
+      .mockReturnValueOnce(JSON.stringify(makeReport({ 'a.js': { mutants: [] } })))
+
+    const result = diffReports('missing.json', 'after.json', out)
+
+    expect(result).toBeUndefined()
+  })
+
+  it('returns undefined when only after file is unreadable', () => {
+    readFileSync
+      .mockReturnValueOnce(JSON.stringify(makeReport({ 'a.js': { mutants: [] } })))
+      .mockImplementationOnce(() => { throw new Error('ENOENT') })
+
+    const result = diffReports('before.json', 'missing.json', out)
+
+    expect(result).toBeUndefined()
+  })
+
+  it('tracks mutants separately by id even when computed keys collide', () => {
+    const m1 = makeMutant('id-alpha', 'EqualityOperator', 'Survived', 5)
+    const m2 = makeMutant('id-beta', 'EqualityOperator', 'Survived', 5)
+
+    const result = runDiff(
+      { 'a.js': { mutants: [m1, m2] } },
+      { 'a.js': { mutants: [
+        { ...m1, status: 'Killed' },
+        { ...m2, status: 'Killed' }
+      ] } }
+    )
+
+    expect(result.newlyKilled).toBe(2)
+  })
+
+  it('reports correct line number for newly killed mutant', () => {
+    const result = runDiff(
+      { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Survived', 42)] } },
+      { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Killed', 42)] } }
+    )
+
+    expect(result.newlyKilled).toBe(1)
+    expect(output()).toContain('a.js:42')
+  })
+
+  it('uses line 0 for mutant with no location', () => {
+    const noLoc = { id: 'no-loc', mutatorName: 'X', status: 'Survived', replacement: '' }
+
+    const result = runDiff(
+      { 'a.js': { mutants: [noLoc] } },
+      { 'a.js': { mutants: [{ ...noLoc, status: 'Killed' }] } }
+    )
+
+    expect(result.newlyKilled).toBe(1)
+    expect(output()).toContain('a.js:0')
+  })
+
+  it('handles mutant with location but missing start', () => {
+    const noStart = { id: 'no-start', mutatorName: 'X', status: 'Survived', location: {}, replacement: '' }
+
+    const result = runDiff(
+      { 'a.js': { mutants: [noStart] } },
+      { 'a.js': { mutants: [{ ...noStart, status: 'Killed' }] } }
+    )
+
+    expect(result.newlyKilled).toBe(1)
+    expect(output()).toContain('a.js:0')
+  })
+
+  it('computes exact per-file scores from mutant counts', () => {
+    runDiff(
+      { 'a.js': { mutants: [
+        makeMutant('m1', 'x', 'Survived'),
+        makeMutant('m2', 'y', 'Survived')
+      ] } },
+      { 'a.js': { mutants: [
+        makeMutant('m1', 'x', 'Killed'),
+        makeMutant('m2', 'y', 'Killed')
+      ] } }
+    )
+
+    const perFile = output().slice(output().indexOf('PER-FILE'))
+    expect(perFile).toContain('0.0% → 100.0%')
+  })
 })
