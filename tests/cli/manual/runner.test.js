@@ -194,6 +194,112 @@ describe('createManualRunner', () => {
   })
 })
 
+describe('in-memory mutant switching', () => {
+  it('uses setMutant instead of writeFileSync when runner supports it', async () => {
+    mockFs({ [resolve('src/a.js')]: sourceCode })
+    const runner = {
+      run: vi.fn()
+        .mockResolvedValueOnce({ passed: true })  // preflight
+        .mockResolvedValueOnce({ passed: false, killedBy: ['t.js'] }),
+      close: vi.fn().mockResolvedValue(undefined),
+      setMutant: vi.fn(),
+      clearMutant: vi.fn()
+    }
+
+    await runSingle({
+      sourceFile: resolve('src/a.js'),
+      prepared,
+      createRunner: vi.fn().mockResolvedValue(runner),
+      out: noop
+    })
+
+    expect(runner.setMutant).toHaveBeenCalledOnce()
+    expect(runner.setMutant.mock.calls[0][0]).toContain('!==') // mutated source
+  })
+
+  it('calls clearMutant after each mutation', async () => {
+    mockFs({ [resolve('src/a.js')]: sourceCode })
+    const runner = {
+      run: vi.fn()
+        .mockResolvedValueOnce({ passed: true })  // preflight
+        .mockResolvedValueOnce({ passed: false }),
+      close: vi.fn().mockResolvedValue(undefined),
+      setMutant: vi.fn(),
+      clearMutant: vi.fn()
+    }
+
+    await runSingle({
+      sourceFile: resolve('src/a.js'),
+      prepared,
+      createRunner: vi.fn().mockResolvedValue(runner),
+      out: noop
+    })
+
+    expect(runner.clearMutant).toHaveBeenCalledOnce()
+  })
+
+  it('does not write to disk when runner supports in-memory switching', async () => {
+    mockFs({ [resolve('src/a.js')]: sourceCode })
+    const runner = {
+      run: vi.fn()
+        .mockResolvedValueOnce({ passed: true })  // preflight
+        .mockResolvedValueOnce({ passed: false }),
+      close: vi.fn().mockResolvedValue(undefined),
+      setMutant: vi.fn(),
+      clearMutant: vi.fn()
+    }
+
+    await runSingle({
+      sourceFile: resolve('src/a.js'),
+      prepared,
+      createRunner: vi.fn().mockResolvedValue(runner),
+      out: noop
+    })
+
+    expect(writeFileSync).not.toHaveBeenCalled()
+  })
+
+  it('falls back to writeFileSync when runner lacks setMutant', async () => {
+    mockFs({ [resolve('src/a.js')]: sourceCode })
+    const runner = {
+      run: vi.fn()
+        .mockResolvedValueOnce({ passed: true })  // preflight
+        .mockResolvedValueOnce({ passed: false }),
+      close: vi.fn().mockResolvedValue(undefined)
+    }
+
+    await runSingle({
+      sourceFile: resolve('src/a.js'),
+      prepared,
+      createRunner: vi.fn().mockResolvedValue(runner),
+      out: noop
+    })
+
+    expect(writeFileSync).toHaveBeenCalled()
+  })
+
+  it('calls clearMutant in finally block even when run throws', async () => {
+    mockFs({ [resolve('src/a.js')]: sourceCode })
+    const runner = {
+      run: vi.fn()
+        .mockResolvedValueOnce({ passed: true })  // preflight
+        .mockRejectedValueOnce(new Error('boom')),
+      close: vi.fn().mockResolvedValue(undefined),
+      setMutant: vi.fn(),
+      clearMutant: vi.fn()
+    }
+
+    await runSingle({
+      sourceFile: resolve('src/a.js'),
+      prepared,
+      createRunner: vi.fn().mockResolvedValue(runner),
+      out: noop
+    })
+
+    expect(runner.clearMutant).toHaveBeenCalledOnce()
+  })
+})
+
 describe('dryRun', () => {
   it('outputs mutation names for each line', () => {
     mockFs({ [resolve('src/a.js')]: sourceCode })
