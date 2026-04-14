@@ -15,6 +15,7 @@
 import { resolve } from 'node:path'
 
 import { preparePatterns } from '../core/engine.js'
+import { resolveGlobs } from '../core/resolve-globs.js'
 import { HEADER_SEPARATOR, createReport, writeReportFile } from '../core/report-data.js'
 import { diffReports } from './diff.js'
 import { parseArgs } from './args.js'
@@ -35,7 +36,10 @@ import { runIncremental } from './incremental.js'
 export function createManualRunner(config) {
   const {
     patterns,
-    sources = [],
+    sources: explicitSources,
+    include,
+    exclude,
+    cwd,
     testSources = [],
     createRunner,
     reportDir = 'reports/mutation',
@@ -43,6 +47,12 @@ export function createManualRunner(config) {
     timeout: configTimeout = null,
     out = console.log
   } = config
+
+  const sources = explicitSources && explicitSources.length
+    ? explicitSources
+    : include
+      ? resolveGlobs({ include, exclude, cwd })
+      : []
 
   const prepared = preparePatterns(patterns)
   const reportPath = `${reportDir}/${reportFile}`
