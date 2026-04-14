@@ -1,6 +1,7 @@
 // Core
 export { generateMutations, preparePatterns } from './core/engine.js'
 export { tokenizeLine, getTokenContextAt, isInJsxTag, isArrowOperator } from './core/token-context.js'
+export { createPool } from './core/pool.js'
 
 // Built-in pattern sets
 export * as patterns from './core/patterns.js'
