@@ -31,10 +31,10 @@ export async function run(args, { config, configPath, out = console.log, err = c
 }
 
 function isMain(argv) {
-  const arg = argv[1]
-  if (!arg) return
-  const FIXME = arg.replace(/.*[\\/]/, '')
-  return import.meta.url.endsWith(FIXME)
+  const scriptPath = argv[1]
+  if (!scriptPath) return
+  const basename = scriptPath.replace(/.*[\\/]/, '')
+  return import.meta.url.endsWith(basename)
 }
 
 /* v8 ignore next 2 */
