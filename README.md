@@ -17,6 +17,17 @@ import { patterns, createVitestRunner } from '@bwawan/mutagen'
 
 export default {
   patterns: [...patterns.javascript],
+  include: ['src/**/*.js'],
+  exclude: ['**/*.test.js', '**/node_modules'],
+  createRunner: sourceFile => createVitestRunner(sourceFile)
+}
+```
+
+Or list source files explicitly:
+
+```js
+export default {
+  patterns: [...patterns.javascript],
   sources: ['src/foo.js', 'src/bar.js'],
   createRunner: sourceFile => createVitestRunner(sourceFile)
 }
@@ -40,7 +51,9 @@ The `mutagen.config.js` default export is passed directly to `createManualRunner
 ```js
 export default {
   patterns: [...],            // Mutation patterns (see Pattern format)
-  sources: ['src/*.js'],      // Source files to mutate
+  include: ['src/**/*.js'],   // Glob patterns for source files to mutate
+  exclude: ['**/*.test.js'],  // Glob patterns to exclude (optional)
+  sources: ['src/foo.js'],    // Explicit source files (fallback to include/exclude)
   testSources: [],            // Test files to track for incremental invalidation
   createRunner: async (sourceFile) => runner,  // Test runner factory
   reportDir: 'reports/mutation',               // Directory for JSON reports
@@ -49,6 +62,8 @@ export default {
 }
 ```
 
+Use `include`/`exclude` glob patterns to select source files dynamically. If both `include` and `sources` are provided, `include` takes precedence. Use `sources` when you need an explicit file list.
+
 ## Programmatic API
 
 For custom scripts, use `createManualRunner` directly:
@@ -56,6 +71,20 @@ For custom scripts, use `createManualRunner` directly:
 ```js
 import { createManualRunner, patterns, createVitestRunner } from '@bwawan/mutagen'
 
+// With glob patterns
+const runner = createManualRunner({
+  patterns: [...patterns.javascript],
+  include: ['src/**/*.js'],
+  exclude: ['**/*.test.js'],
+  createRunner: sourceFile => createVitestRunner(sourceFile)
+})
+
+runner.main()
+```
+
+Or with explicit sources:
+
+```js
 const runner = createManualRunner({
   patterns: [...patterns.javascript],
   sources: ['src/foo.js', 'src/bar.js'],
