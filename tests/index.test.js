@@ -22,6 +22,7 @@ describe('public API (index.js)', () => {
 
     // CLI harness
     'createManualRunner',
+    'runParallel',
 
     // Report utilities
     'combineReportData',
