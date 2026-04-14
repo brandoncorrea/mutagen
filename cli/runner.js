@@ -19,7 +19,7 @@ export function dryRun(sourceFile, prepared, targetLine, out = console.log) {
   out(`   Found ${mutations.length} mutation(s)\n`)
 
   const byLine = mutationsByLine(mutations)
-  const mutationLines = Object.entries(byLine).sort((a, b) => Number(a[0]) - Number(b[0]))
+  const mutationLines = Object.entries(byLine)
   for (const [line, names] of mutationLines)
     out(`  L${line}: ${names.join(', ')}`)
 
@@ -107,7 +107,7 @@ async function runMutation(opts, total, outcomes, mutation) {
       outcomes.survived.push(mutation)
       reportMutation(out, total, mutation, 'SURVIVED')
     } else {
-      mutation.killedBy = result.killedBy || []
+      mutation.killedBy = result.killedBy
       outcomes.killed.push(mutation)
       reportMutation(out, total, mutation, 'killed')
     }
