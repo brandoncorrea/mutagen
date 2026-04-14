@@ -2,6 +2,8 @@
 
 A lightweight, regex-based mutation testing engine for JavaScript/JSX projects.
 
+Requires Node.js >= 20.11.0.
+
 ```bash
 npm install @bwawan/mutagen
 ```
@@ -26,6 +28,8 @@ export default {
 npx mutagen src/foo.js              # Single file
 npx mutagen --all                   # All configured sources
 npx mutagen --incremental           # Skip unchanged files
+npx mutagen --parallel              # Parallel execution (default 2 workers)
+npx mutagen --parallel 4            # Parallel with 4 workers
 npx mutagen --diff a.json b.json    # Compare two reports
 ```
 
@@ -73,32 +77,46 @@ runner.main()
 --all --dry-run                 Preview across all sources
 --incremental                   Hash-based caching, skip unchanged
 --incremental --json            Incremental + JSON report
+--parallel                      Run mutations in parallel (default: 2 workers)
+--parallel N                    Run with N parallel workers
 --diff <before> <after>         Compare two JSON report files
 ```
 
-`--json` and `--timeout` work across single-file, `--all`, and `--incremental` modes.
+`--json`, `--timeout`, and `--parallel` work across single-file, `--all`, and `--incremental` modes.
 
 ## Runner interface
 
-The `createRunner` callback receives a source file path and returns a runner object:
+The `createRunner` callback receives a source file path and returns a runner object. Two modes are supported:
+
+**File-I/O mode** (basic — mutagen writes mutated source to disk):
 
 ```js
 async function createRunner(sourceFile) {
   return {
-    async run() {
-      // Run the test suite. Return { passed: boolean, killedBy?: string[] }.
-      return { passed: true }
-    },
-    async close() {
-      // Clean up resources
-    }
+    async run() { return { passed: true, killedBy: [] } },
+    async close() {}
   }
 }
 ```
 
+**In-memory mode** (faster — no file I/O per mutation, required for `--parallel`):
+
+```js
+async function createRunner(sourceFile) {
+  return {
+    async run() { return { passed: true, killedBy: [] } },
+    async close() {},
+    setMutant(source) { /* swap source in memory */ },
+    clearMutant() { /* restore original */ }
+  }
+}
+```
+
+If `setMutant` is present, mutagen uses in-memory switching automatically. The built-in Vitest runner supports both modes.
+
 ## Vitest runner
 
-Built-in adapter for Vitest with warm/cold fallback and module-graph-based test narrowing:
+Built-in adapter for Vitest with warm/cold fallback, module-graph-based test narrowing, and in-memory mutant switching via a Vite plugin:
 
 ```js
 import { createVitestRunner } from '@bwawan/mutagen/runners/vitest'
@@ -112,6 +130,30 @@ createVitestRunner(sourceFile, {
   testFile: 'tests/specific.test.js',
   warm: true   // default: warm rerun, falls back to cold
 })
+```
+
+## Parallel execution
+
+The `--parallel` flag runs mutations concurrently using an in-process worker pool. Each worker holds its own runner instance with in-memory mutant switching — no file I/O during mutation.
+
+```bash
+npx mutagen src/foo.js --parallel       # 2 workers (default)
+npx mutagen --all --parallel 8          # 8 workers across all sources
+npx mutagen --incremental --parallel 4  # Incremental + parallel
+```
+
+For programmatic use:
+
+```js
+import { createPool, runParallel } from '@bwawan/mutagen'
+
+// Low-level pool API
+const pool = createPool({ workerCount: 4, createRunner })
+const outcomes = await pool.run(mutations, { timeout, onResult })
+await pool.close()
+
+// High-level parallel runner (same interface as runSingle)
+const result = await runParallel({ sourceFile, prepared, createRunner, workerCount: 4 })
 ```
 
 ## Pattern format
