@@ -40,7 +40,8 @@
     "./stryker": "./stryker.js"
   },
   "dependencies": {
-    "js-tokens": "^4.0.0"
+    "js-tokens": "^4.0.0",
+    "picomatch": "^4.0.4"
   },
   "scripts": {
     "test": "vitest run",
