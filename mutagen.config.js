@@ -3,16 +3,12 @@ import { createVitestRunner } from './runners/vitest.js'
 
 export default {
   patterns: javascript,
-  include: [
-    'index.js',
-    'bin/**/*.js',
-    'core/**/*.js',
-    'cli/**/*.js',
-    'runners/**/*.js',
-    'scripts/**/*.js',
-    'stryker.js'
+  exclude: [
+    'tests/**/*',
+    'node_modules/**/*',
+    'coverage/**/*',
+    '**/*.config.js'
   ],
-  exclude: ['**/*.config.js'],
   createRunner: sourceFile => createVitestRunner(sourceFile, {
     config: 'vitest.config.js'
   }),
