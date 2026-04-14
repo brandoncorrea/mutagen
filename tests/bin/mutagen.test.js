@@ -12,7 +12,7 @@ vi.mock('node:fs', async (importOriginal) => {
   }
 })
 
-import { run } from '../../bin/mutagen.js'
+import { run, isMain } from '../../bin/mutagen.js'
 import { readFileSync, existsSync } from 'node:fs'
 
 const noop = () => {}
@@ -160,5 +160,23 @@ describe('bin/mutagen CLI', () => {
     })
 
     expect(code).toBe(1)
+  })
+})
+
+describe('isMain', () => {
+  it('returns true when argv[1] basename matches the module', () => {
+    expect(isMain(['node', '/any/path/mutagen.js'])).toBe(true)
+  })
+
+  it('returns true for Windows-style paths', () => {
+    expect(isMain(['node', 'C:\\Users\\app\\mutagen.js'])).toBe(true)
+  })
+
+  it('returns false when argv[1] is a different script', () => {
+    expect(isMain(['node', '/some/other-script.js'])).toBe(false)
+  })
+
+  it('returns undefined when argv[1] is missing', () => {
+    expect(isMain(['node'])).toBeUndefined()
   })
 })
