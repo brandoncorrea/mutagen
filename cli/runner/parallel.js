@@ -50,27 +50,32 @@ async function runAfterPreflight(preflightRunner, options) {
   return await executeWithPool(mutations, { sourceFile, createRunner, workerCount, timeout, out })
 }
 
-async function executeWithPool(mutations, { sourceFile, createRunner, workerCount, timeout, out }) {
+async function executeWithPool(mutations, options) {
+  const { createRunner, workerCount } = options
   const pool = createPool({ workerCount, createRunner })
   try {
-    let completed = 0
-    const total = mutations.length
-
-    function onResult({ mutation, status }) {
-      reportMutation(out, total, { number: ++completed, ...mutation }, status)
-    }
-
-    const outcomes = await pool.run(mutations, { timeout, onResult })
-
-    printRunReport(mutations, outcomes, out)
-
-    return {
-      survived: outcomes.survived.length,
-      killed: outcomes.killed.length + outcomes.timedOut.length,
-      timedOut: outcomes.timedOut.length,
-      jsonData: toJsonMutants(sourceFile, outcomes)
-    }
+    return await runPool(pool, mutations, options)
   } finally {
     await pool.close()
+  }
+}
+
+async function runPool(pool, mutations, { sourceFile, timeout, out }) {
+  let completed = 0
+  const total = mutations.length
+
+  function onResult({ mutation, status }) {
+    reportMutation(out, total, { number: ++completed, ...mutation }, status)
+  }
+
+  const outcomes = await pool.run(mutations, { timeout, onResult })
+
+  printRunReport(mutations, outcomes, out)
+
+  return {
+    survived: outcomes.survived.length,
+    killed: outcomes.killed.length + outcomes.timedOut.length,
+    timedOut: outcomes.timedOut.length,
+    jsonData: toJsonMutants(sourceFile, outcomes)
   }
 }
