@@ -166,6 +166,26 @@ describe('toJsonMutants', () => {
     expect(survived.killedBy).toBeUndefined()
   })
 
+  it('sets column to 0 in start and end locations', () => {
+    const results = {
+      killed: [{ line: 7, name: 'x', original: 'a', mutated: 'b', killedBy: ['t.js'] }],
+      survived: []
+    }
+    const output = toJsonMutants('/project/src/foo.js', results)
+    const m = output.mutants[0]
+    expect(m.location.start.column).toBe(0)
+    expect(m.location.end.column).toBe(0)
+  })
+
+  it('excludes killedBy when it is an empty array', () => {
+    const results = {
+      killed: [{ line: 3, name: 'x', original: 'a', mutated: 'b', killedBy: [] }],
+      survived: []
+    }
+    const output = toJsonMutants('/project/src/foo.js', results)
+    expect(output.mutants[0]).not.toHaveProperty('killedBy')
+  })
+
   it('includes timedOut mutations as Timeout status', () => {
     const results = {
       killed: [],
@@ -351,6 +371,28 @@ describe('combineReportData', () => {
 
     expect(merged.files['a.js'].mutants).toHaveLength(1)
     expect(out).toHaveBeenCalledWith(expect.stringContaining('Deduplicated'))
+  })
+
+  it('reports the exact duplicate count', () => {
+    const mutant = {
+      location: { start: { line: 1 } },
+      mutatorName: 'x',
+      replacement: 'y',
+      status: 'Killed'
+    }
+    const report = {
+      files: {
+        'a.js': { language: 'javascript', mutants: [mutant] }
+      }
+    }
+    readFileSync
+      .mockReturnValueOnce(JSON.stringify(report))
+      .mockReturnValueOnce(JSON.stringify(report))
+
+    const out = vi.fn()
+    combineReportData(['file1.json', 'file2.json'], out)
+
+    expect(out).toHaveBeenCalledWith('  Deduplicated: 1 duplicate mutant(s) removed')
   })
 
   it('handles unreadable files gracefully', () => {
