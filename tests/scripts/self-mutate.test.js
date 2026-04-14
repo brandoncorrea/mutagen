@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('node:fs', () => ({
   readFileSync: vi.fn(),
-  writeFileSync: vi.fn()
+  writeFileSync: vi.fn(),
+  readdirSync: vi.fn().mockReturnValue(['engine.js'])
 }))
 
 vi.mock('node:child_process', () => ({
@@ -10,7 +11,7 @@ vi.mock('node:child_process', () => ({
 }))
 
 import { main } from '../../scripts/self-mutate.js'
-import { readFileSync, writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync, readdirSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 
 const SOURCE_WITH_MUTATIONS = 'function f(x) { return x > 0 }'
@@ -34,7 +35,7 @@ describe('main', () => {
   describe('argument handling', () => {
     it('returns 1 when no valid targets specified', () => {
       expect(main(['bogus.js'])).toBe(1)
-      expect(stderr()).toContain('No valid target modules specified.')
+      expect(stderr()).toContain('No target modules found.')
     })
 
     it('defaults to all target modules when no files given', () => {

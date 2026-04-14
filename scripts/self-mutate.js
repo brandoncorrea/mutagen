@@ -12,9 +12,9 @@
  *   node scripts/self-mutate.js --json              # JSON output
  */
 
-import { readFileSync, writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync, readdirSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
-import { resolve } from 'node:path'
+import { resolve, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { generateMutations, preparePatterns } from '../index.js'
 import { javascript } from '../core/patterns.js'
@@ -22,33 +22,25 @@ import { javascript } from '../core/patterns.js'
 const ROOT = resolve(import.meta.dirname, '..')
 const TIMEOUT_MS = 30_000
 
-// All release code under mutation — no exclusions
-const TARGET_MODULES = [
-  'index.js',
-  'bin/mutagen.js',
-  'core/engine.js',
-  'core/token-context.js',
-  'core/report-data.js',
-  'core/patterns.js',
-  'cli/args.js',
-  'cli/diff.js',
-  'cli/diff-print.js',
-  'cli/incremental.js',
-  'cli/incremental-report.js',
-  'cli/runner.js',
-  'cli/report.js',
-  'cli/manual.js',
-  'runners/vitest.js',
-  'scripts/self-mutate.js',
-  'stryker.js'
-]
+const SOURCE_DIRS = ['bin', 'cli', 'core', 'runners', 'scripts']
+const SOURCE_FILES = ['index.js', 'stryker.js']
+
+function discoverTargets() {
+  const files = [...SOURCE_FILES]
+  for (const dir of SOURCE_DIRS) {
+    const entries = readdirSync(resolve(ROOT, dir), { recursive: true })
+    for (const entry of entries)
+      if (entry.endsWith('.js'))
+        files.push(`${dir}/${entry}`)
+  }
+  return files.sort()
+}
 
 export function main(args) {
   const { dryRun, json, targets } = parseArgs(args)
 
   if (targets.length === 0) {
-    console.error('No valid target modules specified.')
-    console.error('Valid targets:', TARGET_MODULES.join(', '))
+    console.error('No target modules found.')
     return 1
   }
 
@@ -91,9 +83,10 @@ function parseArgs(args) {
   const dryRun = args.includes('--dry-run')
   const json = args.includes('--json')
   const files = args.filter(a => !a.startsWith('--'))
+  const allTargets = discoverTargets()
   const targets = files.length > 0
-    ? files.filter(f => TARGET_MODULES.includes(f))
-    : TARGET_MODULES
+    ? files.filter(f => allTargets.includes(f))
+    : allTargets
   return { dryRun, json, targets }
 }
 
