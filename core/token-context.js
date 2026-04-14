@@ -34,7 +34,7 @@ function spanType(type) {
     : 'code'
 }
 
-export function tokenizeLine(line) {
+function tokenizeLine(line) {
   pattern.lastIndex = 0
   const spans = []
   let match
