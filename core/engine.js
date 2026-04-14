@@ -68,6 +68,7 @@ function shouldSkipLine(line, lineNum, targetLine) {
   return !trimmed
     || trimmed.startsWith('//')
     || trimmed.startsWith('/*')
+    || trimmed.startsWith('*')
     || isStaticImport(trimmed)
 }
 

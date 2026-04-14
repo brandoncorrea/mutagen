@@ -70,6 +70,11 @@ describe('generateMutations', () => {
     expect(generateMutations(source, prepared)).toHaveLength(0)
   })
 
+  it('skips JSDoc continuation lines starting with *', () => {
+    const source = ' * @param {string} a === b'
+    expect(generateMutations(source, prepared)).toHaveLength(0)
+  })
+
   it('skips static import declarations', () => {
     const source = "import foo from 'bar'"
     const boolPatterns = preparePatterns([
