@@ -27,7 +27,10 @@ import { runIncremental } from './incremental.js'
  *
  * @param {Object} config
  * @param {Array} config.patterns - mutation patterns (combine built-in + custom)
- * @param {Array<string>} config.sources - source files to mutate (for --all batch mode)
+ * @param {Array<string>} [config.sources] - explicit source files (takes precedence over include/exclude)
+ * @param {Array<string>} [config.include] - glob patterns for source files
+ * @param {Array<string>} [config.exclude] - glob patterns to exclude
+ * @param {string} [config.cwd=process.cwd()] - base directory for glob resolution
  * @param {Function} config.createRunner - async (sourceFile) => { run, close }
  * @param {string} [config.reportDir='reports/mutation'] - directory for JSON reports
  * @param {string} [config.reportFile] - JSON report filename (default: manual-report.json)
