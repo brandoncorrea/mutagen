@@ -13,8 +13,12 @@ vi.mock('node:fs', async (importOriginal) => {
 })
 
 import { createManualRunner as _createManualRunner } from '../../../cli/manual.js'
+import { dryRun, runSingle } from '../../../cli/runner.js'
+import { preparePatterns } from '../../../core/engine.js'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { patterns, sourceCode, fakeRunner, mockFs as _mockFs, noop } from './helpers.js'
+
+const prepared = preparePatterns(patterns)
 
 function mockFs(files) { _mockFs(readFileSync, files) }
 function createManualRunner(config) {
@@ -187,5 +191,70 @@ describe('createManualRunner', () => {
       expect(result.totalSurvived).toBe(1)
       expect(result.totalTimedOut).toBe(0)
     })
+  })
+})
+
+describe('dryRun', () => {
+  it('outputs mutation names for each line', () => {
+    mockFs({ [resolve('src/a.js')]: sourceCode })
+    const lines = []
+    dryRun(resolve('src/a.js'), prepared, null, msg => lines.push(msg))
+
+    const mutationLines = lines.filter(l => /^\s+L\d+:/.test(l))
+    expect(mutationLines.length).toBeGreaterThan(0)
+    for (const line of mutationLines)
+      expect(line).toContain('=== → !==')
+  })
+})
+
+describe('runSingle', () => {
+  it('closes runner only after all mutations complete', async () => {
+    mockFs({ [resolve('src/a.js')]: sourceCode })
+    const events = []
+    const runner = {
+      run: vi.fn()
+        .mockImplementationOnce(async () => {
+          events.push('preflight')
+          return { passed: true }
+        })
+        .mockImplementationOnce(() => new Promise(resolve => {
+          setTimeout(() => {
+            events.push('mutation-complete')
+            resolve({ passed: false })
+          }, 10)
+        })),
+      close: vi.fn().mockImplementation(async () => {
+        events.push('close')
+      })
+    }
+
+    await runSingle({
+      sourceFile: resolve('src/a.js'),
+      prepared,
+      createRunner: vi.fn().mockResolvedValue(runner),
+      out: noop
+    })
+
+    expect(events.indexOf('mutation-complete')).toBeLessThan(events.indexOf('close'))
+  })
+
+  it('classifies non-timeout errors as killed, not timed out', async () => {
+    mockFs({ [resolve('src/a.js')]: sourceCode })
+    const runner = {
+      run: vi.fn()
+        .mockResolvedValueOnce({ passed: true })
+        .mockRejectedValueOnce(new Error('SIGTERM')),
+      close: vi.fn().mockResolvedValue(undefined)
+    }
+
+    const result = await runSingle({
+      sourceFile: resolve('src/a.js'),
+      prepared,
+      createRunner: vi.fn().mockResolvedValue(runner),
+      out: noop
+    })
+
+    expect(result.killed).toBe(1)
+    expect(result.timedOut).toBe(0)
   })
 })
