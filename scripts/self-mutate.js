@@ -22,18 +22,18 @@ import { javascript } from '../core/patterns.js'
 const ROOT = resolve(import.meta.dirname, '..')
 const TIMEOUT_MS = 30_000
 
-const SOURCE_DIRS = ['bin', 'cli', 'core', 'runners', 'scripts']
-const SOURCE_FILES = ['index.js', 'stryker.js']
+const EXCLUDED_DIRS = new Set(['node_modules', 'tests', 'coverage', 'docs'])
 
 function discoverTargets() {
-  const files = [...SOURCE_FILES]
-  for (const dir of SOURCE_DIRS) {
-    const entries = readdirSync(resolve(ROOT, dir), { recursive: true })
-    for (const entry of entries)
-      if (entry.endsWith('.js'))
-        files.push(`${dir}/${entry}`)
-  }
-  return files.sort()
+  return readdirSync(ROOT, { recursive: true })
+    .filter(isSourceFile)
+    .sort()
+}
+
+function isSourceFile(entry) {
+  return entry.endsWith('.js')
+    && !entry.endsWith('.config.js')
+    && !entry.split('/').some(segment => EXCLUDED_DIRS.has(segment))
 }
 
 export function main(args) {

@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 vi.mock('node:fs', () => ({
   readFileSync: vi.fn(),
   writeFileSync: vi.fn(),
-  readdirSync: vi.fn().mockReturnValue(['engine.js'])
+  readdirSync: vi.fn().mockReturnValue(['core/engine.js'])
 }))
 
 vi.mock('node:child_process', () => ({
