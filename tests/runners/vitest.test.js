@@ -604,5 +604,54 @@ describe('createVitestRunner', () => {
       expect(runDone).toBe(true)
       expect(result.passed).toBe(true)
     })
+
+    // Never-resolving promise guards: detect await removal mutations that
+    // flushMicrotasks misses due to dynamic import indirection.
+
+    it('createVitestRunner blocks until waitForTestRunEnd resolves', async () => {
+      const mock = createMockVitest()
+      mock.waitForTestRunEnd.mockReturnValue(new Promise(() => {}))
+      startVitest.mockResolvedValue(mock)
+
+      const result = await Promise.race([
+        createVitestRunner('src/a.js'),
+        new Promise(resolve => setTimeout(() => resolve('BLOCKED'), 50))
+      ])
+
+      expect(result).toBe('BLOCKED')
+    })
+
+    it('warm-to-cold fallback blocks until close resolves', async () => {
+      const warmMock = createMockVitest()
+      warmMock.state.getFiles.mockReturnValue([
+        { result: { state: 'fail' }, filepath: 'a.test.js' }
+      ])
+      warmMock.close.mockReturnValue(new Promise(() => {}))
+
+      const coldMock = createMockVitest()
+      startVitest
+        .mockResolvedValueOnce(warmMock)
+        .mockResolvedValue(coldMock)
+
+      const result = await Promise.race([
+        createVitestRunner('src/a.js'),
+        new Promise(resolve => setTimeout(() => resolve('BLOCKED'), 50))
+      ])
+
+      expect(result).toBe('BLOCKED')
+    })
+
+    it('warmRerunFailed blocks until runTestSpecifications resolves', async () => {
+      const mock = createMockVitest()
+      mock.runTestSpecifications.mockReturnValue(new Promise(() => {}))
+      startVitest.mockResolvedValue(mock)
+
+      const result = await Promise.race([
+        createVitestRunner('src/a.js'),
+        new Promise(resolve => setTimeout(() => resolve('BLOCKED'), 50))
+      ])
+
+      expect(result).toBe('BLOCKED')
+    })
   })
 })
