@@ -9,7 +9,6 @@ export * as patterns from './core/patterns.js'
 // Runner
 export { createVitestRunner } from './runners/vitest.js'
 export { createMutantPlugin } from './runners/mutagen-plugin.js'
-export { createWorkerHandler } from './core/worker.js'
 
 // CLI harness
 export { createManualRunner } from './cli/manual.js'

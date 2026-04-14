@@ -18,7 +18,6 @@ describe('public API (index.js)', () => {
     // Runner
     'createVitestRunner',
     'createMutantPlugin',
-    'createWorkerHandler',
 
     // CLI harness
     'createManualRunner',
