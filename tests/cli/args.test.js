@@ -109,6 +109,55 @@ describe('parseArgs', () => {
     })
   })
 
+  describe('--parallel flag', () => {
+    it('parses --parallel with a numeric value in --all mode', () => {
+      const result = parseArgs(['--all', '--parallel', '4'])
+      expect(result.parallel).toBe(4)
+    })
+
+    it('parses --parallel with a numeric value in --incremental mode', () => {
+      const result = parseArgs(['--incremental', '--parallel', '2'])
+      expect(result.parallel).toBe(2)
+    })
+
+    it('parses --parallel with a numeric value in source file mode', () => {
+      const result = parseArgs(['source.js', '--parallel', '8'])
+      expect(result.parallel).toBe(8)
+    })
+
+    it('returns true when --parallel is used without a value', () => {
+      const result = parseArgs(['--all', '--parallel'])
+      expect(result.parallel).toBe(true)
+    })
+
+    it('returns true when --parallel is followed by another flag', () => {
+      const result = parseArgs(['--all', '--parallel', '--json'])
+      expect(result.parallel).toBe(true)
+    })
+
+    it('returns error when --parallel value is non-numeric', () =>
+      expectErrorResult('--all', '--parallel', 'abc'))
+
+    it('returns error when --parallel value is negative', () =>
+      expectErrorResult('--all', '--parallel', '-1'))
+
+    it('accepts --parallel 0 as valid', () => {
+      const result = parseArgs(['--all', '--parallel', '0'])
+      expect(result.parallel).toBe(0)
+      expect(result).not.toHaveProperty('error')
+    })
+
+    it('accepts --parallel 1 as valid', () => {
+      const result = parseArgs(['--all', '--parallel', '1'])
+      expect(result.parallel).toBe(1)
+    })
+
+    it('returns undefined when --parallel is absent', () => {
+      const result = parseArgs(['--all'])
+      expect(result.parallel).toBeUndefined()
+    })
+  })
+
   describe('--timeout at index 0', () => {
     it('parses --timeout when it appears first in argv', () => {
       const result = parseArgs(['--timeout', '5000', '--incremental'])
