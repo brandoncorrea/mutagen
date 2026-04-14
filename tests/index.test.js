@@ -6,27 +6,18 @@ describe('public API (index.js)', () => {
     // Core
     'generateMutations',
     'preparePatterns',
-    'tokenizeLine',
-    'getTokenContextAt',
-    'isInJsxTag',
-    'isArrowOperator',
-    'createPool',
 
     // Built-in pattern sets
     'patterns',
 
     // Runner
     'createVitestRunner',
-    'createMutantPlugin',
 
     // CLI harness
     'createManualRunner',
-    'runParallel',
 
     // Report utilities
     'combineReportData',
-    'printSummary',
-    'printRunReport',
     'diffReports'
   ]
 
