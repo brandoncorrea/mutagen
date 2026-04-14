@@ -181,6 +181,31 @@ describe('createManualRunner', () => {
       expect(report.sourceHashes['src/a.js']).toBe(hash)
     })
 
+    it('does not update report when nothing changed and jsonOutput is false', async () => {
+      const src = resolve('src/a.js')
+      const hash = hashOf(sourceCode)
+
+      existsSync.mockReturnValue(true)
+      mockFs({
+        [src]: sourceCode,
+        [reportPath]: JSON.stringify({
+          files: {
+            'src/a.js': { mutants: [{ status: 'Killed' }] }
+          },
+          sourceHashes: { 'src/a.js': hash },
+          testHashes: {}
+        })
+      })
+
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js'], createRunner: vi.fn()
+      })
+      await manual.runIncremental(false, null)
+
+      const reportCalls = writeFileSync.mock.calls.filter(([p]) => p === reportPath)
+      expect(reportCalls).toHaveLength(0)
+    })
+
     it('invalidates sources with surviving mutations when test files change', async () => {
       const src = resolve('src/a.js')
       const testFile = resolve('test/a.test.js')
