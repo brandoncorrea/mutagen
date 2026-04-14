@@ -18,7 +18,7 @@ import { preparePatterns } from '../core/engine.js'
 import { HEADER_SEPARATOR, createReport, writeReportFile } from '../core/report-data.js'
 import { diffReports } from './diff.js'
 import { parseArgs } from './args.js'
-import { runSingle, dryRun } from './runner.js'
+import { runSingle, runParallel, dryRun } from './runner.js'
 import { runIncremental } from './incremental.js'
 
 /**
@@ -68,7 +68,7 @@ async function runBatch(ctx, jsonOutput, timeout, sourcesToRun) {
   out(`MUTAGEN — BATCH MODE`)
   out(`   Sources: ${filesToRun.length} file(s)\n`)
 
-  const result = await accumulateResults(filesToRun, { prepared, createRunner, timeout, out })
+  const result = await accumulateResults(filesToRun, { prepared, createRunner, timeout, parallel: ctx.parallel, out })
 
   if (jsonOutput)
     writeReport(out, reportDir, reportPath, result.fileResults)
@@ -78,7 +78,7 @@ async function runBatch(ctx, jsonOutput, timeout, sourcesToRun) {
   return result
 }
 
-async function accumulateResults(filesToRun, { prepared, createRunner, timeout, out }) {
+async function accumulateResults(filesToRun, { prepared, createRunner, timeout, parallel, out }) {
   let totalSurvived = 0
   let totalKilled = 0
   let totalTimedOut = 0
@@ -86,7 +86,10 @@ async function accumulateResults(filesToRun, { prepared, createRunner, timeout, 
   const fileResults = {}
 
   for (const source of filesToRun) {
-    const result = await runSingle({ sourceFile: resolve(source), prepared, createRunner, timeout, out })
+    const opts = { sourceFile: resolve(source), prepared, createRunner, timeout, out }
+    const result = parallel
+      ? await runParallel({ ...opts, workerCount: toWorkerCount(parallel) })
+      : await runSingle(opts)
     if (result.error) {
       failures++
     } else {
@@ -131,11 +134,14 @@ async function run(ctx, argv) {
     return runAllDryRun(ctx)
   if (parsed.dryRunMode)
     return dryRun(parsed.sourceFile, ctx.prepared, parsed.targetLine, ctx.out) && 0
+  const parallel = parsed.parallel
+  const runCtx = parallel ? { ...ctx, parallel } : ctx
+
   if (parsed.incrementalMode)
-    return runIncrementalMode(ctx, parsed.jsonOutput, timeout)
+    return runIncrementalMode(runCtx, parsed.jsonOutput, timeout)
   if (parsed.allMode)
-    return runBatchMode(ctx, parsed.jsonOutput, timeout)
-  return runSingleMode(ctx, parsed, timeout)
+    return runBatchMode(runCtx, parsed.jsonOutput, timeout)
+  return runSingleMode(runCtx, parsed, timeout)
 }
 
 function runAllDryRun({ sources, prepared, out }) {
@@ -159,13 +165,20 @@ async function runBatchMode(ctx, jsonOutput, timeout) {
 }
 
 async function runSingleMode(ctx, parsed, timeout) {
-  const { error, survived } = await runSingle({
+  const opts = {
     sourceFile: parsed.sourceFile,
     prepared: ctx.prepared,
     createRunner: ctx.createRunner,
     targetLine: parsed.targetLine,
     timeout,
     out: ctx.out
-  })
+  }
+  const { error, survived } = ctx.parallel
+    ? await runParallel({ ...opts, workerCount: toWorkerCount(ctx.parallel) })
+    : await runSingle(opts)
   return error || survived ? 1 : 0
+}
+
+function toWorkerCount(parallel) {
+  return typeof parallel === 'number' ? parallel : undefined
 }
