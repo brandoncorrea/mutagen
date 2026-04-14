@@ -10,6 +10,7 @@ describe('public API (index.js)', () => {
     'getTokenContextAt',
     'isInJsxTag',
     'isArrowOperator',
+    'createPool',
 
     // Built-in pattern sets
     'patterns',
