@@ -230,8 +230,8 @@ describe('runParallel', () => {
 
     // Only line 2 mutations should be dispatched
     const mutations = poolRun.mock.calls[0][0]
-    for (const m of mutations) {
-      expect(m.line).toBe(2)
+    for (const { line } of mutations) {
+      expect(line).toBe(2)
     }
   })
 

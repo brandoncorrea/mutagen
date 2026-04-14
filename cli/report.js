@@ -55,12 +55,12 @@ function writeScore(out, mutations, killed) {
 
 function writeSurvivors(out, mutations) {
   out(`\nSURVIVING MUTATIONS:`)
-  for (const mut of mutations)
-    writeMutation(out, mut)
+  for (const mutation of mutations)
+    writeMutation(out, mutation)
 }
 
-function writeMutation(out, mut) {
-  out(`\n  Line ${mut.line}: ${mut.name}`)
-  out(`  Original: ${mut.original}`)
-  out(`  Mutated:  ${mut.mutated}`)
+function writeMutation(out, { line, name, original, mutated }) {
+  out(`\n  Line ${line}: ${name}`)
+  out(`  Original: ${original}`)
+  out(`  Mutated:  ${mutated}`)
 }

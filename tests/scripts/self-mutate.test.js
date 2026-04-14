@@ -315,8 +315,8 @@ describe('main', () => {
       main(['--dry-run', '--json', 'core/engine.js'])
 
       const results = JSON.parse(stdout())
-      for (const r of results) {
-        expect(r.original.trim().startsWith('//')).toBe(false)
+      for (const { original } of results) {
+        expect(original.trim().startsWith('//')).toBe(false)
       }
     })
 
@@ -325,8 +325,8 @@ describe('main', () => {
       main(['--dry-run', '--json', 'core/engine.js'])
 
       const results = JSON.parse(stdout())
-      for (const r of results) {
-        expect(r.original.trim().startsWith('*')).toBe(false)
+      for (const { original } of results) {
+        expect(original.trim().startsWith('*')).toBe(false)
       }
     })
 
@@ -335,8 +335,8 @@ describe('main', () => {
       main(['--dry-run', '--json', 'core/engine.js'])
 
       const results = JSON.parse(stdout())
-      for (const r of results) {
-        expect(r.original.trim()).not.toBe('*/')
+      for (const { original } of results) {
+        expect(original.trim()).not.toBe('*/')
       }
     })
 
@@ -345,8 +345,8 @@ describe('main', () => {
       main(['--dry-run', '--json', 'core/engine.js'])
 
       const results = JSON.parse(stdout())
-      for (const r of results) {
-        expect(r.original).not.toContain('import.meta.url')
+      for (const { original } of results) {
+        expect(original).not.toContain('import.meta.url')
       }
     })
 
@@ -355,8 +355,8 @@ describe('main', () => {
       main(['--dry-run', '--json', 'core/engine.js'])
 
       const results = JSON.parse(stdout())
-      for (const r of results) {
-        expect(r.original).not.toContain('process.exit')
+      for (const { original } of results) {
+        expect(original).not.toContain('process.exit')
       }
     })
 

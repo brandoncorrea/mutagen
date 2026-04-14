@@ -216,12 +216,17 @@ describe('runSingle vs runParallel result determinism', () => {
     expect(parResult.jsonData).toHaveProperty('mutants')
     expect(seqResult.jsonData.path).toBe(parResult.jsonData.path)
 
+    const mutants = [
+      ...seqResult.jsonData.mutants,
+      ...parResult.jsonData.mutants
+    ]
+
     // Every mutant has required fields
-    for (const m of [...seqResult.jsonData.mutants, ...parResult.jsonData.mutants]) {
-      expect(m).toHaveProperty('id')
-      expect(m).toHaveProperty('mutatorName')
-      expect(m).toHaveProperty('status')
-      expect(m).toHaveProperty('location')
+    for (const mutant of mutants) {
+      expect(mutant).toHaveProperty('id')
+      expect(mutant).toHaveProperty('mutatorName')
+      expect(mutant).toHaveProperty('status')
+      expect(mutant).toHaveProperty('location')
     }
   })
 })

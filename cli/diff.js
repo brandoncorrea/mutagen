@@ -99,12 +99,12 @@ function computeFileDelta(beforeScores, afterScores, file) {
 function buildMutantMap(report) {
   const map = {}
   for (const [path, fileData] of Object.entries(report.files)) {
-    for (const m of fileData.mutants) {
-      const key = m.id || mutantKey(path, m)
+    for (const mutant of fileData.mutants) {
+      const key = mutant.id || mutantKey(path, mutant)
       map[key] = {
-        ...m,
+        ...mutant,
         file: path,
-        line: m.location?.start?.line || 0
+        line: mutant.location?.start?.line || 0
       }
     }
   }

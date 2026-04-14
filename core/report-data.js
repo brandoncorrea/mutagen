@@ -113,13 +113,13 @@ function deduplicateMutants(entries) {
   for (const [path, fileData] of entries) {
     if (!mergedFiles[path])
       mergedFiles[path] = { ...fileData, mutants: [] }
-    for (const mut of fileData.mutants) {
-      const key = mutantKey(path, mut)
+    for (const mutant of fileData.mutants) {
+      const key = mutantKey(path, mutant)
       if (seen.has(key)) {
         duplicates++
       } else {
         seen.add(key)
-        mergedFiles[path].mutants.push(mut)
+        mergedFiles[path].mutants.push(mutant)
       }
     }
   }

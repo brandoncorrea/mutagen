@@ -96,18 +96,27 @@ function previewMutations(sourceFile) {
 }
 
 function executeMutations(sourceFile) {
-  const mutations = loadMutations(sourceFile)
   const results = []
-  for (const mutation of mutations) {
+  for (const mutation of loadMutations(sourceFile)) {
     const result = runMutation(sourceFile, mutation)
-    const status = result.passed ? 'Survived' : result.timedOut ? 'Timeout' : 'Killed'
+    const status = resultToStatus(result)
     results.push(toResult(sourceFile, mutation, status))
-
-    const icon = status === 'Killed' ? '.' : status === 'Timeout' ? 'T' : '!'
-    process.stderr.write(icon)
+    process.stderr.write(statusToIcon(status))
   }
   process.stderr.write('\n')
   return results
+}
+
+function resultToStatus(result) {
+  return result.passed ? 'Survived'
+    : result.timedOut ? 'Timeout'
+    : 'Killed'
+}
+
+function statusToIcon(status) {
+  return status === 'Killed' ? '.'
+    : status === 'Timeout' ? 'T'
+    : '!'
 }
 
 function loadMutations(sourceFile) {
@@ -142,8 +151,10 @@ function runTests() {
     })
     return { passed: true }
   } catch (err) {
-    if (err.killed) return { passed: false, timedOut: true }
-    return { passed: false, timedOut: false }
+    return {
+      passed: false,
+      timedOut: Boolean(err.killed)
+    }
   }
 }
 
@@ -181,7 +192,7 @@ function printSummary(allResults) {
   const killed = allResults.filter(r => r.status === 'Killed')
   const timedOut = allResults.filter(r => r.status === 'Timeout')
   const total = allResults.length
-  const score = total > 0 ? ((killed.length + timedOut.length) / total * 100).toFixed(1) : 0
+  const score = total ? ((killed.length + timedOut.length) / total * 100).toFixed(1) : 0
 
   console.log('\n=== SELF-MUTATION REPORT ===\n')
   console.log(`Total mutations: ${total}`)
@@ -190,28 +201,28 @@ function printSummary(allResults) {
   console.log(`Timed out: ${timedOut.length}`)
   console.log(`Score: ${score}%`)
 
-  if (survived.length > 0)
-    printSurvivors(survived)
+  if (survived.length) {
+    console.log('\n--- SURVIVORS ---\n')
+    survived.forEach(printSurvivor)
+  }
 }
 
-function printSurvivors(survived) {
-  console.log('\n--- SURVIVORS ---\n')
-  for (const r of survived) {
-    console.log(`${r.file}:${r.line} — ${r.name}`)
-    console.log(`  original: ${r.original}`)
-    console.log(`  mutated:  ${r.mutated}`)
-    console.log()
-  }
+function printSurvivor({ file, line, name, original, mutated }) {
+  console.log(`${file}:${line} — ${name}`)
+  console.log(`  original: ${original}`)
+  console.log(`  mutated:  ${mutated}`)
+  console.log()
 }
 
 function printPerFileScores(allResults) {
   const byFile = new Map()
-  for (const r of allResults) {
-    if (!byFile.has(r.file)) byFile.set(r.file, { killed: 0, survived: 0, timedOut: 0, total: 0 })
-    const counts = byFile.get(r.file)
+  for (const { file, status } of allResults) {
+    if (!byFile.has(file))
+      byFile.set(file, { killed: 0, survived: 0, timedOut: 0, total: 0 })
+    const counts = byFile.get(file)
     counts.total++
-    if (r.status === 'Killed') counts.killed++
-    else if (r.status === 'Survived') counts.survived++
+    if (status === 'Killed') counts.killed++
+    else if (status === 'Survived') counts.survived++
     else counts.timedOut++
   }
 
