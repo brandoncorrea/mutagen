@@ -5,9 +5,9 @@
 import { resolve } from 'node:path'
 
 const usageMessage = `\
-Usage: <script> <source-file> [--line N] [--json] [--dry-run] [--timeout N]
-       <script> --all [--json] [--dry-run] [--timeout N]
-       <script> --incremental [--json] [--timeout N]`
+Usage: <script> <source-file> [--line N] [--json] [--dry-run] [--timeout N] [--parallel [N]]
+       <script> --all [--json] [--dry-run] [--timeout N] [--parallel [N]]
+       <script> --incremental [--json] [--timeout N] [--parallel [N]]`
 
 const diffMessage = 'Usage: <script> --diff <before.json> <after.json>'
 
@@ -24,9 +24,12 @@ export function parseArgs(argv = process.argv.slice(2)) {
 function incrementalOptions(argv) {
   const timeout = parseTimeout(argv)
   if (timeout?.error) return timeout
+  const parallel = parseParallel(argv)
+  if (parallel?.error) return parallel
   return {
     incrementalMode: true,
     timeout,
+    parallel,
     jsonOutput: hasFlag(argv, '--json')
   }
 }
@@ -34,9 +37,12 @@ function incrementalOptions(argv) {
 function allOptions(argv) {
   const timeout = parseTimeout(argv)
   if (timeout?.error) return timeout
+  const parallel = parseParallel(argv)
+  if (parallel?.error) return parallel
   return {
     allMode: true,
     timeout,
+    parallel,
     jsonOutput: hasFlag(argv, '--json'),
     dryRunMode: hasFlag(argv, '--dry-run')
   }
@@ -56,7 +62,7 @@ function diffOptions(argv) {
 function sourceFileOptions(argv) {
   const opts = argsToOptions(argv)
   if (opts.error) return opts
-  const { targetLine, timeout, filtered } = opts
+  const { targetLine, timeout, parallel, filtered } = opts
 
   if (!filtered.length)
     return { error: usageMessage }
@@ -66,13 +72,14 @@ function sourceFileOptions(argv) {
     targetLine,
     jsonOutput: hasFlag(argv, '--json'),
     dryRunMode: hasFlag(argv, '--dry-run'),
-    timeout
+    timeout,
+    parallel
   }
 }
 
 function argsToOptions(args) {
   const filtered = []
-  let targetLine, timeout
+  let targetLine, timeout, parallel
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]
     if (arg === '--line') {
@@ -83,11 +90,31 @@ function argsToOptions(args) {
       timeout = Number(args[++i])
       if (isInvalidNumber(timeout))
         return { error: '--timeout requires a numeric value' }
+    } else if (arg === '--parallel') {
+      parallel = parseParallelValue(args, i)
+      if (parallel?.error) return parallel
+      if (typeof parallel === 'number') i++
     } else if (isPositionalArg(arg)) {
       filtered.push(arg)
     }
   }
-  return { targetLine, timeout, filtered }
+  return { targetLine, timeout, parallel, filtered }
+}
+
+function parseParallel(args) {
+  const idx = args.indexOf('--parallel')
+  if (idx < 0) return
+  return parseParallelValue(args, idx)
+}
+
+function parseParallelValue(args, idx) {
+  const next = args[idx + 1]
+  if (next === undefined || next.startsWith('--'))
+    return true
+  const value = Number(next)
+  if (isInvalidNumber(value))
+    return { error: '--parallel requires a numeric value' }
+  return value
 }
 
 function parseTimeout(args) {
@@ -107,7 +134,7 @@ function isInvalidNumber(value) {
   return Number.isNaN(value) || value < 0
 }
 
-const FLAG_OPTIONS = new Set(['--json', '--dry-run'])
+const FLAG_OPTIONS = new Set(['--json', '--dry-run', '--parallel'])
 function isPositionalArg(arg) {
   return !FLAG_OPTIONS.has(arg)
 }
