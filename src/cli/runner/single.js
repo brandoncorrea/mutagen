@@ -14,7 +14,7 @@ import { printRunReport } from '../report.js'
 import { runPreflightTests, reportMutation, printBanner } from './shared.js'
 
 export async function runSingle(options) {
-  const { sourceFile, mutationConfig, createRunner, targetLine, timeout, survivorsOnly, out = console.log } = options
+  const { sourceFile, mutationConfig, createRunner, targetLine, timeout, survivorsOnly, retestMutations, out = console.log } = options
   const original = readFileSync(sourceFile, 'utf-8')
   const worktree = createWorktree(process.cwd())
 
@@ -23,7 +23,7 @@ export async function runSingle(options) {
   const tempSourceFile = worktree.resolve(sourceFile)
   const runner = await createRunner(tempSourceFile, { root: worktree.root })
 
-  const opts = { out, runner, timeout, sourceFile, tempSourceFile, targetLine, original, mutationConfig, survivorsOnly, worktree }
+  const opts = { out, runner, timeout, sourceFile, tempSourceFile, targetLine, original, mutationConfig, survivorsOnly, retestMutations, worktree }
 
   try {
     return await runMutations(opts)
@@ -34,12 +34,12 @@ export async function runSingle(options) {
 }
 
 async function runMutations(opts) {
-  const { out, runner, sourceFile, targetLine, original, mutationConfig, survivorsOnly } = opts
+  const { out, runner, sourceFile, targetLine, original, mutationConfig, survivorsOnly, retestMutations } = opts
   const preflight = await runPreflightTests(out, runner)
   if (preflight.error) return preflight
   out(`Tests pass on original source. Beginning mutations.\n`)
 
-  const mutations = generateMutations(original, mutationConfig, targetLine)
+  const mutations = retestMutations || generateMutations(original, mutationConfig, targetLine)
   out(`Found ${mutations.length} mutation(s) to run.\n`)
 
   const outcomes = { killed: [], survived: [], timedOut: [] }

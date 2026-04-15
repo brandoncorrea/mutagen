@@ -7,14 +7,17 @@ import { resolve } from 'node:path'
 const usageMessage = `\
 Usage: <script> <source-file> [--line N] [--json [path]] [--dry-run] [--timeout N] [--parallel [N]] [--quiet] [--survivors-only] [--min-score N]
        <script> --all [--json [path]] [--dry-run] [--timeout N] [--parallel [N]] [--quiet] [--survivors-only] [--min-score N]
-       <script> --incremental [--json [path]] [--timeout N] [--parallel [N]] [--quiet] [--survivors-only] [--min-score N]`
+       <script> --incremental [--json [path]] [--timeout N] [--parallel [N]] [--quiet] [--survivors-only] [--min-score N]
+       <script> --retest <report.json> [--json [path]] [--timeout N] [--parallel [N]] [--quiet]`
 
 const diffMessage = 'Usage: <script> --diff <before.json> <after.json> [--json]'
+const retestMessage = 'Usage: <script> --retest <report.json> [--json [path]] [--timeout N] [--parallel [N]] [--quiet]'
 
 export function parseArgs(argv = process.argv.slice(2)) {
   return argv.includes('--incremental') ? incrementalOptions(argv)
     : argv.includes('--all') ? allOptions(argv)
     : argv.includes('--diff') ? diffOptions(argv)
+    : argv.includes('--retest') ? retestOptions(argv)
     : sourceFileOptions(argv)
 }
 
@@ -64,6 +67,25 @@ function diffOptions(argv) {
     beforeFile: resolve(argv[diffIdx + 1]),
     afterFile: resolve(argv[diffIdx + 2]),
     jsonOutput: parseJsonOutput(argv)
+  }
+}
+
+function retestOptions(argv) {
+  const idx = argv.indexOf('--retest')
+  const next = argv[idx + 1]
+  if (!next || next.startsWith('--'))
+    return { error: retestMessage }
+  const timeout = parseTimeout(argv)
+  if (timeout?.error) return timeout
+  const parallel = parseParallel(argv)
+  if (parallel?.error) return parallel
+  return {
+    retestMode: true,
+    retestReport: resolve(next),
+    timeout,
+    parallel,
+    jsonOutput: parseJsonOutput(argv),
+    quiet: hasFlag(argv, '--quiet')
   }
 }
 

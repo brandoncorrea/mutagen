@@ -23,6 +23,7 @@ export async function runParallel(options) {
     targetLine,
     timeout,
     survivorsOnly,
+    retestMutations,
     workerCount = DEFAULT_WORKER_COUNT,
     out = console.log
   } = options
@@ -38,6 +39,7 @@ export async function runParallel(options) {
     targetLine,
     timeout,
     survivorsOnly,
+    retestMutations,
     workerCount,
     original,
     out
@@ -51,13 +53,13 @@ export async function runParallel(options) {
 }
 
 async function runAfterPreflight(preflightRunner, options) {
-  const { sourceFile, mutationConfig, createRunner, targetLine, timeout, survivorsOnly, workerCount, original, out } = options
+  const { sourceFile, mutationConfig, createRunner, targetLine, timeout, survivorsOnly, retestMutations, workerCount, original, out } = options
 
   const preflight = await runPreflightTests(out, preflightRunner)
   if (preflight.error) return preflight
   out(`Tests pass on original source. Beginning mutations.\n`)
 
-  const mutations = generateMutations(original, mutationConfig, targetLine)
+  const mutations = retestMutations || generateMutations(original, mutationConfig, targetLine)
   out(`Found ${mutations.length} mutation(s) to run.\n`)
 
   return await executeWithPool(mutations, { sourceFile, createRunner, workerCount, timeout, survivorsOnly, out })

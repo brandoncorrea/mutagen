@@ -21,6 +21,7 @@ import { diffReports } from './diff.js'
 import { parseArgs } from './args.js'
 import { runSingle, runParallel, dryRun } from './runner/index.js'
 import { runIncremental } from './incremental.js'
+import { runRetest } from './retest.js'
 import { formatQuietSummary } from './report.js'
 
 /**
@@ -128,6 +129,8 @@ async function run(ctx, argv) {
 }
 
 async function getRunResults(parsed, pCtx, timeout) {
+  if (parsed.retestMode)
+    return await runRetestMode(pCtx, { ...parsed, timeout })
   if (parsed.incrementalMode)
     return await runIncrementalMode(pCtx, parsed.jsonOutput, timeout)
   if (parsed.allMode)
@@ -138,6 +141,10 @@ async function getRunResults(parsed, pCtx, timeout) {
 function runDiffMode(ctx, parsed) {
   const result = diffReports(parsed.beforeFile, parsed.afterFile, ctx.out, parsed.jsonOutput)
   return !result || result.regressions ? 1 : 0
+}
+
+async function runRetestMode(ctx, parsed) {
+  return await runRetest(ctx, parsed)
 }
 
 function runAllDryRun({ sources, mutationConfig, out }) {
