@@ -6,8 +6,8 @@ import { resolve } from 'node:path'
 
 const usageMessage = `\
 Usage: <script> <source-file> [--line N] [--json [path]] [--dry-run] [--timeout N] [--parallel [N]] [--quiet] [--survivors-only] [--min-score N]
-       <script> --all [--json [path]] [--dry-run] [--timeout N] [--parallel [N]] [--quiet] [--survivors-only] [--min-score N]
-       <script> --incremental [--json [path]] [--timeout N] [--parallel [N]] [--quiet] [--survivors-only] [--min-score N]
+       <script> --all [--changed] [--json [path]] [--dry-run] [--timeout N] [--parallel [N]] [--quiet] [--survivors-only] [--min-score N]
+       <script> --incremental [--changed] [--json [path]] [--timeout N] [--parallel [N]] [--quiet] [--survivors-only] [--min-score N]
        <script> --retest <report.json> [--json [path]] [--timeout N] [--parallel [N]] [--quiet]`
 
 const diffMessage = 'Usage: <script> --diff <before.json> <after.json> [--json]'
@@ -35,6 +35,7 @@ function incrementalOptions(argv) {
     jsonOutput: parseJsonOutput(argv),
     quiet: hasFlag(argv, '--quiet'),
     survivorsOnly: hasFlag(argv, '--survivors-only'),
+    changed: hasFlag(argv, '--changed'),
     minScore
   }
 }
@@ -54,6 +55,7 @@ function allOptions(argv) {
     dryRunMode: hasFlag(argv, '--dry-run'),
     quiet: hasFlag(argv, '--quiet'),
     survivorsOnly: hasFlag(argv, '--survivors-only'),
+    changed: hasFlag(argv, '--changed'),
     minScore
   }
 }
@@ -192,7 +194,7 @@ function isInvalidNumber(value) {
   return Number.isNaN(value) || value < 0
 }
 
-const FLAG_OPTIONS = new Set(['--json', '--dry-run', '--parallel', '--quiet', '--survivors-only', '--min-score'])
+const FLAG_OPTIONS = new Set(['--json', '--dry-run', '--parallel', '--quiet', '--survivors-only', '--min-score', '--changed'])
 function isPositionalArg(arg) {
   return !FLAG_OPTIONS.has(arg)
 }
