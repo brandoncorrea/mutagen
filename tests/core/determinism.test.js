@@ -26,8 +26,7 @@ function deterministicRunner() {
       if (currentSource?.includes('survive'))
         return Promise.resolve({ passed: true, killedBy: [] })
       if (currentSource?.includes('timeout'))
-        return new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Mutation timed out after 100ms')), 5))
+        return Promise.reject(new Error('Mutation timed out after 100ms'))
       return Promise.resolve({ passed: false, killedBy: ['test.js'] })
     }),
     close: vi.fn().mockResolvedValue(),
