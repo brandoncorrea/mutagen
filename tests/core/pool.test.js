@@ -253,6 +253,15 @@ describe('createPool', () => {
       expect(runner2.close).toHaveBeenCalled()
     })
 
+    it('cleanupAllPools swallows runner.close() errors', async () => {
+      const runner = fakeRunner()
+      runner.close.mockRejectedValue(new Error('close failed'))
+      const pool = createPool({ workerCount: 1, createRunner: vi.fn().mockResolvedValue(runner) })
+      await pool.run([fakeMutation()])
+
+      await expect(_cleanupAllPools()).resolves.not.toThrow()
+    })
+
     it('cleanupAllPools is idempotent', async () => {
       const runner = fakeRunner()
       const pool = createPool({ workerCount: 1, createRunner: vi.fn().mockResolvedValue(runner) })
@@ -271,6 +280,42 @@ describe('createPool', () => {
       await _cleanupAllPools()
 
       expect(process.listenerCount('SIGTERM')).toBe(termBefore)
+    })
+
+    it('onExit handler synchronously closes runners', async () => {
+      const runner = fakeRunner()
+      const pool = createPool({ workerCount: 1, createRunner: vi.fn().mockResolvedValue(runner) })
+      await pool.run([fakeMutation()])
+
+      process.emit('exit', 0)
+
+      expect(runner.close).toHaveBeenCalled()
+    })
+
+    it('onExit swallows runner.close() errors', async () => {
+      const runner = fakeRunner()
+      runner.close.mockImplementation(() => { throw new Error('close failed') })
+      const pool = createPool({ workerCount: 1, createRunner: vi.fn().mockResolvedValue(runner) })
+      await pool.run([fakeMutation()])
+
+      expect(() => process.emit('exit', 0)).not.toThrow()
+    })
+
+    it('onSignal handler cleans up pools and re-raises signal', async () => {
+      const runner = fakeRunner()
+      const pool = createPool({ workerCount: 1, createRunner: vi.fn().mockResolvedValue(runner) })
+      await pool.run([fakeMutation()])
+
+      const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => {})
+
+      // Get the registered handler and call it directly (V8 doesn't
+      // instrument async functions invoked via process.emit)
+      const handler = process.listeners('SIGTERM').pop()
+      await handler('SIGTERM')
+
+      expect(runner.close).toHaveBeenCalled()
+      expect(killSpy).toHaveBeenCalledWith(process.pid, 'SIGTERM')
+      killSpy.mockRestore()
     })
   })
 

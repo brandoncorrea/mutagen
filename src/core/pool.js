@@ -17,21 +17,17 @@ import { withTimeout } from './timeout.js'
 const activePools = new Set()
 let handlersInstalled = false
 
-function onSignal(signal) {
-  cleanupAllPools().finally(() => {
-    removeSignalHandlers()
-    process.kill(process.pid, signal)
-  })
+async function onSignal(signal) {
+  await cleanupAllPools()
+  removeSignalHandlers()
+  process.kill(process.pid, signal)
 }
 
 function onExit() {
   for (const pool of activePools) {
-    if (!pool.closed) {
-      pool.closed = true
-      for (const r of pool.runners) {
-        try { r.close() } catch {}
-      }
-    }
+    pool.closed = true
+    for (const r of pool.runners)
+      try { r.close() } catch {}
   }
   activePools.clear()
 }
