@@ -142,3 +142,41 @@ export const javascript = [
   // --- Property access mutations ---
   { pattern: /\.length\b/g, replacement: '.length + 1', name: '.length → .length + 1', guard: /['"`]/ }
 ]
+
+/**
+ * TypeScript/JSX-specific mutation patterns.
+ * These target TS syntax features: type assertions, access modifiers,
+ * readonly, generics, interface optionality, enums, and type guards.
+ */
+export const typescript = [
+  // --- Type assertion removal ---
+  { pattern: / as \w+/g, replacement: '', name: 'as Type → (removed)' },
+
+  // --- Non-null assertion removal ---
+  { pattern: /(\w)!(?=[.;\s)\],}]|$)/g, replacement: '$1', name: 'x! → x' },
+
+  // --- Readonly removal ---
+  { pattern: /\breadonly /g, replacement: '', name: 'readonly → (removed)' },
+
+  // --- Enum member value swap ---
+  { pattern: /= 0,/g, replacement: '= 1,', name: '= 0 → = 1 (enum)' },
+  { pattern: /= 1,/g, replacement: '= 0,', name: '= 1 → = 0 (enum)' },
+
+  // --- Generic constraint removal ---
+  // Matches <T extends Type> and removes the constraint, preserving the angle brackets.
+  // Only works for single-param generics; complex cases need AST.
+  { pattern: /<(\w+) extends \w+>/g, replacement: '<$1>', name: 'extends constraint → (removed)' },
+
+  // --- Interface optionality toggle ---
+  { pattern: /(\w)\?: /g, replacement: '$1: ', name: 'prop? → prop (required)' },
+
+  // --- Access modifier swap ---
+  { pattern: /\bprivate /g, replacement: 'public ', name: 'private → public' },
+  { pattern: /\bprotected /g, replacement: 'public ', name: 'protected → public' },
+
+  // --- Type guard negation ---
+  { pattern: / is \w+ \{/g, replacement: ' is never {', name: 'is Type → is never' },
+
+  // --- Definite assignment removal ---
+  { pattern: /(\w)!:/g, replacement: '$1:', name: 'x!: → x:' },
+]
