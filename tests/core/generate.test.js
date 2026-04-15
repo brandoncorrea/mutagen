@@ -115,4 +115,35 @@ describe('prepareMutationConfig', () => {
     expect(config.mutators).toEqual([])
     expect(config.prepared).toEqual([])
   })
+
+  it('passes through skipNodes', () => {
+    const skipNodes = [{ type: 'IfStatement' }]
+    const config = prepareMutationConfig({ skipNodes })
+    expect(config.skipNodes).toEqual(skipNodes)
+  })
+
+  it('defaults skipNodes to empty array', () => {
+    const config = prepareMutationConfig({})
+    expect(config.skipNodes).toEqual([])
+  })
+})
+
+describe('generateMutations with skipNodes', () => {
+  it('applies skipNodes to AST-generated mutations', () => {
+    const config = prepareMutationConfig({
+      mutators: [equalityMutator],
+      skipNodes: [{ type: 'IfStatement' }]
+    })
+    const mutations = generateMutations('if (a === b) {}', config)
+    expect(mutations).toEqual([])
+  })
+
+  it('does not skip mutations outside of matching nodes', () => {
+    const config = prepareMutationConfig({
+      mutators: [equalityMutator],
+      skipNodes: [{ type: 'ForStatement' }]
+    })
+    const mutations = generateMutations('if (a === b) {}', config)
+    expect(mutations).toHaveLength(1)
+  })
 })

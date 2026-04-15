@@ -60,7 +60,7 @@ export function createManualRunner(config) {
     : include ? resolveGlobs({ include, exclude, cwd })
     : []
 
-  const mutationConfig = prepareMutationConfig({ mutators, patterns })
+  const mutationConfig = prepareMutationConfig({ mutators, patterns, skipNodes: config.skipNodes })
   const reportPath = `${reportDir}/${reportFile}`
 
   const ctx = {

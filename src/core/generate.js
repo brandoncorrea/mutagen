@@ -25,7 +25,7 @@ export function generateMutations(source, config, targetLine) {
   const mutations = []
 
   if (config.mutators?.length)
-    mutations.push(...astGenerate(source, config.mutators, targetLine))
+    mutations.push(...astGenerate(source, config.mutators, targetLine, config.skipNodes))
 
   if (config.prepared?.length)
     mutations.push(...regexGenerate(source, config.prepared, targetLine))
@@ -41,9 +41,10 @@ export function generateMutations(source, config, targetLine) {
  * @param {Array} [options.patterns] - regex patterns ({ pattern, replacement, name, ... })
  * @returns {Object} config for generateMutations
  */
-export function prepareMutationConfig({ mutators, patterns } = {}) {
+export function prepareMutationConfig({ mutators, patterns, skipNodes } = {}) {
   return {
     mutators: mutators || [],
-    prepared: patterns?.length ? preparePatterns(patterns) : []
+    prepared: patterns?.length ? preparePatterns(patterns) : [],
+    skipNodes: skipNodes || []
   }
 }
