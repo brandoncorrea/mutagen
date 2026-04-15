@@ -38,6 +38,32 @@ beforeEach(() => {
   createWorktree.mockReturnValue(fakeWorktree())
 })
 
+describe('--version flag', () => {
+  it('prints version from package.json and exits 0', async () => {
+    const lines = []
+    const code = await run(['--version'], { out: msg => lines.push(msg), err: noop })
+    expect(code).toBe(0)
+    expect(lines).toHaveLength(1)
+    expect(lines[0]).toMatch(/^\d+\.\d+\.\d+/)
+  })
+
+  it('prints version for -v shorthand', async () => {
+    const lines = []
+    const code = await run(['-v'], { out: msg => lines.push(msg), err: noop })
+    expect(code).toBe(0)
+    expect(lines[0]).toMatch(/^\d+\.\d+\.\d+/)
+  })
+
+  it('does not load config when --version is passed', async () => {
+    const code = await run(['--version'], {
+      out: noop,
+      err: noop,
+      configPath: '/nonexistent/mutagen.config.js'
+    })
+    expect(code).toBe(0)
+  })
+})
+
 describe('bin/mutagen CLI', () => {
   it('resolves mutagen.config.js from cwd when no configPath given', async () => {
     const sourceCode = 'if (a === b) {}'
