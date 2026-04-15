@@ -7,8 +7,11 @@
  * itself, not on scheduling order.
  */
 
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { createPool } from '../../src/core/pool.js'
+
+beforeEach(() => vi.useFakeTimers())
+afterEach(() => vi.useRealTimers())
 
 /**
  * Build a runner whose outcome is determined by the mutation source content.
