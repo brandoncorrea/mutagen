@@ -213,6 +213,34 @@ describe('parseArgs', () => {
     })
   })
 
+  describe('--quiet flag', () => {
+    it('parses --quiet in --all mode', () => {
+      const result = parseArgs(['--all', '--quiet'])
+      expect(result.quiet).toBe(true)
+    })
+
+    it('parses --quiet in --incremental mode', () => {
+      const result = parseArgs(['--incremental', '--quiet'])
+      expect(result.quiet).toBe(true)
+    })
+
+    it('parses --quiet in source file mode', () => {
+      const result = parseArgs(['source.js', '--quiet'])
+      expect(result.quiet).toBe(true)
+    })
+
+    it('defaults quiet to false when absent', () => {
+      const result = parseArgs(['--all'])
+      expect(result.quiet).toBeFalsy()
+    })
+
+    it('combines with --json', () => {
+      const result = parseArgs(['--all', '--quiet', '--json'])
+      expect(result.quiet).toBe(true)
+      expect(result.jsonOutput).toBe(true)
+    })
+  })
+
   describe('--timeout at index 0', () => {
     it('parses --timeout when it appears first in argv', () => {
       const result = parseArgs(['--timeout', '5000', '--incremental'])

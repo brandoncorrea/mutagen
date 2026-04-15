@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { printRunReport, printSummary } from '../../cli/report.js'
+import { printRunReport, printSummary, formatQuietSummary } from '../../cli/report.js'
 
 describe('printSummary', () => {
   it('prints file count, statuses, and mutation score', () => {
@@ -45,6 +45,44 @@ describe('printSummary', () => {
 
     const output = lines.join('\n')
     expect(output).toContain('50.0%')
+  })
+})
+
+describe('formatQuietSummary', () => {
+  it('formats single-line score summary', () => {
+    const result = formatQuietSummary({
+      killed: 624, survived: 85, timedOut: 0, fileCount: 24
+    })
+    expect(result).toBe('Score: 88.0% (624/709) | 85 survivors | 24 files')
+  })
+
+  it('counts timed-out mutations as killed', () => {
+    const result = formatQuietSummary({
+      killed: 8, survived: 2, timedOut: 2, fileCount: 1
+    })
+    // killed+timedOut=10, total=12, score=10/12*100=83.3%
+    expect(result).toBe('Score: 83.3% (10/12) | 2 survivors | 1 files')
+  })
+
+  it('shows 100.0% when all killed', () => {
+    const result = formatQuietSummary({
+      killed: 50, survived: 0, timedOut: 0, fileCount: 3
+    })
+    expect(result).toBe('Score: 100.0% (50/50) | 0 survivors | 3 files')
+  })
+
+  it('shows 100.0% when no mutations exist', () => {
+    const result = formatQuietSummary({
+      killed: 0, survived: 0, timedOut: 0, fileCount: 1
+    })
+    expect(result).toBe('Score: 100.0% (0/0) | 0 survivors | 1 files')
+  })
+
+  it('shows 0.0% when none killed', () => {
+    const result = formatQuietSummary({
+      killed: 0, survived: 10, timedOut: 0, fileCount: 2
+    })
+    expect(result).toBe('Score: 0.0% (0/10) | 10 survivors | 2 files')
   })
 })
 

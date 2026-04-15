@@ -21,6 +21,7 @@ import { diffReports } from './diff.js'
 import { parseArgs } from './args.js'
 import { runSingle, runParallel, dryRun } from './runner/index.js'
 import { runIncremental } from './incremental.js'
+import { formatQuietSummary } from './report.js'
 
 /**
  * Create a manual mutation runner with project-specific config.
@@ -100,23 +101,32 @@ async function run(ctx, argv) {
     return 1
   }
 
+  const quiet = parsed.quiet
+  const runCtx = quiet ? { ...ctx, out: () => {} } : ctx
   const timeout = parsed.timeout || ctx.configTimeout
 
   if (parsed.diffMode)
-    return runDiffMode(ctx, parsed)
+    return runDiffMode(runCtx, parsed)
   if (parsed.dryRunMode && parsed.allMode)
-    return runAllDryRun(ctx)
+    return runAllDryRun(runCtx)
   if (parsed.dryRunMode)
-    return dryRun(parsed.sourceFile, ctx.mutationConfig, parsed.targetLine, ctx.out) && 0
+    return dryRun(parsed.sourceFile, runCtx.mutationConfig, parsed.targetLine, runCtx.out) && 0
 
   const parallel = parsed.parallel
-  const runCtx = parallel ? { ...ctx, parallel } : ctx
+  const pCtx = parallel ? { ...runCtx, parallel } : runCtx
 
+  let result
   if (parsed.incrementalMode)
-    return runIncrementalMode(runCtx, parsed.jsonOutput, timeout)
-  if (parsed.allMode)
-    return runBatchMode(runCtx, parsed.jsonOutput, timeout)
-  return runSingleMode(runCtx, parsed, timeout)
+    result = await runIncrementalMode(pCtx, parsed.jsonOutput, timeout)
+  else if (parsed.allMode)
+    result = await runBatchMode(pCtx, parsed.jsonOutput, timeout)
+  else
+    result = await runSingleMode(pCtx, parsed, timeout)
+
+  if (quiet && result.stats)
+    process.stderr.write(formatQuietSummary(result.stats) + '\n')
+
+  return result.exitCode
 }
 
 function runDiffMode(ctx, parsed) {
@@ -135,13 +145,22 @@ function runAllDryRun({ sources, mutationConfig, out }) {
 async function runIncrementalMode(ctx, jsonOutput, timeout) {
   const { sources, testSources, reportDir, reportPath, out } = ctx
   const incrementalConfig = { sources, testSources, reportDir, reportPath, runBatch: runBatch.bind(null, ctx) }
-  const { totalSurvived, failures } = await runIncremental(incrementalConfig, jsonOutput, timeout, out)
-  return (totalSurvived + failures) ? 1 : 0
+  const { totalSurvived, totalKilled = 0, failures } = await runIncremental(incrementalConfig, jsonOutput, timeout, out)
+  const exitCode = (totalSurvived + failures) ? 1 : 0
+  return {
+    exitCode,
+    stats: { killed: totalKilled, survived: totalSurvived, timedOut: 0, fileCount: sources.length }
+  }
 }
 
 async function runBatchMode(ctx, jsonOutput, timeout) {
-  const { totalSurvived, failures } = await runBatch(ctx, jsonOutput, timeout)
-  return (totalSurvived + failures) ? 1 : 0
+  const result = await runBatch(ctx, jsonOutput, timeout)
+  const { totalSurvived, totalKilled, totalTimedOut, failures, fileResults } = result
+  const exitCode = (totalSurvived + failures) ? 1 : 0
+  return {
+    exitCode,
+    stats: { killed: totalKilled, survived: totalSurvived, timedOut: totalTimedOut, fileCount: Object.keys(fileResults).length }
+  }
 }
 
 async function runSingleMode(ctx, parsed, timeout) {
@@ -153,10 +172,14 @@ async function runSingleMode(ctx, parsed, timeout) {
     timeout,
     out: ctx.out
   }
-  const { error, survived } = ctx.parallel
+  const result = ctx.parallel
     ? await runParallel({ ...opts, workerCount: typeof ctx.parallel === 'number' ? ctx.parallel : undefined })
     : await runSingle(opts)
-  return error || survived ? 1 : 0
+  const exitCode = result.error || result.survived ? 1 : 0
+  return {
+    exitCode,
+    stats: { killed: result.killed || 0, survived: result.survived || 0, timedOut: result.timedOut || 0, fileCount: 1 }
+  }
 }
 
 async function runBatch(ctx, jsonOutput, timeout, sourcesToRun) {

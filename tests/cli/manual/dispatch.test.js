@@ -420,6 +420,79 @@ describe('createManualRunner', () => {
       exitSpy.mockRestore()
     })
 
+    it('--quiet suppresses normal output and writes summary to stderr', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: true } // survived
+      ])
+
+      const lines = []
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+
+      const manual = _createManualRunner({
+        patterns, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner),
+        out: msg => lines.push(msg)
+      })
+      const code = await manual.run(['src/a.js', '--quiet'])
+
+      // Normal output should be suppressed
+      expect(lines).toEqual([])
+      // Summary should go to stderr
+      expect(stderrSpy).toHaveBeenCalled()
+      const stderrOutput = stderrSpy.mock.calls.map(c => c[0]).join('')
+      expect(stderrOutput).toMatch(/^Score: \d+\.\d+% \(\d+\/\d+\) \| \d+ survivors \| \d+ files\n$/)
+
+      stderrSpy.mockRestore()
+    })
+
+    it('--quiet in batch mode writes summary to stderr', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: false }
+      ])
+
+      const lines = []
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+
+      const manual = _createManualRunner({
+        patterns, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner),
+        out: msg => lines.push(msg)
+      })
+      const code = await manual.run(['--all', '--quiet'])
+
+      expect(lines).toEqual([])
+      expect(stderrSpy).toHaveBeenCalled()
+      const stderrOutput = stderrSpy.mock.calls.map(c => c[0]).join('')
+      expect(stderrOutput).toContain('Score:')
+      expect(stderrOutput).toContain('| 1 files')
+
+      stderrSpy.mockRestore()
+    })
+
+    it('--quiet still returns correct exit code', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: true } // survived
+      ])
+
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+
+      const manual = _createManualRunner({
+        patterns, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner),
+        out: noop
+      })
+      const code = await manual.run(['src/a.js', '--quiet'])
+
+      expect(code).toBe(1) // survived, so exit 1
+      stderrSpy.mockRestore()
+    })
+
     it('uses config timeout when CLI does not specify one', async () => {
       mockFs({ [resolve('src/a.js')]: sourceCode })
       const runner = fakeRunner([

@@ -3,7 +3,7 @@
  * Data utilities live in core/report-data.js.
  */
 
-import { HEADER_SEPARATOR, SECTION_SEPARATOR, mutationScore } from '../core/report-data.js'
+import { HEADER_SEPARATOR, SECTION_SEPARATOR, mutationScore, totalMutants } from '../core/report-data.js'
 
 export function printSummary(merged, counts, reportPath, out = console.log) {
   const { killed, survived, noCoverage, timeout } = counts
@@ -57,6 +57,14 @@ function writeSurvivors(out, mutations) {
   out(`\nSURVIVING MUTATIONS:`)
   for (const mutation of mutations)
     writeMutation(out, mutation)
+}
+
+export function formatQuietSummary({ killed, survived, timedOut, fileCount }) {
+  const effectiveKilled = killed + timedOut
+  const counts = { killed: effectiveKilled, survived, noCoverage: 0, timeout: 0 }
+  const total = totalMutants(counts)
+  const score = mutationScore(counts).toFixed(1)
+  return `Score: ${score}% (${effectiveKilled}/${total}) | ${survived} survivors | ${fileCount} files`
 }
 
 function writeMutation(out, { line, name, original, mutated }) {
