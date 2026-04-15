@@ -265,6 +265,16 @@ describe('ast-engine generateMutations', () => {
     expect(mutations).toHaveLength(0)
   })
 
+  it('falls back to result.name when handler has no name', () => {
+    const namelessMutator = {
+      types: ['BooleanLiteral'],
+      test: node => node.value === true,
+      mutate: node => ({ start: node.start, end: node.end, replacement: 'false', name: 'from result' })
+    }
+    const mutations = generateMutations('const x = true', [namelessMutator])
+    expect(mutations[0].name).toBe('from result')
+  })
+
   it('supports old-style mutators with singular type property', () => {
     const oldStyleMutator = {
       name: 'true → false',
