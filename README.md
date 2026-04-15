@@ -26,13 +26,73 @@ export default {
 2. Run mutations:
 
 ```bash
-npx mutagen src/foo.js              # Single file
 npx mutagen --all                   # All configured sources
+npx mutagen src/foo.js              # Single file
 npx mutagen --incremental           # Skip unchanged files
-npx mutagen --parallel              # Parallel execution (default 2 workers)
-npx mutagen --parallel 4            # Parallel with 4 workers
+npx mutagen --all --parallel 4      # 4 parallel workers
 npx mutagen --diff a.json b.json    # Compare two reports
 ```
+
+## Agent usage
+
+Mutagen is designed for agent consumption. Use `--quiet` and `--json` for machine-readable output:
+
+```bash
+# One-line summary to stderr, structured JSON to file
+npx mutagen --all --quiet --json reports/mutation.json
+
+# Only show surviving mutations (what to fix)
+npx mutagen --all --quiet --survivors-only
+
+# Incremental: only re-test changed files, JSON report
+npx mutagen --incremental --quiet --json reports/mutation.json
+
+# Compare reports for regressions (exit code 1 = regressions found)
+npx mutagen --diff before.json after.json --json
+```
+
+### Exit codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | All mutations killed |
+| 1 | Surviving mutations or errors |
+| 2 | Safety check failed (source may be corrupted) |
+
+### JSON report schema
+
+When `--json [path]` is used, a structured report is written:
+
+```json
+{
+  "score": 85.7,
+  "total": 14,
+  "killed": 12,
+  "survived": 2,
+  "timedOut": 0,
+  "files": {
+    "src/foo.js": { "score": 100, "killed": 8, "total": 8 },
+    "src/bar.js": { "score": 66.7, "killed": 4, "total": 6 }
+  },
+  "survivors": [
+    {
+      "file": "src/bar.js",
+      "line": 42,
+      "name": "=== → !==",
+      "original": "if (a === b) {}",
+      "mutated": "if (a !== b) {}"
+    }
+  ],
+  "deltas": {
+    "fixes": ["src/bar.js:10:+ → -"],
+    "regressions": [],
+    "rerunFiles": ["src/bar.js"],
+    "cachedFiles": ["src/foo.js"]
+  }
+}
+```
+
+The `deltas` field is only present in incremental mode.
 
 ## Config file
 
@@ -56,6 +116,27 @@ export default {
 
 Use `mutators` for AST-based mutations (recommended) and `patterns` for regex-based mutations. Both can be used together — AST mutations run first, then regex.
 
+## CLI flags
+
+```
+<source>                        Mutate a single file
+<source> --line 42              Target a single line
+<source> --dry-run              List mutations without running
+<source> --json [path]          Structured JSON report (optional file path)
+<source> --timeout 10000        10s timeout per mutation
+--all                           Batch all configured sources
+--all --dry-run                 Preview across all sources
+--incremental                   Hash-based caching, skip unchanged
+--incremental --json            Incremental + JSON report with deltas
+--parallel                      Run mutations in parallel (default: 2 workers)
+--parallel N                    Run with N parallel workers
+--quiet                         Suppress verbose output, one-line summary to stderr
+--survivors-only                Only report surviving mutations
+--diff <before> <after>         Compare two JSON report files
+```
+
+`--json`, `--timeout`, `--parallel`, `--quiet`, and `--survivors-only` work across single-file, `--all`, and `--incremental` modes.
+
 ## Programmatic API
 
 ```js
@@ -69,25 +150,6 @@ const runner = createManualRunner({
 
 runner.main()
 ```
-
-## CLI flags
-
-```
-<source>                        Mutate a single file
-<source> --line 42              Target a single line
-<source> --dry-run              List mutations without running
-<source> --json                 JSON report output
-<source> --timeout 10000        10s timeout per mutation
---all                           Batch all sources
---all --dry-run                 Preview across all sources
---incremental                   Hash-based caching, skip unchanged
---incremental --json            Incremental + JSON report
---parallel                      Run mutations in parallel (default: 2 workers)
---parallel N                    Run with N parallel workers
---diff <before> <after>         Compare two JSON report files
-```
-
-`--json`, `--timeout`, and `--parallel` work across single-file, `--all`, and `--incremental` modes.
 
 ## Runner interface
 
@@ -168,10 +230,10 @@ npx mutagen --incremental --parallel 4  # Incremental + parallel
 
 ## Incremental mode
 
-Incremental mode tracks SHA-256 hashes of source and test files between runs. Only changed files (or files whose tests changed) are re-mutated. Cached results from the previous report carry forward.
+Incremental mode tracks SHA-256 hashes of source and test files between runs. Only changed files (or files whose tests changed) are re-mutated. Cached results carry forward. The JSON report includes `deltas` showing fixes and regressions since the last run.
 
 ```bash
-npx mutagen --incremental --json    # Writes merged report with hashes
+npx mutagen --incremental --json reports/mutation.json
 ```
 
 ## Diff mode
@@ -180,6 +242,7 @@ Compare two JSON reports to find regressions, improvements, and new/removed muta
 
 ```bash
 npx mutagen --diff before.json after.json
+npx mutagen --diff before.json after.json --json   # Machine-readable diff
 ```
 
 Returns exit code 1 if regressions are found.
