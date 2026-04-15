@@ -68,23 +68,20 @@ function groupByType(mutators) {
   return map
 }
 
+const WALK_SKIP_KEYS = new Set(['type', 'start', 'end', 'loc'])
+
 function walk(node, parent, visitor) {
   if (!isObject(node)) return
   visitor(node, parent)
 
-  for (const key of Object.keys(node).filter(walkableKey)) {
+  for (const key of Object.keys(node)) {
+    if (WALK_SKIP_KEYS.has(key)) continue
     const child = node[key]
     if (Array.isArray(child))
       child.forEach(c => walk(c, node, visitor))
     else if (isObject(child) && child.type)
       walk(child, node, visitor)
   }
-}
-
-
-const IGNORED_KEYS = new Set(['type', 'start', 'end', 'loc'])
-function walkableKey(key) {
-  return !IGNORED_KEYS.has(key)
 }
 
 function applyRangeMutation(source, start, end, replacement) {

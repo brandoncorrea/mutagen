@@ -127,7 +127,7 @@ async function run(ctx, argv) {
 async function getRunResults(parsed, pCtx, timeout) {
   if (parsed.incrementalMode)
     return await runIncrementalMode(pCtx, parsed.jsonOutput, timeout)
-  else if (parsed.allMode)
+  if (parsed.allMode)
     return await runBatchMode(pCtx, parsed.jsonOutput, timeout)
   return await runSingleMode(pCtx, parsed, timeout)
 }
@@ -212,6 +212,10 @@ function parallelWorkerCount({ parallel }) {
     return parallel
 }
 
+function isString(value) {
+  return typeof value === 'string'
+}
+
 async function runBatch(ctx, jsonOutput, timeout, sourcesToRun) {
   const { mutationConfig, createRunner, reportDir, reportPath, sources, survivorsOnly, out } = ctx
   const filesToRun = sourcesToRun || sources
@@ -222,7 +226,7 @@ async function runBatch(ctx, jsonOutput, timeout, sourcesToRun) {
 
   const result = await accumulateResults(filesToRun, { mutationConfig, createRunner, timeout, parallel: ctx.parallel, survivorsOnly, out })
 
-  if (typeof jsonOutput === 'string')
+  if (isString(jsonOutput))
     writeStructuredReportFile(jsonOutput, filesToRun.length, result.fileResults)
   else if (jsonOutput)
     writeReport(out, reportDir, reportPath, result.fileResults)
@@ -242,7 +246,7 @@ async function accumulateResults(filesToRun, { mutationConfig, createRunner, tim
   for (const source of filesToRun) {
     const opts = { sourceFile: resolve(source), mutationConfig, createRunner, timeout, survivorsOnly, out }
     const result = parallel
-      ? await runParallel({ ...opts, workerCount: typeof parallel === 'number' ? parallel : undefined })
+      ? await runParallel({ ...opts, workerCount: parallelWorkerCount({ parallel }) })
       : await runSingle(opts)
     if (result.error) {
       failures++
