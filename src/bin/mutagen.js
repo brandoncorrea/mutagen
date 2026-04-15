@@ -8,13 +8,23 @@
  *   npx mutagen --all                   # All configured sources
  *   npx mutagen --incremental           # Skip unchanged files
  *   npx mutagen --diff a.json b.json    # Compare reports
+ *   npx mutagen --version               # Print version
  */
 
 import { resolve } from 'node:path'
+import { createRequire } from 'node:module'
 import { pathToFileURL } from 'node:url'
 import { createManualRunner } from '../cli/manual.js'
 
+const require = createRequire(import.meta.url)
+const { version } = require('../../package.json')
+
 export async function run(args, { config, configPath, out = console.log, err = console.error } = {}) {
+  if (args.includes('--version') || args.includes('-v')) {
+    out(version)
+    return 0
+  }
+
   if (!config) {
     const path = configPath || resolve('mutagen.config.js')
     try {
