@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseArgs } from '../../cli/args.js'
+import { parseArgs } from '../../src/cli/args.js'
 
 function expectErrorResult(...args) {
   const result = parseArgs(args)

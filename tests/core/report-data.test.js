@@ -15,7 +15,7 @@ import {
   mutantKey, countStatuses, totalMutants, mutationScore,
   toJsonMutants, createReport, writeReportFile, tryLoadJson,
   combineReportData, writeStructuredReportFile
-} from '../../core/report-data.js'
+} from '../../src/core/report-data.js'
 
 describe('mutantKey', () => {
   it('builds a key from path, line, mutator name, and replacement', () => {

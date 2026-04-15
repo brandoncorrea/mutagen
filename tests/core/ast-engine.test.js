@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { generateMutations } from '../../core/ast-engine.js'
+import { generateMutations } from '../../src/core/ast-engine.js'
 
 function findBetween(source, from, to, text) {
   const idx = source.indexOf(text, from)

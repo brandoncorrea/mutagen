@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { javascript } from '../../core/ast-mutators.js'
+import { javascript } from '../../src/core/ast-mutators.js'
 
 describe('ast-mutators', () => {
   describe('structure', () => {

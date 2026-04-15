@@ -8,7 +8,7 @@ vi.mock('node:fs', async (importOriginal) => {
   }
 })
 
-import { resolveGlobs } from '../../core/resolve-globs.js'
+import { resolveGlobs } from '../../src/core/resolve-globs.js'
 import { readdirSync } from 'node:fs'
 
 beforeEach(() => {

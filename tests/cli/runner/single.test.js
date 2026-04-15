@@ -12,11 +12,11 @@ vi.mock('node:fs', async (importOriginal) => {
   }
 })
 
-vi.mock('../../../core/worktree.js')
+vi.mock('../../../src/core/worktree.js')
 
-import { runSingle } from '../../../cli/runner/index.js'
-import { prepareMutationConfig } from '../../../core/generate.js'
-import { createWorktree } from '../../../core/worktree.js'
+import { runSingle } from '../../../src/cli/runner/index.js'
+import { prepareMutationConfig } from '../../../src/core/generate.js'
+import { createWorktree } from '../../../src/core/worktree.js'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { patterns, sourceCode, mockFs as _mockFs, noop } from '../helpers.js'
 

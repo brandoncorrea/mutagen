@@ -8,7 +8,7 @@ import { join } from 'node:path'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 
-import { createWorktree } from '../../core/worktree.js'
+import { createWorktree } from '../../src/core/worktree.js'
 
 function makeTempProject() {
   const root = mkdtempSync(join(tmpdir(), 'mutagen-test-project-'))

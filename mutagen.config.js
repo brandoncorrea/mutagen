@@ -1,6 +1,6 @@
-import { javascript as astMutators } from './core/ast-mutators.js'
-import { javascript as regexPatterns } from './core/patterns.js'
-import { createVitestRunner } from './runners/vitest.js'
+import { javascript as astMutators } from './src/core/ast-mutators.js'
+import { javascript as regexPatterns } from './src/core/patterns.js'
+import { createVitestRunner } from './src/runners/vitest.js'
 
 export default {
   // AST mutators (primary mode) — built-in + custom visitors

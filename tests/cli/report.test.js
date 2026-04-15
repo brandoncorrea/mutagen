@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { printRunReport, printSummary, formatQuietSummary } from '../../cli/report.js'
+import { printRunReport, printSummary, formatQuietSummary } from '../../src/cli/report.js'
 
 describe('printSummary', () => {
   it('prints file count, statuses, and mutation score', () => {

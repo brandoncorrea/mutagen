@@ -12,7 +12,7 @@ vi.mock('node:fs', async (importOriginal) => {
   }
 })
 
-import { createManualRunner as _createManualRunner } from '../../../cli/manual.js'
+import { createManualRunner as _createManualRunner } from '../../../src/cli/manual.js'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { patterns, sourceCode, fakeRunner, mockFs as _mockFs, noop } from '../helpers.js'
 

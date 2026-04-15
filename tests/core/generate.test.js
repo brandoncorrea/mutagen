@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { generateMutations, prepareMutationConfig } from '../../core/generate.js'
+import { generateMutations, prepareMutationConfig } from '../../src/core/generate.js'
 
 const equalityMutator = {
   name: '=== → !==',

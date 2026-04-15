@@ -12,8 +12,8 @@ vi.mock('node:fs', async (importOriginal) => {
   }
 })
 
-import { dryRun } from '../../../cli/runner/index.js'
-import { preparePatterns } from '../../../core/engine.js'
+import { dryRun } from '../../../src/cli/runner/index.js'
+import { preparePatterns } from '../../../src/core/engine.js'
 import { readFileSync } from 'node:fs'
 import { patterns, sourceCode, mockFs as _mockFs, noop } from '../helpers.js'
 

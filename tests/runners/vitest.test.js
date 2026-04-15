@@ -4,7 +4,7 @@ vi.mock('vitest/node', () => ({
   startVitest: vi.fn()
 }))
 
-import { createVitestRunner } from '../../runners/vitest.js'
+import { createVitestRunner } from '../../src/runners/vitest.js'
 import { startVitest } from 'vitest/node'
 
 function createMockVitest() {

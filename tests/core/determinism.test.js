@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest'
-import { createPool } from '../../core/pool.js'
+import { createPool } from '../../src/core/pool.js'
 
 /**
  * Build a runner whose outcome is determined by the mutation source content.

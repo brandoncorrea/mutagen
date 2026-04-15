@@ -22,7 +22,7 @@ import {
   clearIncrementalCache,
   runStrykerScope,
   mergeReports
-} from '../stryker.js'
+} from '../src/stryker.js'
 import { existsSync, renameSync, rmSync, readFileSync, writeFileSync } from 'node:fs'
 import { execSync, execFileSync } from 'node:child_process'
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import * as publicApi from '../index.js'
+import * as publicApi from '../src/index.js'
 
 describe('public API (index.js)', () => {
   const expectedExports = [

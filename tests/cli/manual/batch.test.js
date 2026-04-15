@@ -12,10 +12,10 @@ vi.mock('node:fs', async (importOriginal) => {
   }
 })
 
-vi.mock('../../../core/worktree.js')
+vi.mock('../../../src/core/worktree.js')
 
-import { createManualRunner as _createManualRunner } from '../../../cli/manual.js'
-import { createWorktree } from '../../../core/worktree.js'
+import { createManualRunner as _createManualRunner } from '../../../src/cli/manual.js'
+import { createWorktree } from '../../../src/core/worktree.js'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { patterns, sourceCode, fakeRunner, mockFs as _mockFs, noop } from '../helpers.js'
 

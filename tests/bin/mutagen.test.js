@@ -13,7 +13,7 @@ vi.mock('node:fs', async (importOriginal) => {
   }
 })
 
-import { run, isMain } from '../../bin/mutagen.js'
+import { run, isMain } from '../../src/bin/mutagen.js'
 import { readFileSync, existsSync, readdirSync } from 'node:fs'
 
 const noop = () => {}

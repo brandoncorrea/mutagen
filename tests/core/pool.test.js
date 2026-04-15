@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest'
-import { createPool } from '../../core/pool.js'
+import { createPool } from '../../src/core/pool.js'
 
 function fakeRunner(results = { passed: false, killedBy: ['test.js'] }) {
   return {

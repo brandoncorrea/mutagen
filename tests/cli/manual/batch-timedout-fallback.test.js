@@ -7,13 +7,13 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('../../../cli/runner/index.js', () => ({
+vi.mock('../../../src/cli/runner/index.js', () => ({
   runSingle: vi.fn(),
   dryRun: vi.fn()
 }))
 
-import { createManualRunner } from '../../../cli/manual.js'
-import { runSingle } from '../../../cli/runner/index.js'
+import { createManualRunner } from '../../../src/cli/manual.js'
+import { runSingle } from '../../../src/cli/runner/index.js'
 
 const noop = () => {}
 const patterns = [{ pattern: / === /g, replacement: ' !== ', name: 'test' }]

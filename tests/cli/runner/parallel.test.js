@@ -12,13 +12,13 @@ vi.mock('node:fs', async (importOriginal) => {
   }
 })
 
-vi.mock('../../../core/pool.js')
-vi.mock('../../../core/worktree.js')
+vi.mock('../../../src/core/pool.js')
+vi.mock('../../../src/core/worktree.js')
 
-import { runParallel } from '../../../cli/runner/index.js'
-import { prepareMutationConfig } from '../../../core/generate.js'
-import { createPool } from '../../../core/pool.js'
-import { createWorktree } from '../../../core/worktree.js'
+import { runParallel } from '../../../src/cli/runner/index.js'
+import { prepareMutationConfig } from '../../../src/core/generate.js'
+import { createPool } from '../../../src/core/pool.js'
+import { createWorktree } from '../../../src/core/worktree.js'
 import { readFileSync } from 'node:fs'
 import { patterns, sourceCode, noop, fakePoolRunner, mockFs as _mockFs } from '../helpers.js'
 

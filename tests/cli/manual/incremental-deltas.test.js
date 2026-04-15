@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { resolve } from 'node:path'
-import { computeDeltas } from '../../../cli/incremental-report.js'
+import { computeDeltas } from '../../../src/cli/incremental-report.js'
 
 vi.mock('node:fs', async (importOriginal) => {
   const actual = await importOriginal()
@@ -13,7 +13,7 @@ vi.mock('node:fs', async (importOriginal) => {
   }
 })
 
-import { createManualRunner as _createManualRunner } from '../../../cli/manual.js'
+import { createManualRunner as _createManualRunner } from '../../../src/cli/manual.js'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { patterns, sourceCode, hashOf, fakeRunner, mockFs as _mockFs, noop } from '../helpers.js'
 

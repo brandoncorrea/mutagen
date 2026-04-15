@@ -16,17 +16,12 @@
     "stryker"
   ],
   "type": "module",
-  "main": "index.js",
+  "main": "src/index.js",
   "bin": {
-    "mutagen": "bin/mutagen.js"
+    "mutagen": "src/bin/mutagen.js"
   },
   "files": [
-    "index.js",
-    "bin/",
-    "core/",
-    "cli/",
-    "runners/",
-    "stryker.js",
+    "src/",
     "LICENSE",
     "README.md"
   ],
@@ -34,11 +29,11 @@
     "node": ">=20.11.0"
   },
   "exports": {
-    ".": "./index.js",
-    "./mutators": "./core/ast-mutators.js",
-    "./patterns": "./core/patterns.js",
-    "./runners/vitest": "./runners/vitest.js",
-    "./stryker": "./stryker.js"
+    ".": "./src/index.js",
+    "./mutators": "./src/core/ast-mutators.js",
+    "./patterns": "./src/core/patterns.js",
+    "./runners/vitest": "./src/runners/vitest.js",
+    "./stryker": "./src/stryker.js"
   },
   "dependencies": {
     "@babel/parser": "^7.29.2",
@@ -49,10 +44,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "mutate": "node bin/mutagen.js --all",
-    "mutate:dry": "node bin/mutagen.js --all --dry-run",
-    "mutate:incremental": "node bin/mutagen.js --incremental",
-    "mutate:json": "node bin/mutagen.js --all --json"
+    "mutate": "node src/bin/mutagen.js --all",
+    "mutate:dry": "node src/bin/mutagen.js --all --dry-run",
+    "mutate:incremental": "node src/bin/mutagen.js --incremental",
+    "mutate:json": "node src/bin/mutagen.js --all --json"
   },
   "peerDependenciesMeta": {
     "vitest": {

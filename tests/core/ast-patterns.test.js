@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { generateMutations } from '../../core/ast-engine.js'
+import { generateMutations } from '../../src/core/ast-engine.js'
 
 /**
  * AST mutator definitions — one per pattern category.

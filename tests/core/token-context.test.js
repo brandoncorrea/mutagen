@@ -3,7 +3,7 @@ import {
   getTokenContextAt,
   isInJsxTag,
   isArrowOperator
-} from '../../core/token-context.js'
+} from '../../src/core/token-context.js'
 
 describe('getTokenContextAt', () => {
   it('returns code for a position inside code tokens', () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { preparePatterns, generateMutations } from '../../core/engine.js'
+import { preparePatterns, generateMutations } from '../../src/core/engine.js'
 
 const prepared = preparePatterns([
   { pattern: / === /g, replacement: ' !== ', name: '=== → !==' }

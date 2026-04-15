@@ -5,7 +5,7 @@ vi.mock('node:fs', () => ({
   readFileSync: vi.fn()
 }))
 
-import { diffReports } from '../../cli/diff.js'
+import { diffReports } from '../../src/cli/diff.js'
 
 describe('diffReports', () => {
   let lines, out
