@@ -2,8 +2,8 @@
  * Tests for core/pool.js — worker pool manager.
  */
 
-import { describe, it, expect, vi } from 'vitest'
-import { createPool } from '../../src/core/pool.js'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { createPool, _cleanupAllPools, _resetCleanupState } from '../../src/core/pool.js'
 
 function fakeRunner(results = { passed: false, killedBy: ['test.js'] }) {
   return {
@@ -197,6 +197,80 @@ describe('createPool', () => {
       await pool.close()
 
       expect(runner.close).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('process cleanup', () => {
+    beforeEach(() => {
+      _resetCleanupState()
+    })
+    afterEach(() => {
+      _resetCleanupState()
+    })
+
+    it('registers SIGTERM and SIGINT handlers when pool is created', () => {
+      const termBefore = process.listenerCount('SIGTERM')
+      const intBefore = process.listenerCount('SIGINT')
+      const pool = createPool({ workerCount: 1, createRunner: vi.fn() })
+
+      expect(process.listenerCount('SIGTERM')).toBe(termBefore + 1)
+      expect(process.listenerCount('SIGINT')).toBe(intBefore + 1)
+    })
+
+    it('removes signal handlers when last pool is closed', async () => {
+      const termBefore = process.listenerCount('SIGTERM')
+      const pool = createPool({ workerCount: 1, createRunner: vi.fn() })
+
+      await pool.close()
+
+      expect(process.listenerCount('SIGTERM')).toBe(termBefore)
+    })
+
+    it('keeps signal handlers while any pool is active', async () => {
+      const termBefore = process.listenerCount('SIGTERM')
+      const pool1 = createPool({ workerCount: 1, createRunner: vi.fn() })
+      const pool2 = createPool({ workerCount: 1, createRunner: vi.fn() })
+
+      await pool1.close()
+      expect(process.listenerCount('SIGTERM')).toBe(termBefore + 1)
+
+      await pool2.close()
+      expect(process.listenerCount('SIGTERM')).toBe(termBefore)
+    })
+
+    it('cleanupAllPools closes all active pools with runners', async () => {
+      const runner1 = fakeRunner()
+      const runner2 = fakeRunner()
+      const pool1 = createPool({ workerCount: 1, createRunner: vi.fn().mockResolvedValue(runner1) })
+      const pool2 = createPool({ workerCount: 1, createRunner: vi.fn().mockResolvedValue(runner2) })
+
+      await pool1.run([fakeMutation()])
+      await pool2.run([fakeMutation()])
+
+      await _cleanupAllPools()
+
+      expect(runner1.close).toHaveBeenCalled()
+      expect(runner2.close).toHaveBeenCalled()
+    })
+
+    it('cleanupAllPools is idempotent', async () => {
+      const runner = fakeRunner()
+      const pool = createPool({ workerCount: 1, createRunner: vi.fn().mockResolvedValue(runner) })
+      await pool.run([fakeMutation()])
+
+      await _cleanupAllPools()
+      await _cleanupAllPools()
+
+      expect(runner.close).toHaveBeenCalledTimes(1)
+    })
+
+    it('cleanupAllPools removes signal handlers', async () => {
+      const termBefore = process.listenerCount('SIGTERM')
+      createPool({ workerCount: 1, createRunner: vi.fn() })
+
+      await _cleanupAllPools()
+
+      expect(process.listenerCount('SIGTERM')).toBe(termBefore)
     })
   })
 
