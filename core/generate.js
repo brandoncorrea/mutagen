@@ -18,6 +18,11 @@ import { generateMutations as regexGenerate, preparePatterns } from './engine.js
  * @returns {Array} mutations in standard shape { line, original, mutated, name, source }
  */
 export function generateMutations(source, config, targetLine) {
+  // Backward compat: plain array is treated as prepared regex patterns
+  if (Array.isArray(config)) {
+    return regexGenerate(source, config, targetLine)
+  }
+
   const mutations = []
 
   if (config.mutators?.length) {

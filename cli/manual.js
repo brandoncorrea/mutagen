@@ -14,7 +14,7 @@
 
 import { resolve } from 'node:path'
 
-import { preparePatterns } from '../core/engine.js'
+import { prepareMutationConfig } from '../core/generate.js'
 import { resolveGlobs } from '../core/resolve-globs.js'
 import { HEADER_SEPARATOR, createReport, writeReportFile } from '../core/report-data.js'
 import { diffReports } from './diff.js'
@@ -26,7 +26,8 @@ import { runIncremental } from './incremental.js'
  * Create a manual mutation runner with project-specific config.
  *
  * @param {Object} config
- * @param {Array} config.patterns - mutation patterns (combine built-in + custom)
+ * @param {Array} [config.mutators] - AST visitor mutators ({ type, mutate })
+ * @param {Array} [config.patterns] - regex patterns (secondary mode for quick patterns)
  * @param {Array<string>} [config.sources] - explicit source files (takes precedence over include/exclude)
  * @param {Array<string>} [config.include] - glob patterns for source files
  * @param {Array<string>} [config.exclude] - glob patterns to exclude
@@ -38,6 +39,7 @@ import { runIncremental } from './incremental.js'
  */
 export function createManualRunner(config) {
   const {
+    mutators,
     patterns,
     sources: explicitSources,
     include,
@@ -57,11 +59,11 @@ export function createManualRunner(config) {
       ? resolveGlobs({ include, exclude, cwd })
       : []
 
-  const prepared = preparePatterns(patterns)
+  const mutationConfig = prepareMutationConfig({ mutators, patterns })
   const reportPath = `${reportDir}/${reportFile}`
 
   const ctx = {
-    prepared,
+    mutationConfig,
     sources,
     testSources,
     createRunner,
@@ -105,7 +107,7 @@ async function run(ctx, argv) {
   if (parsed.dryRunMode && parsed.allMode)
     return runAllDryRun(ctx)
   if (parsed.dryRunMode)
-    return dryRun(parsed.sourceFile, ctx.prepared, parsed.targetLine, ctx.out) && 0
+    return dryRun(parsed.sourceFile, ctx.mutationConfig, parsed.targetLine, ctx.out) && 0
 
   const parallel = parsed.parallel
   const runCtx = parallel ? { ...ctx, parallel } : ctx
@@ -122,10 +124,10 @@ function runDiffMode(ctx, parsed) {
   return !result || result.regressions ? 1 : 0
 }
 
-function runAllDryRun({ sources, prepared, out }) {
+function runAllDryRun({ sources, mutationConfig, out }) {
   let total = 0
   for (const source of sources)
-    total += dryRun(resolve(source), prepared, null, out)
+    total += dryRun(resolve(source), mutationConfig, null, out)
   out(`\n  Grand total: ${total} mutations across ${sources.length} files`)
   return 0
 }
@@ -145,7 +147,7 @@ async function runBatchMode(ctx, jsonOutput, timeout) {
 async function runSingleMode(ctx, parsed, timeout) {
   const opts = {
     sourceFile: parsed.sourceFile,
-    prepared: ctx.prepared,
+    mutationConfig: ctx.mutationConfig,
     createRunner: ctx.createRunner,
     targetLine: parsed.targetLine,
     timeout,
@@ -158,14 +160,14 @@ async function runSingleMode(ctx, parsed, timeout) {
 }
 
 async function runBatch(ctx, jsonOutput, timeout, sourcesToRun) {
-  const { prepared, createRunner, reportDir, reportPath, sources, out } = ctx
+  const { mutationConfig, createRunner, reportDir, reportPath, sources, out } = ctx
   const filesToRun = sourcesToRun || sources
 
   out(`\n${HEADER_SEPARATOR}`)
   out(`MUTAGEN — BATCH MODE`)
   out(`   Sources: ${filesToRun.length} file(s)\n`)
 
-  const result = await accumulateResults(filesToRun, { prepared, createRunner, timeout, parallel: ctx.parallel, out })
+  const result = await accumulateResults(filesToRun, { mutationConfig, createRunner, timeout, parallel: ctx.parallel, out })
 
   if (jsonOutput)
     writeReport(out, reportDir, reportPath, result.fileResults)
@@ -175,7 +177,7 @@ async function runBatch(ctx, jsonOutput, timeout, sourcesToRun) {
   return result
 }
 
-async function accumulateResults(filesToRun, { prepared, createRunner, timeout, parallel, out }) {
+async function accumulateResults(filesToRun, { mutationConfig, createRunner, timeout, parallel, out }) {
   let totalSurvived = 0
   let totalKilled = 0
   let totalTimedOut = 0
@@ -183,7 +185,7 @@ async function accumulateResults(filesToRun, { prepared, createRunner, timeout, 
   const fileResults = {}
 
   for (const source of filesToRun) {
-    const opts = { sourceFile: resolve(source), prepared, createRunner, timeout, out }
+    const opts = { sourceFile: resolve(source), mutationConfig, createRunner, timeout, out }
     const result = parallel
       ? await runParallel({ ...opts, workerCount: typeof parallel === 'number' ? parallel : undefined })
       : await runSingle(opts)

@@ -35,6 +35,7 @@
   },
   "exports": {
     ".": "./index.js",
+    "./mutators": "./core/mutators.js",
     "./patterns": "./core/patterns.js",
     "./runners/vitest": "./runners/vitest.js",
     "./stryker": "./stryker.js"

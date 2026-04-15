@@ -5,7 +5,7 @@
 
 import { readFileSync } from 'node:fs'
 
-import { generateMutations } from '../../core/engine.js'
+import { generateMutations } from '../../core/generate.js'
 import { createPool } from '../../core/pool.js'
 import { toJsonMutants } from '../../core/report-data.js'
 import { printRunReport } from '../report.js'
@@ -16,6 +16,7 @@ const DEFAULT_WORKER_COUNT = 2
 export async function runParallel(options) {
   const {
     sourceFile,
+    mutationConfig,
     prepared,
     createRunner,
     targetLine,
@@ -23,6 +24,7 @@ export async function runParallel(options) {
     workerCount = DEFAULT_WORKER_COUNT,
     out = console.log
   } = options
+  const config = mutationConfig || prepared
   const original = readFileSync(sourceFile, 'utf-8')
 
   printBanner(out, `MUTAGEN (parallel — ${workerCount} workers)`, sourceFile, targetLine, timeout)
@@ -30,7 +32,7 @@ export async function runParallel(options) {
   const preflightRunner = await createRunner(sourceFile)
   const runOptions = {
     sourceFile,
-    prepared,
+    mutationConfig: config,
     createRunner,
     targetLine,
     timeout,
@@ -47,13 +49,13 @@ export async function runParallel(options) {
 }
 
 async function runAfterPreflight(preflightRunner, options) {
-  const { sourceFile, prepared, createRunner, targetLine, timeout, workerCount, original, out } = options
+  const { sourceFile, mutationConfig, createRunner, targetLine, timeout, workerCount, original, out } = options
 
   const preflight = await runPreflightTests(out, preflightRunner)
   if (preflight.error) return preflight
   out(`Tests pass on original source. Beginning mutations.\n`)
 
-  const mutations = generateMutations(original, prepared, targetLine)
+  const mutations = generateMutations(original, mutationConfig, targetLine)
   out(`Found ${mutations.length} mutation(s) to run.\n`)
 
   return await executeWithPool(mutations, { sourceFile, createRunner, workerCount, timeout, out })

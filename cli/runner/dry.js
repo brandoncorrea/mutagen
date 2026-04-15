@@ -5,11 +5,11 @@
 import { readFileSync } from 'node:fs'
 import { relative } from 'node:path'
 
-import { generateMutations } from '../../core/engine.js'
+import { generateMutations } from '../../core/generate.js'
 
-export function dryRun(sourceFile, prepared, targetLine, out = console.log) {
+export function dryRun(sourceFile, mutationConfig, targetLine, out = console.log) {
   const source = readFileSync(sourceFile, 'utf-8')
-  const mutations = generateMutations(source, prepared, targetLine)
+  const mutations = generateMutations(source, mutationConfig, targetLine)
   const relPath = relative(process.cwd(), sourceFile)
 
   out(`\nDRY RUN — ${relPath}`)

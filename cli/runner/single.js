@@ -10,20 +10,21 @@
 
 import { readFileSync, writeFileSync } from 'node:fs'
 
-import { generateMutations } from '../../core/engine.js'
+import { generateMutations } from '../../core/generate.js'
 import { withTimeout } from '../../core/timeout.js'
 import { toJsonMutants } from '../../core/report-data.js'
 import { printRunReport } from '../report.js'
 import { runPreflightTests, reportMutation, printBanner } from './shared.js'
 
 export async function runSingle(options) {
-  const { sourceFile, prepared, createRunner, targetLine, timeout, out = console.log } = options
+  const { sourceFile, mutationConfig, prepared, createRunner, targetLine, timeout, out = console.log } = options
+  const config = mutationConfig || prepared
   const original = readFileSync(sourceFile, 'utf-8')
 
   printBanner(out, 'MUTAGEN', sourceFile, targetLine, timeout)
 
   const runner = await createRunner(sourceFile)
-  const opts = { out, runner, timeout, sourceFile, targetLine, original, prepared }
+  const opts = { out, runner, timeout, sourceFile, targetLine, original, mutationConfig: config }
 
   try {
     return await runMutations(opts)
@@ -33,12 +34,12 @@ export async function runSingle(options) {
 }
 
 async function runMutations(opts) {
-  const { out, runner, sourceFile, targetLine, original, prepared } = opts
+  const { out, runner, sourceFile, targetLine, original, mutationConfig } = opts
   const preflight = await runPreflightTests(out, runner)
   if (preflight.error) return preflight
   out(`Tests pass on original source. Beginning mutations.\n`)
 
-  const mutations = generateMutations(original, prepared, targetLine)
+  const mutations = generateMutations(original, mutationConfig, targetLine)
   out(`Found ${mutations.length} mutation(s) to run.\n`)
 
   const outcomes = { killed: [], survived: [], timedOut: [] }

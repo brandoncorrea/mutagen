@@ -3,12 +3,19 @@ import * as publicApi from '../index.js'
 
 describe('public API (index.js)', () => {
   const expectedExports = [
-    // Core
+    // Unified mutation API
     'generateMutations',
-    'preparePatterns',
+    'prepareMutationConfig',
 
-    // Built-in pattern sets
+    // Built-in AST mutators
+    'mutators',
+
+    // Built-in regex pattern sets (secondary mode)
     'patterns',
+
+    // Legacy regex engine
+    'generateRegexMutations',
+    'preparePatterns',
 
     // Runner
     'createVitestRunner',
@@ -25,7 +32,7 @@ describe('public API (index.js)', () => {
     it(`exports ${name}`, () => {
       expect(publicApi).toHaveProperty(name)
       const value = publicApi[name]
-      if (name === 'patterns')
+      if (name === 'patterns' || name === 'mutators')
         expect(typeof value).toBe('object')
       else
         expect(typeof value).toBe('function')
