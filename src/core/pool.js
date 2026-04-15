@@ -13,6 +13,67 @@
 
 import { withTimeout } from './timeout.js'
 
+// Module-level tracking of active pools for process signal cleanup
+const activePools = new Set()
+let handlersInstalled = false
+
+function onSignal(signal) {
+  cleanupAllPools().finally(() => {
+    removeSignalHandlers()
+    process.kill(process.pid, signal)
+  })
+}
+
+function onExit() {
+  for (const pool of activePools) {
+    if (!pool.closed) {
+      pool.closed = true
+      for (const r of pool.runners) {
+        try { r.close() } catch {}
+      }
+    }
+  }
+  activePools.clear()
+}
+
+function installSignalHandlers() {
+  if (handlersInstalled) return
+  handlersInstalled = true
+  process.on('SIGTERM', onSignal)
+  process.on('SIGINT', onSignal)
+  process.on('exit', onExit)
+}
+
+function removeSignalHandlers() {
+  if (!handlersInstalled) return
+  handlersInstalled = false
+  process.removeListener('SIGTERM', onSignal)
+  process.removeListener('SIGINT', onSignal)
+  process.removeListener('exit', onExit)
+}
+
+function trackPool(pool) {
+  activePools.add(pool)
+  installSignalHandlers()
+}
+
+function untrackPool(pool) {
+  activePools.delete(pool)
+  if (activePools.size === 0) removeSignalHandlers()
+}
+
+async function cleanupAllPools() {
+  const pools = [...activePools]
+  await Promise.all(pools.map(p => closePool(p).catch(() => {})))
+}
+
+export { cleanupAllPools as _cleanupAllPools }
+
+export function _resetCleanupState() {
+  activePools.clear()
+  removeSignalHandlers()
+}
+
 /**
  * Create a worker pool for parallel mutation testing.
  *
@@ -28,6 +89,7 @@ import { withTimeout } from './timeout.js'
  */
 export function createPool(poolOptions) {
   const pool = { runners: [] }
+  trackPool(pool)
 
   return {
     async run(mutations, options) {
@@ -60,6 +122,7 @@ async function runPool(pool, mutations, poolOptions, runOptions) {
 async function closePool(pool) {
   if (pool.closed) return
   pool.closed = true
+  untrackPool(pool)
   await Promise.all(pool.runners.map(r => r.close()))
 }
 
