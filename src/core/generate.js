@@ -23,24 +23,21 @@ export function generateMutations(source, config, targetLine) {
     return regexGenerate(source, config, targetLine)
 
   const mutations = []
-
   if (config.mutators?.length)
     mutations.push(...astGenerate(source, config.mutators, targetLine, config.skipNodes))
-
   if (config.prepared?.length)
     mutations.push(...regexGenerate(source, config.prepared, targetLine))
+  return deduplicateMutations(mutations)
+}
 
-  if (config.mutators?.length && config.prepared?.length) {
-    const seen = new Set()
-    return mutations.filter(m => {
-      const key = m.line + ':' + m.mutated
-      if (seen.has(key)) return false
-      seen.add(key)
-      return true
-    })
-  }
-
-  return mutations
+function deduplicateMutations(mutations) {
+  const seen = new Set()
+  return mutations.filter(({ line, mutated }) => {
+    const key = `${line}:${mutated}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
 }
 
 /**
