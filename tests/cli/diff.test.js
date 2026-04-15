@@ -588,4 +588,24 @@ describe('diffReports', () => {
       expect(output()).not.toContain('MUTATION DIFF')
     })
   })
+
+  describe('malformed reports', () => {
+    it('returns undefined when report has no files key', () => {
+      readFileSync
+        .mockReturnValueOnce(JSON.stringify({ score: 100 }))
+        .mockReturnValueOnce(JSON.stringify(makeReport({ 'a.js': { mutants: [] } })))
+
+      const result = diffReports('before.json', 'after.json', out)
+      expect(result).toBeUndefined()
+    })
+
+    it('returns undefined when after report has no files key', () => {
+      readFileSync
+        .mockReturnValueOnce(JSON.stringify(makeReport({ 'a.js': { mutants: [] } })))
+        .mockReturnValueOnce(JSON.stringify({ score: 100 }))
+
+      const result = diffReports('before.json', 'after.json', out)
+      expect(result).toBeUndefined()
+    })
+  })
 })

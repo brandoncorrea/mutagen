@@ -17,7 +17,7 @@ export function diffReports(beforeFile, afterFile, out = console.log, jsonOutput
   const before = tryLoadJson(beforeFile, out)
   const after = tryLoadJson(afterFile, out)
 
-  if (!before || !after) return
+  if (!before?.files || !after?.files) return
 
   const changes = classifyChanges(before, after)
   const fileDeltas = computeFileDeltas(before, after)

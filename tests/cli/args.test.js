@@ -94,6 +94,9 @@ describe('parseArgs', () => {
 
     it('returns error when --timeout value is negative', () =>
       expectErrorResult('--incremental', '--timeout', '-1'))
+
+    it('returns error when --timeout is 0', () =>
+      expectErrorResult('--incremental', '--timeout', '0'))
   })
 
   describe('--line flag', () => {
@@ -188,6 +191,9 @@ describe('parseArgs', () => {
 
     it('returns error when --parallel value is negative', () =>
       expectErrorResult('--all', '--parallel', '-1'))
+
+    it('returns error when --parallel exceeds maximum', () =>
+      expectErrorResult('--all', '--parallel', '999'))
 
     it('accepts --parallel 0 as valid', () => {
       const result = parseArgs(['--all', '--parallel', '0'])
@@ -417,16 +423,10 @@ describe('parseArgs', () => {
       expect(result.timeout).toBe(5000)
     })
 
-    it('accepts --timeout 0 as valid', () => {
-      const result = parseArgs(['--incremental', '--timeout', '0'])
-      expect(result.timeout).toBe(0)
-      expect(result).not.toHaveProperty('error')
-    })
+    it('returns error when --timeout is 0 (incremental)', () =>
+      expectErrorResult('--incremental', '--timeout', '0'))
 
-    it('accepts --timeout 0 in source file mode', () => {
-      const result = parseArgs(['source.js', '--timeout', '0'])
-      expect(result.timeout).toBe(0)
-      expect(result).not.toHaveProperty('error')
-    })
+    it('returns error when --timeout is 0 (source file)', () =>
+      expectErrorResult('source.js', '--timeout', '0'))
   })
 })

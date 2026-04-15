@@ -8,9 +8,11 @@ export function withTimeout(fn, ms) {
 }
 
 function createTimeout(fn, ms) {
+  let timer
   return Promise.race([
-    fn(),
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error(`Mutation timed out after ${ms}ms`)), ms))
+    fn().finally(() => clearTimeout(timer)),
+    new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`Mutation timed out after ${ms}ms`)), ms)
+    })
   ])
 }

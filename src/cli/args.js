@@ -125,8 +125,8 @@ function argsToOptions(args) {
         return { error: '--line requires a numeric value' }
     } else if (arg === '--timeout') {
       timeout = Number(args[++i])
-      if (isInvalidNumber(timeout))
-        return { error: '--timeout requires a numeric value' }
+      if (isInvalidNumber(timeout) || timeout === 0)
+        return { error: '--timeout requires a positive numeric value' }
     } else if (arg === '--min-score') {
       minScore = Number(args[++i])
       if (isInvalidNumber(minScore))
@@ -151,6 +151,8 @@ function parseParallel(args) {
     return parseParallelValue(args, idx)
 }
 
+const MAX_PARALLEL = 32
+
 function parseParallelValue(args, idx) {
   const next = args[idx + 1]
   if (!next || next.startsWith('--'))
@@ -158,6 +160,8 @@ function parseParallelValue(args, idx) {
   const value = Number(next)
   if (isInvalidNumber(value))
     return { error: '--parallel requires a numeric value' }
+  if (value > MAX_PARALLEL)
+    return { error: `--parallel maximum is ${MAX_PARALLEL}` }
   return value
 }
 
@@ -165,8 +169,8 @@ function parseTimeout(args) {
   const idx = args.indexOf('--timeout')
   if (idx < 0) return
   const value = Number(args[idx + 1])
-  if (isInvalidNumber(value))
-    return { error: '--timeout requires a numeric value' }
+  if (isInvalidNumber(value) || value === 0)
+    return { error: '--timeout requires a positive numeric value' }
   return value
 }
 
