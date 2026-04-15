@@ -284,6 +284,76 @@ describe('runParallel', () => {
     )
   })
 
+  it('suppresses killed progress lines when survivorsOnly is true', async () => {
+    mockFs({ [resolve('src/a.js')]: sourceCode })
+    const preflightRunner = fakePoolRunner([{ passed: true }])
+    const poolRun = vi.fn().mockImplementation((mutations, opts) => {
+      opts.onResult?.({ mutation: mutations[0], status: 'killed' })
+      return { killed: [mutations[0]], survived: [], timedOut: [] }
+    })
+    createPool.mockReturnValue({ run: poolRun, close: vi.fn().mockResolvedValue() })
+
+    const lines = []
+    await runParallel({
+      sourceFile: resolve('src/a.js'),
+      mutationConfig,
+      createRunner: vi.fn().mockResolvedValue(preflightRunner),
+      workerCount: 2,
+      survivorsOnly: true,
+      out: msg => lines.push(msg)
+    })
+
+    const progressLines = lines.filter(l => /\[\d+\/\d+\]/.test(l))
+    expect(progressLines).toHaveLength(0)
+  })
+
+  it('shows survived progress lines when survivorsOnly is true', async () => {
+    mockFs({ [resolve('src/a.js')]: sourceCode })
+    const preflightRunner = fakePoolRunner([{ passed: true }])
+    const poolRun = vi.fn().mockImplementation((mutations, opts) => {
+      opts.onResult?.({ mutation: mutations[0], status: 'SURVIVED' })
+      return { killed: [], survived: [mutations[0]], timedOut: [] }
+    })
+    createPool.mockReturnValue({ run: poolRun, close: vi.fn().mockResolvedValue() })
+
+    const lines = []
+    await runParallel({
+      sourceFile: resolve('src/a.js'),
+      mutationConfig,
+      createRunner: vi.fn().mockResolvedValue(preflightRunner),
+      workerCount: 2,
+      survivorsOnly: true,
+      out: msg => lines.push(msg)
+    })
+
+    const progressLines = lines.filter(l => /\[\d+\/\d+\]/.test(l))
+    expect(progressLines).toHaveLength(1)
+    expect(progressLines[0]).toContain('SURVIVED')
+  })
+
+  it('filters JSON to only survivors when survivorsOnly is true', async () => {
+    mockFs({ [resolve('src/a.js')]: sourceCode })
+    const preflightRunner = fakePoolRunner([{ passed: true }])
+    const mutation = { line: 1, name: '=== → !==', original: 'a === b', mutated: 'a !== b', source: 'if (a !== b) {}' }
+    const poolRun = vi.fn().mockResolvedValue({
+      killed: [{ ...mutation, killedBy: ['t.js'] }],
+      survived: [],
+      timedOut: []
+    })
+    createPool.mockReturnValue({ run: poolRun, close: vi.fn().mockResolvedValue() })
+
+    const result = await runParallel({
+      sourceFile: resolve('src/a.js'),
+      mutationConfig,
+      createRunner: vi.fn().mockResolvedValue(preflightRunner),
+      workerCount: 2,
+      survivorsOnly: true,
+      out: noop
+    })
+
+    expect(result.jsonData.mutants).toHaveLength(0)
+  })
+
   it('pool createRunner creates worktrees per worker', async () => {
     mockFs({ [resolve('src/a.js')]: sourceCode })
     const preflightRunner = fakePoolRunner([{ passed: true }])

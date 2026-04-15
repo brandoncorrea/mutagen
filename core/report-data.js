@@ -72,17 +72,18 @@ export function combineReportData(reports, out = console.log) {
   return createReport(mergedFiles)
 }
 
-export function toJsonMutants(sourceFile, results) {
+export function toJsonMutants(sourceFile, results, { survivorsOnly } = {}) {
   const relPath = relative(process.cwd(), sourceFile)
 
-  return {
-    path: relPath,
-    mutants: [
+  const mutants = survivorsOnly
+    ? results.survived.map(m => toMutant(relPath, m, 'Survived'))
+    : [
       ...results.killed.map(m => toMutant(relPath, m, 'Killed')),
       ...results.survived.map(m => toMutant(relPath, m, 'Survived')),
       ...(results.timedOut || []).map(m => toMutant(relPath, m, 'Timeout'))
     ]
-  }
+
+  return { path: relPath, mutants }
 }
 
 /**

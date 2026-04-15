@@ -241,6 +241,41 @@ describe('parseArgs', () => {
     })
   })
 
+  describe('--survivors-only flag', () => {
+    it('parses --survivors-only in --all mode', () => {
+      const result = parseArgs(['--all', '--survivors-only'])
+      expect(result.survivorsOnly).toBe(true)
+    })
+
+    it('parses --survivors-only in --incremental mode', () => {
+      const result = parseArgs(['--incremental', '--survivors-only'])
+      expect(result.survivorsOnly).toBe(true)
+    })
+
+    it('parses --survivors-only in source file mode', () => {
+      const result = parseArgs(['source.js', '--survivors-only'])
+      expect(result.survivorsOnly).toBe(true)
+    })
+
+    it('returns falsy survivorsOnly when flag is absent', () => {
+      const result = parseArgs(['--all'])
+      expect(result.survivorsOnly).toBeFalsy()
+    })
+
+    it('does not treat --survivors-only as a positional arg', () => {
+      const result = parseArgs(['source.js', '--survivors-only'])
+      expect(result.sourceFile).toContain('source.js')
+      expect(result).not.toHaveProperty('error')
+    })
+
+    it('composes with --json and other flags', () => {
+      const result = parseArgs(['--all', '--json', '--survivors-only', '--timeout', '5000'])
+      expect(result.survivorsOnly).toBe(true)
+      expect(result.jsonOutput).toBe(true)
+      expect(result.timeout).toBe(5000)
+    })
+  })
+
   describe('--timeout at index 0', () => {
     it('parses --timeout when it appears first in argv', () => {
       const result = parseArgs(['--timeout', '5000', '--incremental'])

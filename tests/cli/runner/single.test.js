@@ -171,6 +171,76 @@ describe('worktree-based mutation isolation', () => {
   })
 })
 
+describe('--survivors-only output filtering', () => {
+  it('suppresses killed mutation lines in text output when survivorsOnly is true', async () => {
+    mockFs({ [resolve('src/a.js')]: sourceCode })
+    const lines = []
+    const out = msg => lines.push(msg)
+    const runner = {
+      run: vi.fn()
+        .mockResolvedValueOnce({ passed: true })   // preflight
+        .mockResolvedValueOnce({ passed: false }),  // killed
+      close: vi.fn().mockResolvedValue(undefined)
+    }
+
+    await runSingle({
+      sourceFile: resolve('src/a.js'),
+      mutationConfig,
+      createRunner: vi.fn().mockResolvedValue(runner),
+      survivorsOnly: true,
+      out
+    })
+
+    const perMutationLines = lines.filter(l => l.match(/^\[\d+\/\d+\]/))
+    expect(perMutationLines).toHaveLength(0)
+  })
+
+  it('shows survived mutation lines when survivorsOnly is true', async () => {
+    mockFs({ [resolve('src/a.js')]: sourceCode })
+    const lines = []
+    const out = msg => lines.push(msg)
+    const runner = {
+      run: vi.fn()
+        .mockResolvedValueOnce({ passed: true })  // preflight
+        .mockResolvedValueOnce({ passed: true }),  // survived
+      close: vi.fn().mockResolvedValue(undefined)
+    }
+
+    await runSingle({
+      sourceFile: resolve('src/a.js'),
+      mutationConfig,
+      createRunner: vi.fn().mockResolvedValue(runner),
+      survivorsOnly: true,
+      out
+    })
+
+    const perMutationLines = lines.filter(l => l.match(/^\[\d+\/\d+\]/))
+    expect(perMutationLines).toHaveLength(1)
+    expect(perMutationLines[0]).toContain('SURVIVED')
+  })
+
+  it('filters JSON output to only survivors when survivorsOnly is true', async () => {
+    mockFs({ [resolve('src/a.js')]: sourceCode })
+    const runner = {
+      run: vi.fn()
+        .mockResolvedValueOnce({ passed: true })  // preflight
+        .mockResolvedValueOnce({ passed: true }),  // survived
+      close: vi.fn().mockResolvedValue(undefined)
+    }
+
+    const result = await runSingle({
+      sourceFile: resolve('src/a.js'),
+      mutationConfig,
+      createRunner: vi.fn().mockResolvedValue(runner),
+      survivorsOnly: true,
+      out: noop
+    })
+
+    expect(result.jsonData.mutants).toHaveLength(1)
+    expect(result.jsonData.mutants[0].status).toBe('Survived')
+  })
+})
+
 describe('runSingle', () => {
   it('closes runner only after all mutations complete', async () => {
     mockFs({ [resolve('src/a.js')]: sourceCode })

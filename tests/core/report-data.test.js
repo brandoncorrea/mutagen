@@ -248,6 +248,36 @@ describe('toJsonMutants', () => {
     const output = toJsonMutants(process.cwd() + '/src/foo.js', { killed: [], survived: [] })
     expect(output.path).toBe('src/foo.js')
   })
+
+  it('includes only survived mutants when survivorsOnly is true', () => {
+    const results = {
+      killed: [
+        { line: 5, name: '=== → !==', original: 'a === b', mutated: 'a !== b', killedBy: ['t.js'] }
+      ],
+      survived: [
+        { line: 10, name: '+ → -', original: 'a + b', mutated: 'a - b' }
+      ],
+      timedOut: [
+        { line: 15, name: '&& → ||', original: 'a && b', mutated: 'a || b' }
+      ]
+    }
+
+    const output = toJsonMutants('/project/src/foo.js', results, { survivorsOnly: true })
+    expect(output.mutants).toHaveLength(1)
+    expect(output.mutants[0].status).toBe('Survived')
+    expect(output.mutants[0].mutatorName).toBe('+ → -')
+  })
+
+  it('includes all mutants when survivorsOnly is false', () => {
+    const results = {
+      killed: [{ line: 5, name: 'x', original: 'a', mutated: 'b', killedBy: ['t.js'] }],
+      survived: [{ line: 10, name: 'y', original: 'c', mutated: 'd' }],
+      timedOut: [{ line: 15, name: 'z', original: 'e', mutated: 'f' }]
+    }
+
+    const output = toJsonMutants('/project/src/foo.js', results, { survivorsOnly: false })
+    expect(output.mutants).toHaveLength(3)
+  })
 })
 
 describe('createReport', () => {

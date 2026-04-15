@@ -14,7 +14,7 @@ import { printRunReport } from '../report.js'
 import { runPreflightTests, reportMutation, printBanner } from './shared.js'
 
 export async function runSingle(options) {
-  const { sourceFile, mutationConfig, createRunner, targetLine, timeout, out = console.log } = options
+  const { sourceFile, mutationConfig, createRunner, targetLine, timeout, survivorsOnly, out = console.log } = options
   const original = readFileSync(sourceFile, 'utf-8')
   const worktree = createWorktree(process.cwd())
 
@@ -23,7 +23,7 @@ export async function runSingle(options) {
   const tempSourceFile = worktree.resolve(sourceFile)
   const runner = await createRunner(tempSourceFile, { root: worktree.root })
 
-  const opts = { out, runner, timeout, sourceFile, tempSourceFile, targetLine, original, mutationConfig }
+  const opts = { out, runner, timeout, sourceFile, tempSourceFile, targetLine, original, mutationConfig, survivorsOnly }
 
   try {
     return await runMutations(opts)
@@ -34,7 +34,7 @@ export async function runSingle(options) {
 }
 
 async function runMutations(opts) {
-  const { out, runner, sourceFile, targetLine, original, mutationConfig } = opts
+  const { out, runner, sourceFile, targetLine, original, mutationConfig, survivorsOnly } = opts
   const preflight = await runPreflightTests(out, runner)
   if (preflight.error) return preflight
   out(`Tests pass on original source. Beginning mutations.\n`)
@@ -56,12 +56,12 @@ async function runMutations(opts) {
     survived: outcomes.survived.length,
     killed: outcomes.killed.length + outcomes.timedOut.length,
     timedOut: outcomes.timedOut.length,
-    jsonData: toJsonMutants(sourceFile, outcomes)
+    jsonData: toJsonMutants(sourceFile, outcomes, { survivorsOnly })
   }
 }
 
 async function runMutation(opts, total, outcomes, mutation) {
-  const { out, runner, timeout, tempSourceFile } = opts
+  const { out, runner, timeout, tempSourceFile, survivorsOnly } = opts
   try {
     writeFileSync(tempSourceFile, mutation.source)
 
@@ -72,15 +72,15 @@ async function runMutation(opts, total, outcomes, mutation) {
       reportMutation(out, total, mutation, 'SURVIVED')
     } else {
       outcomes.killed.push({ ...mutation, killedBy: result.killedBy })
-      reportMutation(out, total, mutation, 'killed')
+      if (!survivorsOnly) reportMutation(out, total, mutation, 'killed')
     }
   } catch (err) {
     if (err.message?.includes('timed out')) {
       outcomes.timedOut.push(mutation)
-      reportMutation(out, total, mutation, 'TIMEOUT (killed)')
+      if (!survivorsOnly) reportMutation(out, total, mutation, 'TIMEOUT (killed)')
     } else {
       outcomes.killed.push(mutation)
-      reportMutation(out, total, mutation, 'killed (error)')
+      if (!survivorsOnly) reportMutation(out, total, mutation, 'killed (error)')
     }
   }
 }

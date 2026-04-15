@@ -113,7 +113,8 @@ async function run(ctx, argv) {
     return dryRun(parsed.sourceFile, runCtx.mutationConfig, parsed.targetLine, runCtx.out) && 0
 
   const parallel = parsed.parallel
-  const pCtx = parallel ? { ...runCtx, parallel } : runCtx
+  const survivorsOnly = parsed.survivorsOnly
+  const pCtx = { ...runCtx, ...(parallel && { parallel }), ...(survivorsOnly && { survivorsOnly }) }
 
   let result
   if (parsed.incrementalMode)
@@ -170,6 +171,7 @@ async function runSingleMode(ctx, parsed, timeout) {
     createRunner: ctx.createRunner,
     targetLine: parsed.targetLine,
     timeout,
+    survivorsOnly: ctx.survivorsOnly,
     out: ctx.out
   }
   const result = ctx.parallel
@@ -183,14 +185,14 @@ async function runSingleMode(ctx, parsed, timeout) {
 }
 
 async function runBatch(ctx, jsonOutput, timeout, sourcesToRun) {
-  const { mutationConfig, createRunner, reportDir, reportPath, sources, out } = ctx
+  const { mutationConfig, createRunner, reportDir, reportPath, sources, survivorsOnly, out } = ctx
   const filesToRun = sourcesToRun || sources
 
   out(`\n${HEADER_SEPARATOR}`)
   out(`MUTAGEN — BATCH MODE`)
   out(`   Sources: ${filesToRun.length} file(s)\n`)
 
-  const result = await accumulateResults(filesToRun, { mutationConfig, createRunner, timeout, parallel: ctx.parallel, out })
+  const result = await accumulateResults(filesToRun, { mutationConfig, createRunner, timeout, parallel: ctx.parallel, survivorsOnly, out })
 
   if (typeof jsonOutput === 'string')
     writeStructuredReportFile(jsonOutput, filesToRun.length, result.fileResults)
@@ -202,7 +204,7 @@ async function runBatch(ctx, jsonOutput, timeout, sourcesToRun) {
   return result
 }
 
-async function accumulateResults(filesToRun, { mutationConfig, createRunner, timeout, parallel, out }) {
+async function accumulateResults(filesToRun, { mutationConfig, createRunner, timeout, parallel, survivorsOnly, out }) {
   let totalSurvived = 0
   let totalKilled = 0
   let totalTimedOut = 0
@@ -210,7 +212,7 @@ async function accumulateResults(filesToRun, { mutationConfig, createRunner, tim
   const fileResults = {}
 
   for (const source of filesToRun) {
-    const opts = { sourceFile: resolve(source), mutationConfig, createRunner, timeout, out }
+    const opts = { sourceFile: resolve(source), mutationConfig, createRunner, timeout, survivorsOnly, out }
     const result = parallel
       ? await runParallel({ ...opts, workerCount: typeof parallel === 'number' ? parallel : undefined })
       : await runSingle(opts)

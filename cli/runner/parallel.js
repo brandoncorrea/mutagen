@@ -22,6 +22,7 @@ export async function runParallel(options) {
     createRunner,
     targetLine,
     timeout,
+    survivorsOnly,
     workerCount = DEFAULT_WORKER_COUNT,
     out = console.log
   } = options
@@ -36,6 +37,7 @@ export async function runParallel(options) {
     createRunner,
     targetLine,
     timeout,
+    survivorsOnly,
     workerCount,
     original,
     out
@@ -49,7 +51,7 @@ export async function runParallel(options) {
 }
 
 async function runAfterPreflight(preflightRunner, options) {
-  const { sourceFile, mutationConfig, createRunner, targetLine, timeout, workerCount, original, out } = options
+  const { sourceFile, mutationConfig, createRunner, targetLine, timeout, survivorsOnly, workerCount, original, out } = options
 
   const preflight = await runPreflightTests(out, preflightRunner)
   if (preflight.error) return preflight
@@ -58,11 +60,11 @@ async function runAfterPreflight(preflightRunner, options) {
   const mutations = generateMutations(original, mutationConfig, targetLine)
   out(`Found ${mutations.length} mutation(s) to run.\n`)
 
-  return await executeWithPool(mutations, { sourceFile, createRunner, workerCount, timeout, out })
+  return await executeWithPool(mutations, { sourceFile, createRunner, workerCount, timeout, survivorsOnly, out })
 }
 
 async function executeWithPool(mutations, options) {
-  const { sourceFile, createRunner, workerCount } = options
+  const { sourceFile, createRunner, workerCount, survivorsOnly } = options
 
   const workerCreateRunner = async () => {
     const wt = createWorktree(process.cwd())
@@ -83,12 +85,14 @@ async function executeWithPool(mutations, options) {
   }
 }
 
-async function runPool(pool, mutations, { sourceFile, timeout, out }) {
+async function runPool(pool, mutations, { sourceFile, timeout, survivorsOnly, out }) {
   let completed = 0
   const total = mutations.length
 
   function onResult({ mutation, status }) {
-    reportMutation(out, total, { number: ++completed, ...mutation }, status)
+    completed++
+    if (!survivorsOnly || status === 'SURVIVED')
+      reportMutation(out, total, { number: completed, ...mutation }, status)
   }
 
   const outcomes = await pool.run(mutations, { timeout, onResult })
@@ -99,6 +103,6 @@ async function runPool(pool, mutations, { sourceFile, timeout, out }) {
     survived: outcomes.survived.length,
     killed: outcomes.killed.length + outcomes.timedOut.length,
     timedOut: outcomes.timedOut.length,
-    jsonData: toJsonMutants(sourceFile, outcomes)
+    jsonData: toJsonMutants(sourceFile, outcomes, { survivorsOnly })
   }
 }

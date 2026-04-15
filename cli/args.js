@@ -5,9 +5,9 @@
 import { resolve } from 'node:path'
 
 const usageMessage = `\
-Usage: <script> <source-file> [--line N] [--json [path]] [--dry-run] [--timeout N] [--parallel [N]] [--quiet]
-       <script> --all [--json [path]] [--dry-run] [--timeout N] [--parallel [N]] [--quiet]
-       <script> --incremental [--json [path]] [--timeout N] [--parallel [N]] [--quiet]`
+Usage: <script> <source-file> [--line N] [--json [path]] [--dry-run] [--timeout N] [--parallel [N]] [--quiet] [--survivors-only]
+       <script> --all [--json [path]] [--dry-run] [--timeout N] [--parallel [N]] [--quiet] [--survivors-only]
+       <script> --incremental [--json [path]] [--timeout N] [--parallel [N]] [--quiet] [--survivors-only]`
 
 const diffMessage = 'Usage: <script> --diff <before.json> <after.json> [--json]'
 
@@ -28,7 +28,8 @@ function incrementalOptions(argv) {
     timeout,
     parallel,
     jsonOutput: parseJsonOutput(argv),
-    quiet: hasFlag(argv, '--quiet')
+    quiet: hasFlag(argv, '--quiet'),
+    survivorsOnly: hasFlag(argv, '--survivors-only')
   }
 }
 
@@ -43,7 +44,8 @@ function allOptions(argv) {
     parallel,
     jsonOutput: parseJsonOutput(argv),
     dryRunMode: hasFlag(argv, '--dry-run'),
-    quiet: hasFlag(argv, '--quiet')
+    quiet: hasFlag(argv, '--quiet'),
+    survivorsOnly: hasFlag(argv, '--survivors-only')
   }
 }
 
@@ -73,6 +75,7 @@ function sourceFileOptions(argv) {
     jsonOutput: parseJsonOutput(argv),
     dryRunMode: hasFlag(argv, '--dry-run'),
     quiet: hasFlag(argv, '--quiet'),
+    survivorsOnly: hasFlag(argv, '--survivors-only'),
     timeout,
     parallel
   }
@@ -147,7 +150,7 @@ function isInvalidNumber(value) {
   return Number.isNaN(value) || value < 0
 }
 
-const FLAG_OPTIONS = new Set(['--json', '--dry-run', '--parallel', '--quiet'])
+const FLAG_OPTIONS = new Set(['--json', '--dry-run', '--parallel', '--quiet', '--survivors-only'])
 function isPositionalArg(arg) {
   return !FLAG_OPTIONS.has(arg)
 }

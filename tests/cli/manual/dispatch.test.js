@@ -493,6 +493,44 @@ describe('createManualRunner', () => {
       stderrSpy.mockRestore()
     })
 
+    it('passes --survivors-only through to text output filtering in single mode', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: false }
+      ])
+
+      const lines = []
+      const manual = _createManualRunner({
+        patterns, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner),
+        out: msg => lines.push(msg)
+      })
+      await manual.run(['src/a.js', '--survivors-only'])
+
+      const perMutationLines = lines.filter(l => l.match(/^\[\d+\/\d+\]/))
+      expect(perMutationLines).toHaveLength(0)
+    })
+
+    it('passes --survivors-only through to text output filtering in --all mode', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: false }
+      ])
+
+      const lines = []
+      const manual = _createManualRunner({
+        patterns, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner),
+        out: msg => lines.push(msg)
+      })
+      await manual.run(['--all', '--survivors-only'])
+
+      const perMutationLines = lines.filter(l => l.match(/^\[\d+\/\d+\]/))
+      expect(perMutationLines).toHaveLength(0)
+    })
+
     it('uses config timeout when CLI does not specify one', async () => {
       mockFs({ [resolve('src/a.js')]: sourceCode })
       const runner = fakeRunner([
