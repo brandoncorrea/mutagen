@@ -142,6 +142,12 @@ describe('update expression mutators', () => {
     const names = mutations.map(m => m.name)
     expect(names).toContain('-- → ++')
   })
+
+  it('mutates prefix ++i to --i', () => {
+    const mutations = generateMutations('++i', javascript)
+    const m = mutations.find(m => m.name === '++ → --')
+    expect(m.source).toBe('--i')
+  })
 })
 
 describe('assignment mutators', () => {
@@ -163,5 +169,11 @@ describe('negation mutators', () => {
     const mutations = generateMutations('if (!ready) {}', javascript)
     const names = mutations.map(m => m.name)
     expect(names).toContain('!x → x')
+  })
+
+  it('does not mutate non-! unary operators', () => {
+    const mutations = generateMutations('const x = -y', javascript)
+    const names = mutations.map(m => m.name)
+    expect(names).not.toContain('!x → x')
   })
 })

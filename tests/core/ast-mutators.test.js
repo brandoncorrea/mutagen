@@ -117,6 +117,7 @@ describe('ast-mutators', () => {
         consequent: { start: 6, end: 7 },
         start: 0, end: 12
       }
+      expect(m.test(node)).toBe(true)
       const patch = m.mutate(node, 'cond ? b : c')
       expect(patch).toEqual({ start: 6, end: 6, replacement: 'true || ' })
     })
@@ -167,6 +168,7 @@ describe('ast-mutators', () => {
         object: { end: 3 }, property: { start: 5 },
         start: 0, end: 9
       }
+      expect(m.test(node)).toBe(true)
       const patch = m.mutate(node, 'obj?.prop')
       expect(patch.replacement).toBe('.')
       expect(patch.end - patch.start).toBe(2)
@@ -230,6 +232,7 @@ describe('ast-mutators', () => {
     it('throw → return replaces throw keyword', () => {
       const m = find('throw → return')
       const node = { type: 'ThrowStatement', start: 2, end: 22 }
+      expect(m.test(node)).toBe(true)
       const patch = m.mutate(node, '  throw new Error()')
       expect(patch.replacement).toBe('return')
     })
@@ -244,11 +247,11 @@ describe('ast-mutators', () => {
       expect(patch.replacement).toBe('ceil')
     })
 
-    it('Math.abs → (removed) removes Math.abs', () => {
+    it('Math.abs → (removed) removes Math.abs callee', () => {
       const m = find('Math.abs → (removed)')
       const node = staticCall('Math', 'abs', 0, 12, 5, 8)
       expect(m.test(node)).toBe(true)
-      const patch = m.mutate(node, 'Math.abs(x)')
+      const patch = m.mutate(node)
       expect(patch).toEqual({ start: 0, end: 8, replacement: '' })
     })
   })
@@ -267,6 +270,7 @@ describe('ast-mutators', () => {
       const node = callWithMethod('reverse', 4, 11, 0, 13)
       node.arguments = []
       node.callee.object = { end: 3 }
+      expect(m.test(node)).toBe(true)
       const patch = m.mutate(node, 'arr.reverse()')
       expect(patch).toEqual({ start: 3, end: 13, replacement: '' })
     })
@@ -284,6 +288,7 @@ describe('ast-mutators', () => {
       const m = find('Object.keys → Object.values')
       const node = staticCall('Object', 'keys', 0, 16, 7, 11)
       expect(m.test(node, '')).toBe(true)
+      expect(m.mutate(node).replacement).toBe('values')
     })
   })
 
@@ -299,6 +304,7 @@ describe('ast-mutators', () => {
         }],
         start: 0, end: 8
       }
+      expect(m.test(node)).toBe(true)
       const patch = m.mutate(node, '[...arr]')
       expect(patch).toEqual({ start: 0, end: 8, replacement: 'arr' })
     })
@@ -312,6 +318,7 @@ describe('ast-mutators', () => {
         argument: { start: 5, end: 15 },
         start: 0, end: 15
       }
+      expect(m.test(node)).toBe(true)
       const patch = m.mutate(node, 'void callback()')
       expect(patch).toEqual({ start: 0, end: 5, replacement: '' })
     })
@@ -325,6 +332,7 @@ describe('ast-mutators', () => {
         property: { name: 'length' },
         start: 0, end: 10
       }
+      expect(m.test(node)).toBe(true)
       const patch = m.mutate(node, 'arr.length')
       expect(patch).toEqual({ start: 10, end: 10, replacement: ' + 1' })
     })
@@ -338,6 +346,7 @@ describe('ast-mutators', () => {
         argument: { start: 6, end: 16 },
         start: 0, end: 16
       }
+      expect(m.test(node)).toBe(true)
       const patch = m.mutate(node, 'await fetch(url)')
       expect(patch).toEqual({ start: 0, end: 6, replacement: '' })
     })
@@ -404,6 +413,569 @@ describe('ast-mutators', () => {
       expect(m.test(node)).toBe(true)
       const patch = m.mutate(node, '-x')
       expect(patch).toEqual({ start: 0, end: 1, replacement: '' })
+    })
+  })
+
+  // ── Defensive findBetween branches ──
+
+  describe('defensive null returns', () => {
+    it('assignmentOpSwap returns null when operator not found between nodes', () => {
+      const m = find('+= → -=')
+      // Source doesn't contain += between left.end and right.start
+      const node = assignExpr('+=', 0, 1, 2, 3)
+      expect(m.mutate(node, 'x 1')).toBeNull()
+    })
+
+    it('optional chaining returns null when ?. not found in source', () => {
+      const m = find('?. → .')
+      const node = {
+        type: 'MemberExpression', optional: true,
+        object: { end: 3 }, property: { start: 5 },
+        start: 0, end: 9
+      }
+      expect(m.mutate(node, 'obj.prop!')).toBeNull()
+    })
+
+    it('optional chaining uses callee.end when object is missing', () => {
+      const m = find('?. → .')
+      const node = {
+        type: 'CallExpression', optional: true,
+        callee: { end: 4 },
+        start: 0, end: 9
+      }
+      const patch = m.mutate(node, 'fn()?.val')
+      expect(patch.replacement).toBe('.')
+    })
+
+    it('optional chaining falls back to node.start when both object and callee are missing', () => {
+      const m = find('?. → .')
+      const node = {
+        type: 'MemberExpression', optional: true,
+        start: 0, end: 6
+      }
+      const patch = m.mutate(node, '?.prop')
+      expect(patch.replacement).toBe('.')
+    })
+
+    it('throw → return returns null when throw not found', () => {
+      const m = find('throw → return')
+      const node = { type: 'ThrowStatement', start: 0, end: 10 }
+      expect(m.mutate(node, 'return err')).toBeNull()
+    })
+
+    it('binaryOpSwap returns null when operator not found', () => {
+      const m = find('=== → !==')
+      const node = binExpr('===', 0, 1, 4, 5)
+      expect(m.mutate(node, 'a != b')).toBeNull()
+    })
+
+    it('logicalOpSwap returns null when operator not found', () => {
+      const m = find('&& → ||')
+      const node = logExpr('&&', 0, 1, 4, 5)
+      expect(m.mutate(node, 'a || b')).toBeNull()
+    })
+
+    it('return → void returns null when return not found', () => {
+      const m = find('return → void')
+      const node = {
+        type: 'ReturnStatement',
+        argument: { type: 'Identifier', start: 5, end: 6 },
+        start: 0, end: 6
+      }
+      expect(m.mutate(node, 'void x')).toBeNull()
+    })
+
+    it('slice mutator returns null when open paren not found', () => {
+      const m = find('slice() → slice(1,')
+      const node = callWithMethod('slice', 4, 9, 0, 11)
+      node.callee.end = 9
+      expect(m.mutate(node, 'arr.slice  ')).toBeNull()
+    })
+  })
+
+  // ── Remaining equality operators ──
+
+  describe('remaining equality operators', () => {
+    it('!== → === swaps operator', () => {
+      const m = find('!== → ===')
+      expect(m.test(binExpr('!==', 4, 5, 10, 11))).toBe(true)
+      expect(m.mutate(binExpr('!==', 4, 5, 10, 11), 'if (a !== b) {}').replacement).toBe('===')
+    })
+
+    it('<= → > swaps operator', () => {
+      const m = find('<= → >')
+      expect(m.test(binExpr('<=', 4, 5, 9, 10))).toBe(true)
+      expect(m.mutate(binExpr('<=', 4, 5, 9, 10), 'if (a <= b) {}').replacement).toBe('>')
+    })
+
+    it('> → < swaps operator', () => {
+      const m = find('> → <')
+      expect(m.test(binExpr('>', 4, 5, 8, 9))).toBe(true)
+      expect(m.mutate(binExpr('>', 4, 5, 8, 9), 'if (a > b) {}').replacement).toBe('<')
+    })
+
+    it('< → > swaps operator', () => {
+      const m = find('< → >')
+      expect(m.test(binExpr('<', 4, 5, 8, 9))).toBe(true)
+      expect(m.mutate(binExpr('<', 4, 5, 8, 9), 'if (a < b) {}').replacement).toBe('>')
+    })
+  })
+
+  // ── Remaining logical/nullish ──
+
+  describe('remaining logical operators', () => {
+    it('|| → && swaps operator', () => {
+      const m = find('|| → &&')
+      expect(m.test(logExpr('||', 4, 5, 10, 11))).toBe(true)
+      expect(m.mutate(logExpr('||', 4, 5, 10, 11), 'if (a || b) {}').replacement).toBe('&&')
+    })
+
+    it('?? → || swaps nullish coalescing', () => {
+      const m = find('?? → ||')
+      expect(m.test(logExpr('??', 0, 1, 5, 6))).toBe(true)
+      expect(m.mutate(logExpr('??', 0, 1, 5, 6), 'a ?? b').replacement).toBe('||')
+    })
+  })
+
+  // ── Remaining arithmetic ──
+
+  describe('remaining arithmetic operators', () => {
+    it('- → + swaps', () => {
+      const m = find('- → +')
+      expect(m.mutate(binExpr('-', 10, 11, 14, 15), 'const x = a - b').replacement).toBe('+')
+    })
+
+    it('* → / swaps', () => {
+      const m = find('* → /')
+      expect(m.mutate(binExpr('*', 10, 11, 14, 15), 'const x = a * b').replacement).toBe('/')
+    })
+
+    it('/ → * swaps', () => {
+      const m = find('/ → *')
+      expect(m.mutate(binExpr('/', 10, 11, 14, 15), 'const x = a / b').replacement).toBe('*')
+    })
+
+    it('% → + swaps', () => {
+      const m = find('% → +')
+      expect(m.mutate(binExpr('%', 10, 11, 14, 15), 'const x = a % b').replacement).toBe('+')
+    })
+  })
+
+  // ── Remaining boolean ──
+
+  describe('remaining boolean literals', () => {
+    it('false → true matches boolean false', () => {
+      const m = find('false → true')
+      expect(m.test({ type: 'Literal', value: false })).toBe(true)
+      expect(m.test({ type: 'BooleanLiteral', value: false })).toBe(true)
+      const patch = m.mutate({ type: 'Literal', value: false, start: 10, end: 15 })
+      expect(patch).toEqual({ start: 10, end: 15, replacement: 'true' })
+    })
+  })
+
+  // ── Remaining conditional ──
+
+  describe('remaining conditional', () => {
+    it('ternary → always falsy inserts false && before consequent', () => {
+      const m = find('ternary → always falsy')
+      const node = {
+        type: 'ConditionalExpression',
+        consequent: { start: 6, end: 7 },
+        start: 0, end: 12
+      }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'cond ? b : c')
+      expect(patch).toEqual({ start: 6, end: 6, replacement: 'false && ' })
+    })
+  })
+
+  // ── Remaining method expressions ──
+
+  describe('remaining method expressions', () => {
+    it('toUpperCase → toLowerCase swaps', () => {
+      const m = find('toUpperCase → toLowerCase')
+      const node = callWithMethod('toUpperCase', 2, 13, 0, 15)
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node).replacement).toBe('toLowerCase')
+    })
+
+    it('filter(predicate) → filter(true) prepends true predicate', () => {
+      const m = find('filter(predicate) → filter(true) (ignore predicate)')
+      const node = callWithMethod('filter', 4, 10, 0, 20)
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node)
+      expect(patch.replacement).toBe('x => true, ')
+    })
+
+    it('slice() → slice(1, prepends 1', () => {
+      const m = find('slice() → slice(1,')
+      const node = callWithMethod('slice', 4, 9, 0, 11)
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'arr.slice()')
+      expect(patch.replacement).toBe('1,')
+    })
+  })
+
+  // ── String literals ──
+
+  describe('string literals', () => {
+    it("return '' → return 'mutant' matches single-quoted empty string", () => {
+      const m = find("return '' → return 'mutant'")
+      const node = {
+        type: 'ReturnStatement',
+        argument: { type: 'StringLiteral', value: '', start: 7, end: 9 },
+        start: 0, end: 9
+      }
+      expect(m.test(node, "return ''")).toBe(true)
+      expect(m.mutate(node).replacement).toBe("'mutant'")
+    })
+
+    it('return "" → return "mutant" matches double-quoted empty string', () => {
+      const m = find('return "" → return "mutant"')
+      const node = {
+        type: 'ReturnStatement',
+        argument: { type: 'StringLiteral', value: '', start: 7, end: 9 },
+        start: 0, end: 9
+      }
+      expect(m.test(node, 'return ""')).toBe(true)
+      expect(m.mutate(node).replacement).toBe('"mutant"')
+    })
+
+    it("return '' matches ESTree Literal with string value", () => {
+      const m = find("return '' → return 'mutant'")
+      const node = {
+        type: 'ReturnStatement',
+        argument: { type: 'Literal', value: '', start: 7, end: 9 },
+        start: 0, end: 9
+      }
+      expect(m.test(node, "return ''")).toBe(true)
+    })
+  })
+
+  // ── Block statements ──
+
+  describe('block statements', () => {
+    it('return {} → Object.freeze prepends Object.freeze(', () => {
+      const m = find('return {} → Object.freeze (syntax break)')
+      const node = {
+        type: 'ReturnStatement',
+        argument: { type: 'ObjectExpression', start: 7, end: 9 },
+        start: 0, end: 9
+      }
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node).replacement).toBe('Object.freeze(')
+    })
+
+    it('return → void replaces return keyword', () => {
+      const m = find('return → void')
+      const node = {
+        type: 'ReturnStatement',
+        argument: { type: 'Identifier', start: 7, end: 8 },
+        start: 0, end: 8
+      }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'return x')
+      expect(patch.replacement).toBe('void')
+    })
+  })
+
+  // ── Remaining fallback removals ──
+
+  describe('remaining fallback removals', () => {
+    it("|| '' → (removed) removes empty string fallback", () => {
+      const m = find("|| '' → (removed)")
+      const node = logExpr('||', 0, 1, 5, 7)
+      node.right = { type: 'StringLiteral', value: '' }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node)
+      expect(patch).toEqual({ start: 1, end: 7, replacement: '' })
+    })
+
+    it("|| '' → (removed) matches ESTree Literal with string value", () => {
+      const m = find("|| '' → (removed)")
+      const node = logExpr('||', 0, 1, 5, 7)
+      node.right = { type: 'Literal', value: '' }
+      expect(m.test(node)).toBe(true)
+    })
+
+    it('|| 0 → (removed) removes zero fallback', () => {
+      const m = find('|| 0 → (removed)')
+      const node = logExpr('||', 0, 1, 5, 6)
+      node.right = { type: 'NumericLiteral', value: 0 }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node)
+      expect(patch).toEqual({ start: 1, end: 6, replacement: '' })
+    })
+
+    it('|| 0 → (removed) matches ESTree Literal with number value', () => {
+      const m = find('|| 0 → (removed)')
+      const node = logExpr('||', 0, 1, 5, 6)
+      node.right = { type: 'Literal', value: 0 }
+      expect(m.test(node)).toBe(true)
+    })
+  })
+
+  // ── Remaining update operators ──
+
+  describe('remaining update operators', () => {
+    it('-- → ++ swaps postfix decrement', () => {
+      const m = find('-- → ++')
+      const node = { type: 'UpdateExpression', operator: '--', prefix: false, argument: { start: 0, end: 1 }, start: 0, end: 3 }
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node, 'i--')).toEqual({ start: 1, end: 3, replacement: '++' })
+    })
+
+    it('-- → ++ swaps prefix decrement', () => {
+      const m = find('-- → ++')
+      const node = { type: 'UpdateExpression', operator: '--', prefix: true, argument: { start: 2, end: 3 }, start: 0, end: 3 }
+      expect(m.mutate(node, '--i')).toEqual({ start: 0, end: 2, replacement: '++' })
+    })
+  })
+
+  // ── Remaining assignment ──
+
+  describe('remaining assignment operators', () => {
+    it('-= → += swaps operator', () => {
+      const m = find('-= → +=')
+      const node = assignExpr('-=', 0, 1, 5, 6)
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node, 'x -= 1').replacement).toBe('+=')
+    })
+  })
+
+  // ── Remaining numeric boundary ──
+
+  describe('remaining numeric boundary', () => {
+    it('1 → 0 matches numeric one', () => {
+      const m = find('1 → 0')
+      const node = { type: 'Literal', value: 1, start: 10, end: 11 }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'const x = 1')
+      expect(patch).toEqual({ start: 10, end: 11, replacement: '0' })
+    })
+
+    it('1 → 0 skips hex literals', () => {
+      const m = find('1 → 0')
+      const node = { type: 'Literal', value: 1, start: 10, end: 14 }
+      expect(m.mutate(node, 'const x = 0x01')).toBeNull()
+    })
+
+    it('1 → 0 skips when preceded by digit or dot', () => {
+      const m = find('1 → 0')
+      const node = { type: 'Literal', value: 1, start: 1, end: 2 }
+      expect(m.mutate(node, '.1')).toBeNull()
+    })
+
+    it('0 → 1 skips floats', () => {
+      const m = find('0 → 1')
+      const node = { type: 'Literal', value: 0, start: 10, end: 13 }
+      expect(m.mutate(node, 'const x = 0.0')).toBeNull()
+    })
+  })
+
+  // ── Remaining string method swaps ──
+
+  describe('remaining string method swaps', () => {
+    it('includes → indexOf swaps', () => {
+      const m = find('includes → indexOf')
+      const node = callWithMethod('includes', 2, 10, 0, 14)
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node).replacement).toBe('indexOf')
+    })
+
+    it('startsWith → endsWith swaps', () => {
+      const m = find('startsWith → endsWith')
+      const node = callWithMethod('startsWith', 2, 12, 0, 16)
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node).replacement).toBe('endsWith')
+    })
+
+    it('endsWith → startsWith swaps', () => {
+      const m = find('endsWith → startsWith')
+      const node = callWithMethod('endsWith', 2, 10, 0, 14)
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node).replacement).toBe('startsWith')
+    })
+  })
+
+  // ── Remaining math method swaps ──
+
+  describe('remaining math method swaps', () => {
+    it('Math.ceil → Math.floor swaps', () => {
+      const m = find('Math.ceil → Math.floor')
+      expect(m.test(staticCall('Math', 'ceil', 0, 12, 5, 9))).toBe(true)
+      expect(m.mutate(staticCall('Math', 'ceil', 0, 12, 5, 9)).replacement).toBe('floor')
+    })
+
+    it('Math.min → Math.max swaps', () => {
+      const m = find('Math.min → Math.max')
+      expect(m.test(staticCall('Math', 'min', 0, 12, 5, 8))).toBe(true)
+      expect(m.mutate(staticCall('Math', 'min', 0, 12, 5, 8)).replacement).toBe('max')
+    })
+
+    it('Math.max → Math.min swaps', () => {
+      const m = find('Math.max → Math.min')
+      expect(m.test(staticCall('Math', 'max', 0, 12, 5, 8))).toBe(true)
+      expect(m.mutate(staticCall('Math', 'max', 0, 12, 5, 8)).replacement).toBe('min')
+    })
+
+    it('Math.round → Math.floor swaps', () => {
+      const m = find('Math.round → Math.floor')
+      expect(m.test(staticCall('Math', 'round', 0, 14, 5, 10))).toBe(true)
+      expect(m.mutate(staticCall('Math', 'round', 0, 14, 5, 10)).replacement).toBe('floor')
+    })
+
+    it('Math.sqrt → Math.cbrt swaps', () => {
+      const m = find('Math.sqrt → Math.cbrt')
+      expect(m.test(staticCall('Math', 'sqrt', 0, 13, 5, 9))).toBe(true)
+      expect(m.mutate(staticCall('Math', 'sqrt', 0, 13, 5, 9)).replacement).toBe('cbrt')
+    })
+  })
+
+  // ── Remaining array method swaps ──
+
+  describe('remaining array method swaps', () => {
+    it('some → every swaps', () => {
+      const m = find('some → every')
+      expect(m.test(callWithMethod('some', 4, 8, 0, 12))).toBe(true)
+      expect(m.mutate(callWithMethod('some', 4, 8, 0, 12)).replacement).toBe('every')
+    })
+
+    it('every → some swaps', () => {
+      const m = find('every → some')
+      expect(m.test(callWithMethod('every', 4, 9, 0, 13))).toBe(true)
+      expect(m.mutate(callWithMethod('every', 4, 9, 0, 13)).replacement).toBe('some')
+    })
+
+    it('map → filter swaps', () => {
+      const m = find('map → filter')
+      expect(m.test(callWithMethod('map', 4, 7, 0, 11))).toBe(true)
+      expect(m.mutate(callWithMethod('map', 4, 7, 0, 11)).replacement).toBe('filter')
+    })
+
+    it('push → pop swaps', () => {
+      const m = find('push → pop')
+      expect(m.test(callWithMethod('push', 4, 8, 0, 12))).toBe(true)
+      expect(m.mutate(callWithMethod('push', 4, 8, 0, 12)).replacement).toBe('pop')
+    })
+
+    it('shift → pop swaps (0 args)', () => {
+      const m = find('shift → pop')
+      const node = callWithMethod('shift', 4, 9, 0, 11)
+      node.arguments = []
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node).replacement).toBe('pop')
+    })
+
+    it('unshift → push swaps', () => {
+      const m = find('unshift → push')
+      expect(m.test(callWithMethod('unshift', 4, 11, 0, 15))).toBe(true)
+      expect(m.mutate(callWithMethod('unshift', 4, 11, 0, 15)).replacement).toBe('push')
+    })
+
+    it('find → findIndex swaps', () => {
+      const m = find('find → findIndex')
+      expect(m.test(callWithMethod('find', 4, 8, 0, 12))).toBe(true)
+      expect(m.mutate(callWithMethod('find', 4, 8, 0, 12)).replacement).toBe('findIndex')
+    })
+
+    it('findIndex → find swaps', () => {
+      const m = find('findIndex → find')
+      expect(m.test(callWithMethod('findIndex', 4, 13, 0, 17))).toBe(true)
+      expect(m.mutate(callWithMethod('findIndex', 4, 13, 0, 17)).replacement).toBe('find')
+    })
+
+    it('splice → slice swaps', () => {
+      const m = find('splice → slice')
+      expect(m.test(callWithMethod('splice', 4, 10, 0, 14))).toBe(true)
+      expect(m.mutate(callWithMethod('splice', 4, 10, 0, 14)).replacement).toBe('slice')
+    })
+  })
+
+  // ── Remaining object method swaps ──
+
+  describe('remaining object method swaps', () => {
+    it('Object.values → Object.keys swaps', () => {
+      const m = find('Object.values → Object.keys')
+      const node = staticCall('Object', 'values', 0, 18, 7, 13)
+      expect(m.test(node, '')).toBe(true)
+      expect(m.mutate(node).replacement).toBe('keys')
+    })
+
+    it('Object.values → Object.keys skips .length parent', () => {
+      const m = find('Object.values → Object.keys')
+      const node = staticCall('Object', 'values', 0, 18, 7, 13)
+      const parent = { type: 'MemberExpression', property: { name: 'length' } }
+      expect(m.test(node, '', parent)).toBe(false)
+    })
+
+    it('Object.entries → Object.keys swaps', () => {
+      const m = find('Object.entries → Object.keys')
+      const node = staticCall('Object', 'entries', 0, 20, 7, 14)
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node).replacement).toBe('keys')
+    })
+  })
+
+  // ── Remaining bitwise operators ──
+
+  describe('remaining bitwise operators', () => {
+    it('| → & swaps', () => {
+      const m = find('| → &')
+      expect(m.test(binExpr('|', 0, 1, 4, 5))).toBe(true)
+      expect(m.mutate(binExpr('|', 0, 1, 4, 5), 'a | b').replacement).toBe('&')
+    })
+
+    it('^ → & swaps', () => {
+      const m = find('^ → &')
+      expect(m.test(binExpr('^', 0, 1, 4, 5))).toBe(true)
+      expect(m.mutate(binExpr('^', 0, 1, 4, 5), 'a ^ b').replacement).toBe('&')
+    })
+
+    it('<< → >> swaps', () => {
+      const m = find('<< → >>')
+      expect(m.test(binExpr('<<', 0, 1, 5, 6))).toBe(true)
+      expect(m.mutate(binExpr('<<', 0, 1, 5, 6), 'a << b').replacement).toBe('>>')
+    })
+
+    it('>> → << swaps', () => {
+      const m = find('>> → <<')
+      expect(m.test(binExpr('>>', 0, 1, 5, 6))).toBe(true)
+      expect(m.mutate(binExpr('>>', 0, 1, 5, 6), 'a >> b').replacement).toBe('<<')
+    })
+  })
+
+  // ── Remaining type conversions ──
+
+  describe('remaining type conversions', () => {
+    it('parseFloat → parseInt swaps', () => {
+      const m = find('parseFloat → parseInt')
+      const node = {
+        type: 'CallExpression',
+        callee: { type: 'Identifier', name: 'parseFloat', start: 0, end: 10 },
+        start: 0, end: 15
+      }
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node)).toEqual({ start: 0, end: 10, replacement: 'parseInt' })
+    })
+  })
+
+  // ── Remaining spread removal ──
+
+  describe('remaining spread removal', () => {
+    it('[...x, y] → [y] removes leading spread', () => {
+      const m = find('[...x, y] → [y] (remove spread)')
+      const node = {
+        type: 'ArrayExpression',
+        elements: [
+          { type: 'SpreadElement', argument: { start: 4, end: 7 }, start: 1, end: 7 },
+          { type: 'Identifier', name: 'y', start: 9, end: 10 }
+        ],
+        start: 0, end: 11
+      }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, '[...arr, y]')
+      expect(patch).toEqual({ start: 1, end: 9, replacement: '' })
     })
   })
 })

@@ -66,6 +66,7 @@ function groupByType(mutators) {
 
 function walk(node, visitor) {
   if (!node || typeof node !== 'object') return
+  /* v8 ignore next -- all Babel AST objects have type */
   if (node.type) visitor(node)
 
   for (const key of Object.keys(node)) {
