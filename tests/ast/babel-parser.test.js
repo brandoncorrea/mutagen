@@ -282,7 +282,7 @@ describe('@babel/parser: comment preservation', () => {
 
     // The binary expression is NOT inside any comment
     const inComment = commentRanges.some(
-      ([start, end]) => expr.start >= start && expr.end <= end,
+      ([start, end]) => expr.start >= start && expr.end <= end
     );
     expect(inComment).toBe(false);
   });
@@ -298,7 +298,7 @@ describe('@babel/parser: error handling', () => {
   it('errorRecovery handles semantic errors', () => {
     const ast = parse('class Foo { #x = 1; #x = 2; }', {
       sourceType: 'module',
-      errorRecovery: true,
+      errorRecovery: true
     });
     expect(ast.errors.length).toBeGreaterThan(0);
     expect(ast.program).toBeDefined();

@@ -2,13 +2,10 @@
 export { generateMutations, prepareMutationConfig } from './core/generate.js'
 
 // Built-in AST mutators
-export * as mutators from './core/mutators.js'
+export * as mutators from './core/ast-mutators.js'
 
 // Built-in regex pattern sets (secondary mode)
 export * as patterns from './core/patterns.js'
-
-// Legacy regex engine (for direct use)
-export { generateMutations as generateRegexMutations, preparePatterns } from './core/engine.js'
 
 // Runner
 export { createVitestRunner } from './runners/vitest.js'

@@ -1,4 +1,4 @@
-import { javascript as astMutators } from './core/mutators.js'
+import { javascript as astMutators } from './core/ast-mutators.js'
 import { javascript as regexPatterns } from './core/patterns.js'
 import { createVitestRunner } from './runners/vitest.js'
 

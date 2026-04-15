@@ -25,7 +25,7 @@ vi.mock('../../../core/worktree.js')
 // NOTE: pool.js is NOT mocked — we use the real pool for determinism verification
 
 import { runSingle, runParallel } from '../../../cli/runner/index.js'
-import { preparePatterns } from '../../../core/engine.js'
+import { prepareMutationConfig } from '../../../core/generate.js'
 import { createWorktree } from '../../../core/worktree.js'
 import { readFileSync } from 'node:fs'
 import { noop, mockFs as _mockFs } from '../helpers.js'
@@ -34,7 +34,7 @@ const patterns = [
   { pattern: / === /g, replacement: ' !== ', name: '=== → !==' },
   { pattern: / \+ /g, replacement: ' - ', name: '+ → -' }
 ]
-const prepared = preparePatterns(patterns)
+const mutationConfig = prepareMutationConfig({ patterns })
 
 // Source with multiple mutations to exercise distribution
 const multiSource = [
@@ -102,13 +102,13 @@ describe('runSingle vs runParallel result determinism', () => {
     mockFs({ [sourceFile]: multiSource })
 
     const seqResult = await runSingle({
-      sourceFile, prepared,
+      sourceFile, mutationConfig,
       createRunner: killedRunnerFactory(),
       out: noop
     })
 
     const parResult = await runParallel({
-      sourceFile, prepared,
+      sourceFile, mutationConfig,
       createRunner: killedRunnerFactory(),
       workerCount: 3,
       out: noop
@@ -125,13 +125,13 @@ describe('runSingle vs runParallel result determinism', () => {
     mockFs({ [sourceFile]: multiSource })
 
     const seqResult = await runSingle({
-      sourceFile, prepared,
+      sourceFile, mutationConfig,
       createRunner: killedRunnerFactory(),
       out: noop
     })
 
     const parResult = await runParallel({
-      sourceFile, prepared,
+      sourceFile, mutationConfig,
       createRunner: killedRunnerFactory(),
       workerCount: 2,
       out: noop
@@ -151,7 +151,7 @@ describe('runSingle vs runParallel result determinism', () => {
     for (const wc of [2, 2, 2]) {
       mockFs({ [sourceFile]: multiSource })
       const r = await runParallel({
-        sourceFile, prepared,
+        sourceFile, mutationConfig,
         createRunner: killedRunnerFactory(),
         workerCount: wc,
         out: noop
@@ -173,7 +173,7 @@ describe('runSingle vs runParallel result determinism', () => {
     for (let i = 0; i < 3; i++) {
       mockFs({ [sourceFile]: multiSource })
       results.push(await runSingle({
-        sourceFile, prepared,
+        sourceFile, mutationConfig,
         createRunner: killedRunnerFactory(),
         out: noop
       }))
@@ -191,7 +191,7 @@ describe('runSingle vs runParallel result determinism', () => {
     for (let i = 0; i < 3; i++) {
       mockFs({ [sourceFile]: multiSource })
       results.push(await runParallel({
-        sourceFile, prepared,
+        sourceFile, mutationConfig,
         createRunner: killedRunnerFactory(),
         workerCount: 3,
         out: noop
@@ -209,13 +209,13 @@ describe('runSingle vs runParallel result determinism', () => {
     mockFs({ [sourceFile]: multiSource })
 
     const seqResult = await runSingle({
-      sourceFile, prepared,
+      sourceFile, mutationConfig,
       createRunner: killedRunnerFactory(),
       out: noop
     })
 
     const parResult = await runParallel({
-      sourceFile, prepared,
+      sourceFile, mutationConfig,
       createRunner: killedRunnerFactory(),
       workerCount: 2,
       out: noop

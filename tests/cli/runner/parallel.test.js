@@ -16,13 +16,13 @@ vi.mock('../../../core/pool.js')
 vi.mock('../../../core/worktree.js')
 
 import { runParallel } from '../../../cli/runner/index.js'
-import { preparePatterns } from '../../../core/engine.js'
+import { prepareMutationConfig } from '../../../core/generate.js'
 import { createPool } from '../../../core/pool.js'
 import { createWorktree } from '../../../core/worktree.js'
 import { readFileSync } from 'node:fs'
 import { patterns, sourceCode, noop, fakePoolRunner, mockFs as _mockFs } from '../helpers.js'
 
-const prepared = preparePatterns(patterns)
+const mutationConfig = prepareMutationConfig({ patterns })
 
 function mockFs(files) { _mockFs(readFileSync, files) }
 
@@ -57,7 +57,7 @@ describe('runParallel', () => {
 
     const result = await runParallel({
       sourceFile: resolve('src/a.js'),
-      prepared,
+      mutationConfig,
       createRunner: vi.fn().mockResolvedValue(preflightRunner),
       workerCount: 4,
       out: noop
@@ -87,7 +87,7 @@ describe('runParallel', () => {
 
     const result = await runParallel({
       sourceFile: resolve('src/a.js'),
-      prepared,
+      mutationConfig,
       createRunner: vi.fn().mockResolvedValue(preflightRunner),
       workerCount: 2,
       out: noop
@@ -107,7 +107,7 @@ describe('runParallel', () => {
 
     const result = await runParallel({
       sourceFile: resolve('src/a.js'),
-      prepared,
+      mutationConfig,
       createRunner: vi.fn().mockResolvedValue(preflightRunner),
       workerCount: 2,
       out: noop
@@ -125,7 +125,7 @@ describe('runParallel', () => {
 
     await runParallel({
       sourceFile: resolve('src/a.js'),
-      prepared,
+      mutationConfig,
       createRunner: vi.fn().mockResolvedValue(preflightRunner),
       workerCount: 2,
       timeout: 5000,
@@ -147,7 +147,7 @@ describe('runParallel', () => {
 
     await runParallel({
       sourceFile: resolve('src/a.js'),
-      prepared,
+      mutationConfig,
       createRunner: vi.fn().mockResolvedValue(preflightRunner),
       workerCount: 2,
       out: noop
@@ -169,7 +169,7 @@ describe('runParallel', () => {
     const lines = []
     await runParallel({
       sourceFile: resolve('src/a.js'),
-      prepared,
+      mutationConfig,
       createRunner: vi.fn().mockResolvedValue(preflightRunner),
       workerCount: 2,
       out: msg => lines.push(msg)
@@ -192,7 +192,7 @@ describe('runParallel', () => {
     const lines = []
     await runParallel({
       sourceFile: resolve('src/a.js'),
-      prepared,
+      mutationConfig,
       createRunner: vi.fn().mockResolvedValue(preflightRunner),
       workerCount: 2,
       out: msg => lines.push(msg)
@@ -215,7 +215,7 @@ describe('runParallel', () => {
     const lines = []
     await runParallel({
       sourceFile: resolve('src/a.js'),
-      prepared,
+      mutationConfig,
       createRunner: vi.fn().mockResolvedValue(preflightRunner),
       workerCount: 2,
       out: msg => lines.push(msg)
@@ -234,7 +234,7 @@ describe('runParallel', () => {
 
     await runParallel({
       sourceFile: resolve('src/a.js'),
-      prepared,
+      mutationConfig,
       createRunner: vi.fn().mockResolvedValue(preflightRunner),
       workerCount: 2,
       targetLine: 2,
@@ -256,7 +256,7 @@ describe('runParallel', () => {
 
     await expect(runParallel({
       sourceFile: resolve('src/a.js'),
-      prepared,
+      mutationConfig,
       createRunner: vi.fn().mockResolvedValue(preflightRunner),
       workerCount: 2,
       out: noop
@@ -274,7 +274,7 @@ describe('runParallel', () => {
 
     await runParallel({
       sourceFile: resolve('src/a.js'),
-      prepared,
+      mutationConfig,
       createRunner: vi.fn().mockResolvedValue(preflightRunner),
       out: noop
     })
@@ -305,7 +305,7 @@ describe('runParallel', () => {
 
     await runParallel({
       sourceFile: resolve('src/a.js'),
-      prepared,
+      mutationConfig,
       createRunner: userCreateRunner,
       workerCount: 2,
       out: noop

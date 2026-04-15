@@ -19,14 +19,12 @@ export async function runParallel(options) {
   const {
     sourceFile,
     mutationConfig,
-    prepared,
     createRunner,
     targetLine,
     timeout,
     workerCount = DEFAULT_WORKER_COUNT,
     out = console.log
   } = options
-  const config = mutationConfig || prepared
   const original = readFileSync(sourceFile, 'utf-8')
 
   printBanner(out, `MUTAGEN (parallel — ${workerCount} workers)`, sourceFile, targetLine, timeout)
@@ -34,7 +32,7 @@ export async function runParallel(options) {
   const preflightRunner = await createRunner(sourceFile)
   const runOptions = {
     sourceFile,
-    mutationConfig: config,
+    mutationConfig,
     createRunner,
     targetLine,
     timeout,

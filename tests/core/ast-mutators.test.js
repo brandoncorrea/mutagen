@@ -1,15 +1,15 @@
 import { describe, it, expect } from 'vitest'
-import { astMutators } from '../../core/ast-mutators.js'
+import { javascript } from '../../core/ast-mutators.js'
 
 describe('ast-mutators', () => {
   describe('structure', () => {
     it('exports a non-empty array', () => {
-      expect(Array.isArray(astMutators)).toBe(true)
-      expect(astMutators.length).toBeGreaterThan(0)
+      expect(Array.isArray(javascript)).toBe(true)
+      expect(javascript.length).toBeGreaterThan(0)
     })
 
     it('every mutator has required fields with correct types', () => {
-      for (const m of astMutators) {
+      for (const m of javascript) {
         expect(m.name, `missing name`).toBeDefined()
         expect(typeof m.name, `name should be string: ${m.name}`).toBe('string')
         expect(Array.isArray(m.types), `types should be array: ${m.name}`).toBe(true)
@@ -20,7 +20,7 @@ describe('ast-mutators', () => {
     })
 
     it('mutator names are unique', () => {
-      const names = astMutators.map(m => m.name)
+      const names = javascript.map(m => m.name)
       const dupes = names.filter((n, i) => names.indexOf(n) !== i)
       expect(dupes, `duplicate names: ${dupes.join(', ')}`).toHaveLength(0)
     })
@@ -35,7 +35,7 @@ describe('ast-mutators', () => {
         'Literal', 'BooleanLiteral', 'NumericLiteral', 'StringLiteral',
         'ChainExpression'
       ])
-      for (const m of astMutators) {
+      for (const m of javascript) {
         for (const t of m.types) {
           expect(valid.has(t), `${m.name}: unknown node type '${t}'`).toBe(true)
         }
@@ -983,7 +983,7 @@ describe('ast-mutators', () => {
 // ── Test helpers ──
 
 function find(name) {
-  const m = astMutators.find(m => m.name === name)
+  const m = javascript.find(m => m.name === name)
   if (!m) throw new Error(`Mutator not found: ${name}`)
   return m
 }

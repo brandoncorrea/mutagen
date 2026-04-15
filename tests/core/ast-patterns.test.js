@@ -7,326 +7,351 @@ import { generateMutations } from '../../core/ast-engine.js'
  * When the real AST mutators land (mu-wi6h), they replace these inline definitions.
  */
 
+function findBetween(source, from, to, text) {
+  const idx = source.indexOf(text, from)
+  return idx !== -1 && idx + text.length <= to ? idx : -1
+}
+
 // --- EqualityOperator ---
+const equalitySwaps = { '===': '!==', '!==': '===', '>=': '<', '<=': '>', '>': '<', '<': '>' }
+const equalityNames = {
+  '===': '=== → !==', '!==': '!== → ===',
+  '>=': '>= → <', '<=': '<= → >',
+  '>': '> → <', '<': '< → >'
+}
+
 const equalityMutator = {
-  type: 'BinaryExpression',
-  mutate(node) {
-    const swaps = { '===': '!==', '!==': '===', '>=': '<', '<=': '>', '>': '<', '<': '>' }
-    const names = {
-      '===': '=== → !==', '!==': '!== → ===',
-      '>=': '>= → <', '<=': '<= → >',
-      '>': '> → <', '<': '< → >'
-    }
-    if (!swaps[node.operator]) return []
-    return [{ operator: swaps[node.operator], name: names[node.operator] }]
+  types: ['BinaryExpression'],
+  test: (node) => Boolean(equalitySwaps[node.operator]),
+  mutate: (node, source) => {
+    const op = node.operator
+    const idx = findBetween(source, node.left.end, node.right.start, op)
+    if (idx === -1) return null
+    return { start: idx, end: idx + op.length, replacement: equalitySwaps[op], name: equalityNames[op] }
   }
 }
 
 // --- LogicalOperator ---
+const logicalSwaps = { '&&': '||', '||': '&&' }
+const logicalNames = { '&&': '&& → ||', '||': '|| → &&' }
+
 const logicalMutator = {
-  type: 'LogicalExpression',
-  mutate(node) {
-    const swaps = { '&&': '||', '||': '&&' }
-    const names = { '&&': '&& → ||', '||': '|| → &&' }
-    if (!swaps[node.operator]) return []
-    return [{ operator: swaps[node.operator], name: names[node.operator] }]
+  types: ['LogicalExpression'],
+  test: (node) => Boolean(logicalSwaps[node.operator]),
+  mutate: (node, source) => {
+    const op = node.operator
+    const idx = findBetween(source, node.left.end, node.right.start, op)
+    if (idx === -1) return null
+    return { start: idx, end: idx + op.length, replacement: logicalSwaps[op], name: logicalNames[op] }
   }
 }
 
 // --- ArithmeticOperator ---
+const arithmeticSwaps = { '+': '-', '-': '+', '*': '/', '/': '*', '%': '+', '**': '*' }
+const arithmeticNames = {
+  '+': '+ → -', '-': '- → +', '*': '* → /', '/': '/ → *',
+  '%': '% → +', '**': '** → *'
+}
+
 const arithmeticMutator = {
-  type: 'BinaryExpression',
-  mutate(node) {
-    const swaps = { '+': '-', '-': '+', '*': '/', '/': '*', '%': '+', '**': '*' }
-    const names = {
-      '+': '+ → -', '-': '- → +', '*': '* → /', '/': '/ → *',
-      '%': '% → +', '**': '** → *'
-    }
-    if (!swaps[node.operator]) return []
-    return [{ operator: swaps[node.operator], name: names[node.operator] }]
+  types: ['BinaryExpression'],
+  test: (node) => Boolean(arithmeticSwaps[node.operator]),
+  mutate: (node, source) => {
+    const op = node.operator
+    const idx = findBetween(source, node.left.end, node.right.start, op)
+    if (idx === -1) return null
+    return { start: idx, end: idx + op.length, replacement: arithmeticSwaps[op], name: arithmeticNames[op] }
   }
 }
 
 // --- BooleanLiteral ---
 const booleanMutator = {
-  type: 'BooleanLiteral',
-  mutate(node) {
+  types: ['BooleanLiteral'],
+  test: () => true,
+  mutate: (node) => {
     if (node.value === true) {
-      return [{ start: node.start, end: node.end, replacement: 'false', name: 'true → false' }]
+      return { start: node.start, end: node.end, replacement: 'false', name: 'true → false' }
     }
-    return [{ start: node.start, end: node.end, replacement: 'true', name: 'false → true' }]
+    return { start: node.start, end: node.end, replacement: 'true', name: 'false → true' }
   }
 }
 
 // --- ConditionalExpression ---
 const ternaryTruthyMutator = {
-  type: 'ConditionalExpression',
-  mutate(node) {
-    return [{ start: node.consequent.start, end: node.consequent.start, replacement: 'true || ', name: 'ternary → always truthy' }]
-  }
+  name: 'ternary → always truthy',
+  types: ['ConditionalExpression'],
+  test: () => true,
+  mutate: (node) => ({ start: node.consequent.start, end: node.consequent.start, replacement: 'true || ' })
 }
 
 const ternaryFalsyMutator = {
-  type: 'ConditionalExpression',
-  mutate(node) {
-    return [{ start: node.consequent.start, end: node.consequent.start, replacement: 'false && ', name: 'ternary → always falsy' }]
-  }
+  name: 'ternary → always falsy',
+  types: ['ConditionalExpression'],
+  test: () => true,
+  mutate: (node) => ({ start: node.consequent.start, end: node.consequent.start, replacement: 'false && ' })
 }
 
 // --- MethodExpression (CallExpression with MemberExpression callee) ---
+const methodSwaps = {
+  toLowerCase: { to: 'toUpperCase', name: 'toLowerCase → toUpperCase' },
+  toUpperCase: { to: 'toLowerCase', name: 'toUpperCase → toLowerCase' },
+  includes: { to: 'indexOf', name: 'includes → indexOf' },
+  startsWith: { to: 'endsWith', name: 'startsWith → endsWith' },
+  endsWith: { to: 'startsWith', name: 'endsWith → startsWith' },
+  some: { to: 'every', name: 'some → every' },
+  every: { to: 'some', name: 'every → some' },
+  map: { to: 'filter', name: 'map → filter' },
+  push: { to: 'pop', name: 'push → pop' },
+  unshift: { to: 'push', name: 'unshift → push' },
+  find: { to: 'findIndex', name: 'find → findIndex' },
+  findIndex: { to: 'find', name: 'findIndex → find' },
+  splice: { to: 'slice', name: 'splice → slice' },
+  replace: { to: 'toString', name: 'replace → toString (removed)' }
+}
+
 const methodSwapMutator = {
-  type: 'CallExpression',
-  mutate(node) {
-    if (node.callee.type !== 'MemberExpression') return []
+  types: ['CallExpression'],
+  test: (node) => {
+    if (node.callee.type !== 'MemberExpression') return false
+    const name = node.callee.property.name || node.callee.property.value
+    return Boolean(methodSwaps[name])
+  },
+  mutate: (node) => {
     const prop = node.callee.property
     const name = prop.name || prop.value
-    const swaps = {
-      toLowerCase: { to: 'toUpperCase', name: 'toLowerCase → toUpperCase' },
-      toUpperCase: { to: 'toLowerCase', name: 'toUpperCase → toLowerCase' },
-      trim: { to: '', removeProp: true, name: 'trim() → (removed)' },
-      includes: { to: 'indexOf', name: 'includes → indexOf' },
-      startsWith: { to: 'endsWith', name: 'startsWith → endsWith' },
-      endsWith: { to: 'startsWith', name: 'endsWith → startsWith' },
-      some: { to: 'every', name: 'some → every' },
-      every: { to: 'some', name: 'every → some' },
-      map: { to: 'filter', name: 'map → filter' },
-      push: { to: 'pop', name: 'push → pop' },
-      unshift: { to: 'push', name: 'unshift → push' },
-      find: { to: 'findIndex', name: 'find → findIndex' },
-      findIndex: { to: 'find', name: 'findIndex → find' },
-      splice: { to: 'slice', name: 'splice → slice' },
-      replace: { to: 'toString', name: 'replace → toString (removed)' }
-    }
-    const swap = swaps[name]
-    if (!swap) return []
-    if (swap.removeProp) {
-      // Remove .trim() — from dot to closing paren
-      return [{ start: node.callee.object.end, end: node.end, replacement: '', name: swap.name }]
-    }
-    return [{ start: prop.start, end: prop.end, replacement: swap.to, name: swap.name }]
+    const swap = methodSwaps[name]
+    return { start: prop.start, end: prop.end, replacement: swap.to, name: swap.name }
   }
+}
+
+const trimMutator = {
+  name: 'trim() → (removed)',
+  types: ['CallExpression'],
+  test: (node) => node.callee.type === 'MemberExpression' && node.callee.property.name === 'trim',
+  mutate: (node) => ({ start: node.callee.object.end, end: node.end, replacement: '' })
 }
 
 // --- Shift and reverse need special handling ---
 const shiftMutator = {
-  type: 'CallExpression',
-  mutate(node) {
-    if (node.callee.type !== 'MemberExpression') return []
+  types: ['CallExpression'],
+  test: (node) => {
+    if (node.callee.type !== 'MemberExpression') return false
+    const name = node.callee.property.name
+    return name === 'shift' || name === 'reverse'
+  },
+  mutate: (node) => {
     const prop = node.callee.property
     if (prop.name === 'shift') {
-      return [{ start: prop.start, end: prop.end, replacement: 'pop', name: 'shift → pop' }]
+      return { start: prop.start, end: prop.end, replacement: 'pop', name: 'shift → pop' }
     }
-    if (prop.name === 'reverse') {
-      // Remove .reverse() entirely
-      return [{ start: node.callee.object.end, end: node.end, replacement: '', name: 'reverse() → (removed)' }]
-    }
-    return []
+    return { start: node.callee.object.end, end: node.end, replacement: '', name: 'reverse() → (removed)' }
   }
 }
 
 // --- UpdateOperator ---
+const updateSwaps = { '++': '--', '--': '++' }
+const updateNames = { '++': '++ → --', '--': '-- → ++' }
+
 const updateMutator = {
-  type: 'UpdateExpression',
-  mutate(node) {
-    const swaps = { '++': '--', '--': '++' }
-    const names = { '++': '++ → --', '--': '-- → ++' }
-    if (!swaps[node.operator]) return []
-    const arg = node.argument.name
-    const replacement = node.prefix
-      ? swaps[node.operator] + arg
-      : arg + swaps[node.operator]
-    return [{ start: node.start, end: node.end, replacement, name: names[node.operator] }]
+  types: ['UpdateExpression'],
+  test: (node) => Boolean(updateSwaps[node.operator]),
+  mutate: (node) => {
+    const op = node.prefix ? node.start : node.argument.end
+    return { start: op, end: op + 2, replacement: updateSwaps[node.operator], name: updateNames[node.operator] }
   }
 }
 
 // --- Async (AwaitExpression) ---
 const awaitMutator = {
-  type: 'AwaitExpression',
-  mutate(node) {
-    // Remove "await " prefix, keep the argument
-    return [{ start: node.start, end: node.argument.start, replacement: '', name: 'await → (removed)' }]
-  }
+  name: 'await → (removed)',
+  types: ['AwaitExpression'],
+  test: () => true,
+  mutate: (node) => ({ start: node.start, end: node.argument.start, replacement: '' })
 }
 
 // --- Optional chaining ---
 const optionalChainingMutator = {
-  type: 'OptionalMemberExpression',
-  mutate(node) {
-    if (!node.optional) return []
-    // Replace ?. with . — the ? is between object end and property start
-    const dotStart = node.object.end
-    // In ?., the ? is at object.end and . is at object.end+1
-    return [{ start: dotStart, end: dotStart + 2, replacement: '.', name: '?. → .' }]
+  name: '?. → .',
+  types: ['OptionalMemberExpression'],
+  test: (node) => node.optional,
+  mutate: (node, source) => {
+    const idx = source.indexOf('?.', node.object.end)
+    if (idx === -1) return null
+    return { start: idx, end: idx + 2, replacement: '.' }
   }
 }
 
 // --- Negation removal ---
 const negationMutator = {
-  type: 'UnaryExpression',
-  mutate(node) {
-    if (node.operator === '!' && node.prefix) {
-      return [{ start: node.start, end: node.start + 1, replacement: '', name: '!var → var' }]
-    }
-    return []
-  }
+  name: '!var → var',
+  types: ['UnaryExpression'],
+  test: (node) => node.operator === '!' && node.prefix,
+  mutate: (node) => ({ start: node.start, end: node.argument.start, replacement: '' })
 }
 
 // --- Nullish coalescing ---
 const nullishMutator = {
-  type: 'LogicalExpression',
-  mutate(node) {
-    if (node.operator === '??') {
-      return [{ operator: '||', name: '?? → ||' }]
-    }
-    return []
+  name: '?? → ||',
+  types: ['LogicalExpression'],
+  test: (node) => node.operator === '??',
+  mutate: (node, source) => {
+    const idx = findBetween(source, node.left.end, node.right.start, '??')
+    if (idx === -1) return null
+    return { start: idx, end: idx + 2, replacement: '||' }
   }
 }
 
 // --- Assignment mutations ---
+const assignmentSwaps = { '+=': '-=', '-=': '+=' }
+const assignmentNames = { '+=': '+= → -=', '-=': '-= → +=' }
+
 const assignmentMutator = {
-  type: 'AssignmentExpression',
-  mutate(node) {
-    const swaps = { '+=': '-=', '-=': '+=' }
-    const names = { '+=': '+= → -=', '-=': '-= → +=' }
-    if (!swaps[node.operator]) return []
-    return [{ operator: swaps[node.operator], name: names[node.operator] }]
+  types: ['AssignmentExpression'],
+  test: (node) => Boolean(assignmentSwaps[node.operator]),
+  mutate: (node, source) => {
+    const op = node.operator
+    const idx = findBetween(source, node.left.end, node.right.start, op)
+    if (idx === -1) return null
+    return { start: idx, end: idx + op.length, replacement: assignmentSwaps[op], name: assignmentNames[op] }
   }
 }
 
 // --- Numeric boundary ---
 const numericMutator = {
-  type: 'NumericLiteral',
-  mutate(node) {
-    if (node.value === 0) {
-      return [{ start: node.start, end: node.end, replacement: '1', name: '0 → 1' }]
-    }
-    if (node.value === 1) {
-      return [{ start: node.start, end: node.end, replacement: '0', name: '1 → 0' }]
-    }
-    return []
+  types: ['NumericLiteral'],
+  test: (node) => node.value === 0 || node.value === 1,
+  mutate: (node) => {
+    if (node.value === 0) return { start: node.start, end: node.end, replacement: '1', name: '0 → 1' }
+    return { start: node.start, end: node.end, replacement: '0', name: '1 → 0' }
   }
 }
 
 // --- Unary minus for -1 ---
 const unaryMinusMutator = {
-  type: 'UnaryExpression',
-  mutate(node) {
-    if (node.operator === '-' && node.prefix) {
-      if (node.argument.type === 'NumericLiteral' && node.argument.value === 1) {
-        return [{ start: node.start, end: node.end, replacement: '0', name: '-1 → 0' }]
-      }
-      if (node.argument.type === 'Identifier') {
-        return [{ start: node.start, end: node.start + 1, replacement: '', name: 'unary -x → x' }]
-      }
+  types: ['UnaryExpression'],
+  test: (node) => node.operator === '-' && node.prefix,
+  mutate: (node) => {
+    if (node.argument.type === 'NumericLiteral' && node.argument.value === 1) {
+      return { start: node.start, end: node.end, replacement: '0', name: '-1 → 0' }
     }
-    return []
+    if (node.argument.type === 'Identifier') {
+      return { start: node.start, end: node.argument.start, replacement: '', name: 'unary -x → x' }
+    }
+    return null
   }
 }
 
 // --- Throw removal ---
 const throwMutator = {
-  type: 'ThrowStatement',
-  mutate(node, source) {
-    // Replace "throw" with "return"
-    const throwEnd = node.start + 5 // "throw".length
-    return [{ start: node.start, end: throwEnd, replacement: 'return', name: 'throw → return' }]
+  name: 'throw → return',
+  types: ['ThrowStatement'],
+  test: () => true,
+  mutate: (node, source) => {
+    const idx = source.indexOf('throw', node.start)
+    if (idx === -1) return null
+    return { start: idx, end: idx + 5, replacement: 'return' }
   }
 }
 
 // --- Math method swaps ---
+const mathSwaps = {
+  floor: { to: 'ceil', name: 'Math.floor → Math.ceil' },
+  ceil: { to: 'floor', name: 'Math.ceil → Math.floor' },
+  min: { to: 'max', name: 'Math.min → Math.max' },
+  max: { to: 'min', name: 'Math.max → Math.min' },
+  round: { to: 'floor', name: 'Math.round → Math.floor' },
+  sqrt: { to: 'cbrt', name: 'Math.sqrt → Math.cbrt' }
+}
+
 const mathMutator = {
-  type: 'CallExpression',
-  mutate(node) {
-    if (node.callee.type !== 'MemberExpression') return []
-    if (node.callee.object.type !== 'Identifier' || node.callee.object.name !== 'Math') return []
+  types: ['CallExpression'],
+  test: (node) => {
+    if (node.callee.type !== 'MemberExpression') return false
+    if (node.callee.object.type !== 'Identifier' || node.callee.object.name !== 'Math') return false
+    return Boolean(mathSwaps[node.callee.property.name]) || node.callee.property.name === 'abs'
+  },
+  mutate: (node) => {
     const prop = node.callee.property
-    const swaps = {
-      floor: { to: 'ceil', name: 'Math.floor → Math.ceil' },
-      ceil: { to: 'floor', name: 'Math.ceil → Math.floor' },
-      min: { to: 'max', name: 'Math.min → Math.max' },
-      max: { to: 'min', name: 'Math.max → Math.min' },
-      abs: { to: null, removeObj: true, name: 'Math.abs → (removed)' },
-      round: { to: 'floor', name: 'Math.round → Math.floor' },
-      sqrt: { to: 'cbrt', name: 'Math.sqrt → Math.cbrt' }
+    if (prop.name === 'abs') {
+      return { start: node.callee.object.start, end: prop.end, replacement: '', name: 'Math.abs → (removed)' }
     }
-    const swap = swaps[prop.name]
-    if (!swap) return []
-    if (swap.removeObj) {
-      // Remove "Math.abs" keeping just the parens+arg: Math.abs(x) → (x)
-      return [{ start: node.callee.object.start, end: prop.end, replacement: '', name: swap.name }]
-    }
-    return [{ start: prop.start, end: prop.end, replacement: swap.to, name: swap.name }]
+    const swap = mathSwaps[prop.name]
+    return { start: prop.start, end: prop.end, replacement: swap.to, name: swap.name }
   }
 }
 
 // --- Object method swaps ---
+const objectMethodSwaps = {
+  keys: { to: 'values', name: 'Object.keys → Object.values' },
+  values: { to: 'keys', name: 'Object.values → Object.keys' },
+  entries: { to: 'keys', name: 'Object.entries → Object.keys' }
+}
+
 const objectMethodMutator = {
-  type: 'CallExpression',
-  mutate(node) {
-    if (node.callee.type !== 'MemberExpression') return []
-    if (node.callee.object.type !== 'Identifier' || node.callee.object.name !== 'Object') return []
+  types: ['CallExpression'],
+  test: (node) => {
+    if (node.callee.type !== 'MemberExpression') return false
+    if (node.callee.object.type !== 'Identifier' || node.callee.object.name !== 'Object') return false
+    return Boolean(objectMethodSwaps[node.callee.property.name])
+  },
+  mutate: (node) => {
     const prop = node.callee.property
-    const swaps = {
-      keys: { to: 'values', name: 'Object.keys → Object.values' },
-      values: { to: 'keys', name: 'Object.values → Object.keys' },
-      entries: { to: 'keys', name: 'Object.entries → Object.keys' }
-    }
-    const swap = swaps[prop.name]
-    if (!swap) return []
-    return [{ start: prop.start, end: prop.end, replacement: swap.to, name: swap.name }]
+    const swap = objectMethodSwaps[prop.name]
+    return { start: prop.start, end: prop.end, replacement: swap.to, name: swap.name }
   }
 }
 
 // --- Array.isArray negation ---
 const arrayIsArrayMutator = {
-  type: 'CallExpression',
-  mutate(node, source) {
-    if (node.callee.type !== 'MemberExpression') return []
-    if (node.callee.object.type !== 'Identifier' || node.callee.object.name !== 'Array') return []
-    if (node.callee.property.name !== 'isArray') return []
-    return [{ start: node.start, end: node.start, replacement: '!', name: 'Array.isArray → !Array.isArray' }]
-  }
+  name: 'Array.isArray → !Array.isArray',
+  types: ['CallExpression'],
+  test: (node) => {
+    if (node.callee.type !== 'MemberExpression') return false
+    if (node.callee.object.type !== 'Identifier' || node.callee.object.name !== 'Array') return false
+    return node.callee.property.name === 'isArray'
+  },
+  mutate: (node) => ({ start: node.start, end: node.start, replacement: '!' })
 }
 
 // --- Type conversion swaps ---
+const typeConversionSwaps = {
+  parseInt: { to: 'parseFloat', name: 'parseInt → parseFloat' },
+  parseFloat: { to: 'parseInt', name: 'parseFloat → parseInt' }
+}
+
 const typeConversionMutator = {
-  type: 'CallExpression',
-  mutate(node) {
-    if (node.callee.type !== 'Identifier') return []
-    const swaps = {
-      parseInt: { to: 'parseFloat', name: 'parseInt → parseFloat' },
-      parseFloat: { to: 'parseInt', name: 'parseFloat → parseInt' }
-    }
-    const swap = swaps[node.callee.name]
-    if (!swap) return []
-    return [{ start: node.callee.start, end: node.callee.end, replacement: swap.to, name: swap.name }]
+  types: ['CallExpression'],
+  test: (node) => node.callee.type === 'Identifier' && Boolean(typeConversionSwaps[node.callee.name]),
+  mutate: (node) => {
+    const swap = typeConversionSwaps[node.callee.name]
+    return { start: node.callee.start, end: node.callee.end, replacement: swap.to, name: swap.name }
   }
 }
 
 // --- Bitwise operator swaps ---
+const bitwiseSwaps = { '&': '|', '|': '&', '^': '&', '<<': '>>', '>>': '<<' }
+const bitwiseNames = {
+  '&': '& → |', '|': '| → &', '^': '^ → &',
+  '<<': '<< → >>', '>>': '>> → <<'
+}
+
 const bitwiseMutator = {
-  type: 'BinaryExpression',
-  mutate(node) {
-    const swaps = { '&': '|', '|': '&', '^': '&', '<<': '>>', '>>': '<<' }
-    const names = {
-      '&': '& → |', '|': '| → &', '^': '^ → &',
-      '<<': '<< → >>', '>>': '>> → <<'
-    }
-    if (!swaps[node.operator]) return []
-    return [{ operator: swaps[node.operator], name: names[node.operator] }]
+  types: ['BinaryExpression'],
+  test: (node) => Boolean(bitwiseSwaps[node.operator]),
+  mutate: (node, source) => {
+    const op = node.operator
+    const idx = findBetween(source, node.left.end, node.right.start, op)
+    if (idx === -1) return null
+    return { start: idx, end: idx + op.length, replacement: bitwiseSwaps[op], name: bitwiseNames[op] }
   }
 }
 
 // --- Void operator removal ---
 const voidMutator = {
-  type: 'UnaryExpression',
-  mutate(node) {
-    if (node.operator === 'void' && node.prefix) {
-      // Remove "void " prefix
-      return [{ start: node.start, end: node.argument.start, replacement: '', name: 'void expr → expr' }]
-    }
-    return []
-  }
+  name: 'void expr → expr',
+  types: ['UnaryExpression'],
+  test: (node) => node.operator === 'void' && node.prefix,
+  mutate: (node) => ({ start: node.start, end: node.argument.start, replacement: '' })
 }
 
 
@@ -397,7 +422,7 @@ describe('AST mutation patterns', () => {
   describe('MethodExpression', () => {
     testMutation(methodSwapMutator, 'const x = s.toLowerCase()', 'const x = s.toUpperCase()', 'toLowerCase → toUpperCase')
     testMutation(methodSwapMutator, 'const x = s.toUpperCase()', 'const x = s.toLowerCase()', 'toUpperCase → toLowerCase')
-    testMutation(methodSwapMutator, 'const x = s.trim()', 'const x = s', 'trim() → (removed)')
+    testMutation(trimMutator, 'const x = s.trim()', 'const x = s', 'trim() → (removed)')
   })
 
   describe('StringMethodSwaps', () => {

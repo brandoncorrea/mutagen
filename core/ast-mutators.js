@@ -127,14 +127,14 @@ const equalityOperators = [
   binaryOpSwap('>= → <', '>=', '<'),
   binaryOpSwap('<= → >', '<=', '>'),
   binaryOpSwap('> → <', '>', '<'),
-  binaryOpSwap('< → >', '<', '>'),
+  binaryOpSwap('< → >', '<', '>')
 ]
 
 // ── Logical operators ────────────────────────────────────────────────
 
 const logicalOperators = [
   logicalOpSwap('&& → ||', '&&', '||'),
-  logicalOpSwap('|| → &&', '||', '&&'),
+  logicalOpSwap('|| → &&', '||', '&&')
 ]
 
 // ── Arithmetic operators ─────────────────────────────────────────────
@@ -145,7 +145,7 @@ const arithmeticOperators = [
   binaryOpSwap('* → /', '*', '/'),
   binaryOpSwap('/ → *', '/', '*'),
   binaryOpSwap('% → +', '%', '+'),
-  binaryOpSwap('** → *', '**', '*'),
+  binaryOpSwap('** → *', '**', '*')
 ]
 
 // ── Boolean literals ─────────────────────────────────────────────────
@@ -162,7 +162,7 @@ const booleanLiterals = [
     types: ['Literal', 'BooleanLiteral'],
     test: (node) => node.value === false,
     mutate: (node) => ({ start: node.start, end: node.end, replacement: 'true' })
-  },
+  }
 ]
 
 // ── Conditional expression (ternary) ─────────────────────────────────
@@ -187,7 +187,7 @@ const conditionalExpressions = [
       end: node.consequent.start,
       replacement: 'false && '
     })
-  },
+  }
 ]
 
 // ── Method expressions ───────────────────────────────────────────────
@@ -224,7 +224,7 @@ const methodExpressions = [
       if (openParen === -1) return null
       return { start: openParen + 1, end: openParen + 1, replacement: '1,' }
     }
-  },
+  }
 ]
 
 // ── String literals ──────────────────────────────────────────────────
@@ -255,7 +255,7 @@ const stringLiterals = [
       end: node.argument.end,
       replacement: '"mutant"'
     })
-  },
+  }
 ]
 
 // ── Block statement ──────────────────────────────────────────────────
@@ -283,7 +283,7 @@ const blockStatements = [
       if (idx === -1) return null
       return { start: idx, end: idx + 6, replacement: 'void' }
     }
-  },
+  }
 ]
 
 // ── Async ────────────────────────────────────────────────────────────
@@ -298,7 +298,7 @@ const asyncMutations = [
       end: node.argument.start,
       replacement: ''
     })
-  },
+  }
 ]
 
 // ── Remove || fallback ───────────────────────────────────────────────
@@ -338,7 +338,7 @@ const fallbackRemovals = [
       end: node.end,
       replacement: ''
     })
-  },
+  }
 ]
 
 // ── Update operators ─────────────────────────────────────────────────
@@ -361,7 +361,7 @@ const updateOperators = [
       const op = node.prefix ? node.start : node.argument.end
       return { start: op, end: op + 2, replacement: '++' }
     }
-  },
+  }
 ]
 
 // ── Optional chaining removal ────────────────────────────────────────
@@ -377,7 +377,7 @@ const optionalChaining = [
       if (idx === -1) return null
       return { start: idx, end: idx + 2, replacement: '.' }
     }
-  },
+  }
 ]
 
 // ── Negation removal ─────────────────────────────────────────────────
@@ -392,20 +392,20 @@ const negationRemoval = [
       end: node.argument.start,
       replacement: ''
     })
-  },
+  }
 ]
 
 // ── Nullish coalescing ───────────────────────────────────────────────
 
 const nullishCoalescing = [
-  logicalOpSwap('?? → ||', '??', '||'),
+  logicalOpSwap('?? → ||', '??', '||')
 ]
 
 // ── Assignment mutations ─────────────────────────────────────────────
 
 const assignmentMutations = [
   assignmentOpSwap('+= → -=', '+=', '-='),
-  assignmentOpSwap('-= → +=', '-=', '+='),
+  assignmentOpSwap('-= → +=', '-=', '+=')
 ]
 
 // ── Numeric boundary ─────────────────────────────────────────────────
@@ -445,7 +445,7 @@ const numericBoundary = [
       end: node.end,
       replacement: '0'
     })
-  },
+  }
 ]
 
 // ── Throw removal ────────────────────────────────────────────────────
@@ -460,7 +460,7 @@ const throwRemoval = [
       if (idx === -1) return null
       return { start: idx, end: idx + 5, replacement: 'return' }
     }
-  },
+  }
 ]
 
 // ── String method swaps ──────────────────────────────────────────────
@@ -468,7 +468,7 @@ const throwRemoval = [
 const stringMethodSwaps = [
   methodNameSwap('includes → indexOf', 'includes', 'indexOf'),
   methodNameSwap('startsWith → endsWith', 'startsWith', 'endsWith'),
-  methodNameSwap('endsWith → startsWith', 'endsWith', 'startsWith'),
+  methodNameSwap('endsWith → startsWith', 'endsWith', 'startsWith')
 ]
 
 // ── Math method swaps ────────────────────────────────────────────────
@@ -489,7 +489,7 @@ const mathMethodSwaps = [
     })
   },
   staticMethodSwap('Math.round → Math.floor', 'Math', 'round', 'floor'),
-  staticMethodSwap('Math.sqrt → Math.cbrt', 'Math', 'sqrt', 'cbrt'),
+  staticMethodSwap('Math.sqrt → Math.cbrt', 'Math', 'sqrt', 'cbrt')
 ]
 
 // ── Array method swaps ───────────────────────────────────────────────
@@ -531,7 +531,7 @@ const arrayMethodSwaps = [
       replacement: ''
     })
   },
-  methodNameSwap('splice → slice', 'splice', 'slice'),
+  methodNameSwap('splice → slice', 'splice', 'slice')
 ]
 
 // ── Object method swaps ──────────────────────────────────────────────
@@ -559,13 +559,13 @@ const objectMethodSwaps = [
       return { start: prop.start, end: prop.end, replacement: 'keys' }
     }
   },
-  staticMethodSwap('Object.entries → Object.keys', 'Object', 'entries', 'keys'),
+  staticMethodSwap('Object.entries → Object.keys', 'Object', 'entries', 'keys')
 ]
 
 // ── String method mutations ──────────────────────────────────────────
 
 const stringMethodMutations = [
-  methodNameSwap('replace → toString (removed)', 'replace', 'toString'),
+  methodNameSwap('replace → toString (removed)', 'replace', 'toString')
 ]
 
 // ── Unary minus removal ──────────────────────────────────────────────
@@ -583,7 +583,7 @@ const unaryMinusRemoval = [
       end: node.argument.start,
       replacement: ''
     })
-  },
+  }
 ]
 
 // ── Bitwise operator swaps ───────────────────────────────────────────
@@ -593,14 +593,14 @@ const bitwiseOperators = [
   binaryOpSwap('| → &', '|', '&'),
   binaryOpSwap('^ → &', '^', '&'),
   binaryOpSwap('<< → >>', '<<', '>>'),
-  binaryOpSwap('>> → <<', '>>', '<<'),
+  binaryOpSwap('>> → <<', '>>', '<<')
 ]
 
 // ── Type conversion swaps ────────────────────────────────────────────
 
 const typeConversions = [
   globalFnSwap('parseInt → parseFloat', 'parseInt', 'parseFloat'),
-  globalFnSwap('parseFloat → parseInt', 'parseFloat', 'parseInt'),
+  globalFnSwap('parseFloat → parseInt', 'parseFloat', 'parseInt')
 ]
 
 // ── Spread removal ───────────────────────────────────────────────────
@@ -632,7 +632,7 @@ const spreadRemoval = [
       end: node.elements[1].start,
       replacement: ''
     })
-  },
+  }
 ]
 
 // ── Void operator removal ────────────────────────────────────────────
@@ -647,7 +647,7 @@ const voidRemoval = [
       end: node.argument.start,
       replacement: ''
     })
-  },
+  }
 ]
 
 // ── Property access mutations ────────────────────────────────────────
@@ -662,12 +662,12 @@ const propertyAccessMutations = [
       end: node.end,
       replacement: ' + 1'
     })
-  },
+  }
 ]
 
 // ── Export ────────────────────────────────────────────────────────────
 
-export const astMutators = [
+export const javascript = [
   ...equalityOperators,
   ...logicalOperators,
   ...arithmeticOperators,
@@ -695,5 +695,5 @@ export const astMutators = [
   ...typeConversions,
   ...spreadRemoval,
   ...voidRemoval,
-  ...propertyAccessMutations,
+  ...propertyAccessMutations
 ]

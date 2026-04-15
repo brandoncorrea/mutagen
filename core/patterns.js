@@ -178,5 +178,5 @@ export const typescript = [
   { pattern: / is \w+ \{/g, replacement: ' is never {', name: 'is Type → is never' },
 
   // --- Definite assignment removal ---
-  { pattern: /(\w)!:/g, replacement: '$1:', name: 'x!: → x:' },
+  { pattern: /(\w)!:/g, replacement: '$1:', name: 'x!: → x:' }
 ]

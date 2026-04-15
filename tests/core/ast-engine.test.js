@@ -1,16 +1,30 @@
 import { describe, it, expect } from 'vitest'
 import { generateMutations } from '../../core/ast-engine.js'
 
+function findBetween(source, from, to, text) {
+  const idx = source.indexOf(text, from)
+  return idx !== -1 && idx + text.length <= to ? idx : -1
+}
+
 const equalityMutator = {
-  type: 'BinaryExpression',
-  mutate(node) {
-    if (node.operator === '===') {
-      return [{ operator: '!==', name: '=== → !==' }]
-    }
-    if (node.operator === '!==') {
-      return [{ operator: '===', name: '!== → ===' }]
-    }
-    return []
+  name: '=== → !==',
+  types: ['BinaryExpression'],
+  test: (node) => node.operator === '===',
+  mutate: (node, source) => {
+    const idx = findBetween(source, node.left.end, node.right.start, '===')
+    if (idx === -1) return null
+    return { start: idx, end: idx + 3, replacement: '!==' }
+  }
+}
+
+const inequalityMutator = {
+  name: '!== → ===',
+  types: ['BinaryExpression'],
+  test: (node) => node.operator === '!==',
+  mutate: (node, source) => {
+    const idx = findBetween(source, node.left.end, node.right.start, '!==')
+    if (idx === -1) return null
+    return { start: idx, end: idx + 3, replacement: '===' }
   }
 }
 
@@ -45,7 +59,7 @@ describe('ast-engine generateMutations', () => {
 
   it('generates multiple mutations across different lines', () => {
     const source = 'if (a === b) {}\nif (c !== d) {}'
-    const mutations = generateMutations(source, [equalityMutator])
+    const mutations = generateMutations(source, [equalityMutator, inequalityMutator])
     expect(mutations).toHaveLength(2)
     expect(mutations[0].name).toBe('=== → !==')
     expect(mutations[0].line).toBe(1)
@@ -68,13 +82,10 @@ describe('ast-engine generateMutations', () => {
 
   it('supports range-based mutations for non-operator nodes', () => {
     const boolMutator = {
-      type: 'BooleanLiteral',
-      mutate(node) {
-        if (node.value === true) {
-          return [{ start: node.start, end: node.end, replacement: 'false', name: 'true → false' }]
-        }
-        return [{ start: node.start, end: node.end, replacement: 'true', name: 'false → true' }]
-      }
+      name: 'true → false',
+      types: ['BooleanLiteral'],
+      test: (node) => node.value === true,
+      mutate: (node) => ({ start: node.start, end: node.end, replacement: 'false' })
     }
     const source = 'const x = true'
     const mutations = generateMutations(source, [boolMutator])
@@ -90,13 +101,10 @@ describe('ast-engine generateMutations', () => {
 
   it('supports multiple mutators for different node types', () => {
     const boolMutator = {
-      type: 'BooleanLiteral',
-      mutate(node) {
-        if (node.value === true) {
-          return [{ start: node.start, end: node.end, replacement: 'false', name: 'true → false' }]
-        }
-        return []
-      }
+      name: 'true → false',
+      types: ['BooleanLiteral'],
+      test: (node) => node.value === true,
+      mutate: (node) => ({ start: node.start, end: node.end, replacement: 'false' })
     }
     const source = 'if (a === true) {}'
     const mutations = generateMutations(source, [equalityMutator, boolMutator])
@@ -108,15 +116,13 @@ describe('ast-engine generateMutations', () => {
 
   it('supports LogicalExpression operator mutations', () => {
     const logicalMutator = {
-      type: 'LogicalExpression',
-      mutate(node) {
-        if (node.operator === '&&') {
-          return [{ operator: '||', name: '&& → ||' }]
-        }
-        if (node.operator === '||') {
-          return [{ operator: '&&', name: '|| → &&' }]
-        }
-        return []
+      name: '&& → ||',
+      types: ['LogicalExpression'],
+      test: (node) => node.operator === '&&',
+      mutate: (node, source) => {
+        const idx = findBetween(source, node.left.end, node.right.start, '&&')
+        if (idx === -1) return null
+        return { start: idx, end: idx + 2, replacement: '||' }
       }
     }
     const source = 'if (a && b) {}'
@@ -127,12 +133,12 @@ describe('ast-engine generateMutations', () => {
 
   it('supports UpdateExpression mutations', () => {
     const updateMutator = {
-      type: 'UpdateExpression',
-      mutate(node) {
-        if (node.operator === '++') {
-          return [{ start: node.start, end: node.end, replacement: node.prefix ? '--' + node.argument.name : node.argument.name + '--', name: '++ → --' }]
-        }
-        return []
+      name: '++ → --',
+      types: ['UpdateExpression'],
+      test: (node) => node.operator === '++',
+      mutate: (node) => {
+        const op = node.prefix ? node.start : node.argument.end
+        return { start: op, end: op + 2, replacement: '--' }
       }
     }
     const source = 'i++'
@@ -143,13 +149,10 @@ describe('ast-engine generateMutations', () => {
 
   it('supports UnaryExpression mutations (negation removal)', () => {
     const unaryMutator = {
-      type: 'UnaryExpression',
-      mutate(node, source) {
-        if (node.operator === '!' && node.prefix) {
-          return [{ start: node.start, end: node.start + 1, replacement: '', name: '!x → x' }]
-        }
-        return []
-      }
+      name: '!x → x',
+      types: ['UnaryExpression'],
+      test: (node) => node.operator === '!' && node.prefix,
+      mutate: (node) => ({ start: node.start, end: node.argument.start, replacement: '' })
     }
     const source = 'if (!ready) {}'
     const mutations = generateMutations(source, [unaryMutator])
@@ -171,21 +174,29 @@ describe('ast-engine generateMutations', () => {
     expect(mutations[0].mutated).toBe('if (a !== b) {}')
   })
 
-  it('supports a mutator returning multiple mutations for one node', () => {
-    const comparisonMutator = {
-      type: 'BinaryExpression',
-      mutate(node) {
-        if (node.operator === '>=') {
-          return [
-            { operator: '<', name: '>= → <' },
-            { operator: '>', name: '>= → >' }
-          ]
-        }
-        return []
+  it('supports multiple mutators producing two mutations for one node type', () => {
+    const gteLtMutator = {
+      name: '>= → <',
+      types: ['BinaryExpression'],
+      test: (node) => node.operator === '>=',
+      mutate: (node, source) => {
+        const idx = findBetween(source, node.left.end, node.right.start, '>=')
+        if (idx === -1) return null
+        return { start: idx, end: idx + 2, replacement: '<' }
+      }
+    }
+    const gteGtMutator = {
+      name: '>= → >',
+      types: ['BinaryExpression'],
+      test: (node) => node.operator === '>=',
+      mutate: (node, source) => {
+        const idx = findBetween(source, node.left.end, node.right.start, '>=')
+        if (idx === -1) return null
+        return { start: idx, end: idx + 2, replacement: '>' }
       }
     }
     const source = 'if (a >= b) {}'
-    const mutations = generateMutations(source, [comparisonMutator])
+    const mutations = generateMutations(source, [gteLtMutator, gteGtMutator])
     expect(mutations).toHaveLength(2)
     expect(mutations[0].mutated).toBe('if (a < b) {}')
     expect(mutations[1].mutated).toBe('if (a > b) {}')
@@ -193,12 +204,13 @@ describe('ast-engine generateMutations', () => {
 
   it('supports AssignmentExpression operator mutations', () => {
     const assignMutator = {
-      type: 'AssignmentExpression',
-      mutate(node) {
-        if (node.operator === '+=') {
-          return [{ operator: '-=', name: '+= → -=' }]
-        }
-        return []
+      name: '+= → -=',
+      types: ['AssignmentExpression'],
+      test: (node) => node.operator === '+=',
+      mutate: (node, source) => {
+        const idx = findBetween(source, node.left.end, node.right.start, '+=')
+        if (idx === -1) return null
+        return { start: idx, end: idx + 2, replacement: '-=' }
       }
     }
     const source = 'x += 1'
@@ -209,15 +221,12 @@ describe('ast-engine generateMutations', () => {
 
   it('supports CallExpression method name mutations', () => {
     const methodMutator = {
-      type: 'CallExpression',
-      mutate(node, source) {
-        if (node.callee.type !== 'MemberExpression') return []
+      name: 'push → pop',
+      types: ['CallExpression'],
+      test: (node) => node.callee.type === 'MemberExpression' && node.callee.property.name === 'push',
+      mutate: (node) => {
         const prop = node.callee.property
-        const name = prop.name
-        if (name === 'push') {
-          return [{ start: prop.start, end: prop.end, replacement: 'pop', name: 'push → pop' }]
-        }
-        return []
+        return { start: prop.start, end: prop.end, replacement: 'pop' }
       }
     }
     const source = 'arr.push(1)'

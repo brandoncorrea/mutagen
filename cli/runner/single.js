@@ -14,8 +14,7 @@ import { printRunReport } from '../report.js'
 import { runPreflightTests, reportMutation, printBanner } from './shared.js'
 
 export async function runSingle(options) {
-  const { sourceFile, mutationConfig, prepared, createRunner, targetLine, timeout, out = console.log } = options
-  const config = mutationConfig || prepared
+  const { sourceFile, mutationConfig, createRunner, targetLine, timeout, out = console.log } = options
   const original = readFileSync(sourceFile, 'utf-8')
   const worktree = createWorktree(process.cwd())
 
@@ -24,7 +23,7 @@ export async function runSingle(options) {
   const tempSourceFile = worktree.resolve(sourceFile)
   const runner = await createRunner(tempSourceFile, { root: worktree.root })
 
-  const opts = { out, runner, timeout, sourceFile, tempSourceFile, targetLine, original, mutationConfig: config }
+  const opts = { out, runner, timeout, sourceFile, tempSourceFile, targetLine, original, mutationConfig }
 
   try {
     return await runMutations(opts)

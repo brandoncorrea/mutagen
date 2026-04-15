@@ -2,21 +2,21 @@ import { describe, it, expect } from 'vitest'
 import { generateMutations, prepareMutationConfig } from '../../core/generate.js'
 
 const equalityMutator = {
-  type: 'BinaryExpression',
-  mutate(node) {
-    if (node.operator === '===') return [{ operator: '!==', name: '=== → !==' }]
-    return []
+  name: '=== → !==',
+  types: ['BinaryExpression'],
+  test: (node) => node.operator === '===',
+  mutate: (node, source) => {
+    const idx = source.indexOf('===', node.left.end)
+    if (idx === -1) return null
+    return { start: idx, end: idx + 3, replacement: '!==' }
   }
 }
 
 const boolMutator = {
-  type: 'BooleanLiteral',
-  mutate(node) {
-    if (node.value === true) {
-      return [{ start: node.start, end: node.end, replacement: 'false', name: 'true → false' }]
-    }
-    return []
-  }
+  name: 'true → false',
+  types: ['BooleanLiteral'],
+  test: (node) => node.value === true,
+  mutate: (node) => ({ start: node.start, end: node.end, replacement: 'false' })
 }
 
 describe('generateMutations (unified)', () => {

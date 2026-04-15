@@ -15,12 +15,12 @@ vi.mock('node:fs', async (importOriginal) => {
 vi.mock('../../../core/worktree.js')
 
 import { runSingle } from '../../../cli/runner/index.js'
-import { preparePatterns } from '../../../core/engine.js'
+import { prepareMutationConfig } from '../../../core/generate.js'
 import { createWorktree } from '../../../core/worktree.js'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { patterns, sourceCode, mockFs as _mockFs, noop } from '../helpers.js'
 
-const prepared = preparePatterns(patterns)
+const mutationConfig = prepareMutationConfig({ patterns })
 
 function mockFs(files) { _mockFs(readFileSync, files) }
 
@@ -50,7 +50,7 @@ describe('worktree-based mutation isolation', () => {
 
     await runSingle({
       sourceFile: resolve('src/a.js'),
-      prepared,
+      mutationConfig,
       createRunner: vi.fn().mockResolvedValue(runner),
       out: noop
     })
@@ -69,7 +69,7 @@ describe('worktree-based mutation isolation', () => {
 
     await runSingle({
       sourceFile: resolve('src/a.js'),
-      prepared,
+      mutationConfig,
       createRunner: vi.fn().mockResolvedValue(runner),
       out: noop
     })
@@ -94,7 +94,7 @@ describe('worktree-based mutation isolation', () => {
 
     await runSingle({
       sourceFile: resolve('src/a.js'),
-      prepared,
+      mutationConfig,
       createRunner,
       out: noop
     })
@@ -118,7 +118,7 @@ describe('worktree-based mutation isolation', () => {
 
     await runSingle({
       sourceFile: resolve('src/a.js'),
-      prepared,
+      mutationConfig,
       createRunner: vi.fn().mockResolvedValue(runner),
       out: noop
     })
@@ -139,7 +139,7 @@ describe('worktree-based mutation isolation', () => {
 
     await runSingle({
       sourceFile: resolve('src/a.js'),
-      prepared,
+      mutationConfig,
       createRunner: vi.fn().mockResolvedValue(runner),
       out: noop
     })
@@ -158,7 +158,7 @@ describe('worktree-based mutation isolation', () => {
 
     await runSingle({
       sourceFile: resolve('src/a.js'),
-      prepared,
+      mutationConfig,
       createRunner: vi.fn().mockResolvedValue(runner),
       out: noop
     })
@@ -194,7 +194,7 @@ describe('runSingle', () => {
 
     await runSingle({
       sourceFile: resolve('src/a.js'),
-      prepared,
+      mutationConfig,
       createRunner: vi.fn().mockResolvedValue(runner),
       out: noop
     })
@@ -213,7 +213,7 @@ describe('runSingle', () => {
 
     const result = await runSingle({
       sourceFile: resolve('src/a.js'),
-      prepared,
+      mutationConfig,
       createRunner: vi.fn().mockResolvedValue(runner),
       out: noop
     })

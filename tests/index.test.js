@@ -7,15 +7,11 @@ describe('public API (index.js)', () => {
     'generateMutations',
     'prepareMutationConfig',
 
-    // Built-in AST mutators
+    // Built-in mutators
     'mutators',
 
     // Built-in regex pattern sets (secondary mode)
     'patterns',
-
-    // Legacy regex engine
-    'generateRegexMutations',
-    'preparePatterns',
 
     // Runner
     'createVitestRunner',
