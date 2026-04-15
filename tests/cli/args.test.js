@@ -20,6 +20,17 @@ describe('parseArgs', () => {
       expect(result.beforeFile).toContain('before.json')
       expect(result.afterFile).toContain('after.json')
     })
+
+    it('parses --json flag in diff mode', () => {
+      const result = parseArgs(['--diff', 'before.json', 'after.json', '--json'])
+      expect(result.diffMode).toBe(true)
+      expect(result.jsonOutput).toBe(true)
+    })
+
+    it('defaults jsonOutput to false when --json is absent in diff mode', () => {
+      const result = parseArgs(['--diff', 'before.json', 'after.json'])
+      expect(result.jsonOutput).toBeFalsy()
+    })
   })
 
   describe('--timeout flag', () => {

@@ -120,7 +120,7 @@ async function run(ctx, argv) {
 }
 
 function runDiffMode(ctx, parsed) {
-  const result = diffReports(parsed.beforeFile, parsed.afterFile, ctx.out)
+  const result = diffReports(parsed.beforeFile, parsed.afterFile, ctx.out, parsed.jsonOutput)
   return !result || result.regressions ? 1 : 0
 }
 

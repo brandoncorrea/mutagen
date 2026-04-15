@@ -9,7 +9,7 @@ Usage: <script> <source-file> [--line N] [--json [path]] [--dry-run] [--timeout 
        <script> --all [--json [path]] [--dry-run] [--timeout N] [--parallel [N]]
        <script> --incremental [--json [path]] [--timeout N] [--parallel [N]]`
 
-const diffMessage = 'Usage: <script> --diff <before.json> <after.json>'
+const diffMessage = 'Usage: <script> --diff <before.json> <after.json> [--json]'
 
 export function parseArgs(argv = process.argv.slice(2)) {
   return argv.includes('--incremental') ? incrementalOptions(argv)
@@ -52,7 +52,8 @@ function diffOptions(argv) {
   return {
     diffMode: true,
     beforeFile: resolve(argv[diffIdx + 1]),
-    afterFile: resolve(argv[diffIdx + 2])
+    afterFile: resolve(argv[diffIdx + 2]),
+    jsonOutput: parseJsonOutput(argv)
   }
 }
 

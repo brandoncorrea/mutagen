@@ -409,4 +409,183 @@ describe('diffReports', () => {
     const perFile = output().slice(output().indexOf('PER-FILE'))
     expect(perFile).toContain('0.0% → 100.0%')
   })
+
+  describe('JSON output mode', () => {
+    function runDiffJson(beforeFiles, afterFiles) {
+      readFileSync
+        .mockReturnValueOnce(JSON.stringify(makeReport(beforeFiles)))
+        .mockReturnValueOnce(JSON.stringify(makeReport(afterFiles)))
+      return diffReports('before.json', 'after.json', out, true)
+    }
+
+    function parsedOutput() {
+      return JSON.parse(lines[0])
+    }
+
+    it('outputs valid JSON instead of text report', () => {
+      runDiffJson(
+        { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } },
+        { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } }
+      )
+
+      expect(lines).toHaveLength(1)
+      expect(() => JSON.parse(lines[0])).not.toThrow()
+    })
+
+    it('includes beforeScore, afterScore, and delta', () => {
+      runDiffJson(
+        { 'a.js': { mutants: [
+          makeMutant('m1', 'x', 'Killed'),
+          makeMutant('m2', 'y', 'Survived')
+        ] } },
+        { 'a.js': { mutants: [
+          makeMutant('m1', 'x', 'Killed'),
+          makeMutant('m2', 'y', 'Killed')
+        ] } }
+      )
+
+      const json = parsedOutput()
+      expect(json.beforeScore).toBe(50)
+      expect(json.afterScore).toBe(100)
+      expect(json.delta).toBe(50)
+    })
+
+    it('includes newlyKilled mutants with file, line, and mutatorName', () => {
+      runDiffJson(
+        { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Survived', 5)] } },
+        { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Killed', 5)] } }
+      )
+
+      const json = parsedOutput()
+      expect(json.newlyKilled).toHaveLength(1)
+      expect(json.newlyKilled[0]).toMatchObject({
+        file: 'a.js',
+        line: 5,
+        mutatorName: 'EqualityOperator'
+      })
+    })
+
+    it('includes regressions with file, line, and mutatorName', () => {
+      runDiffJson(
+        { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Killed', 7)] } },
+        { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Survived', 7)] } }
+      )
+
+      const json = parsedOutput()
+      expect(json.regressions).toHaveLength(1)
+      expect(json.regressions[0]).toMatchObject({
+        file: 'a.js',
+        line: 7,
+        mutatorName: 'EqualityOperator'
+      })
+    })
+
+    it('includes newMutants with file, line, mutatorName, and status', () => {
+      runDiffJson(
+        { 'a.js': { mutants: [] } },
+        { 'a.js': { mutants: [makeMutant('m1', 'ArithmeticOperator', 'Survived', 3)] } }
+      )
+
+      const json = parsedOutput()
+      expect(json.newMutants).toHaveLength(1)
+      expect(json.newMutants[0]).toMatchObject({
+        file: 'a.js',
+        line: 3,
+        mutatorName: 'ArithmeticOperator',
+        status: 'Survived'
+      })
+    })
+
+    it('includes removedMutants with file, line, mutatorName, and status', () => {
+      runDiffJson(
+        { 'a.js': { mutants: [makeMutant('m1', 'LogicalOperator', 'Killed', 9)] } },
+        { 'a.js': { mutants: [] } }
+      )
+
+      const json = parsedOutput()
+      expect(json.removedMutants).toHaveLength(1)
+      expect(json.removedMutants[0]).toMatchObject({
+        file: 'a.js',
+        line: 9,
+        mutatorName: 'LogicalOperator',
+        status: 'Killed'
+      })
+    })
+
+    it('includes fileDeltas keyed by path', () => {
+      runDiffJson(
+        { 'a.js': { mutants: [makeMutant('m1', 'x', 'Survived')] } },
+        { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } }
+      )
+
+      const json = parsedOutput()
+      expect(json.fileDeltas).toHaveProperty('a.js')
+      expect(json.fileDeltas['a.js']).toMatchObject({
+        before: 0,
+        after: 100,
+        delta: 100
+      })
+    })
+
+    it('omits files with no score change from fileDeltas', () => {
+      runDiffJson(
+        { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } },
+        { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } }
+      )
+
+      const json = parsedOutput()
+      expect(json.fileDeltas).toEqual({})
+    })
+
+    it('returns the same counts object as text mode', () => {
+      const result = runDiffJson(
+        { 'a.js': { mutants: [makeMutant('m1', 'x', 'Survived', 5)] } },
+        { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed', 5)] } }
+      )
+
+      expect(result.newlyKilled).toBe(1)
+      expect(result.regressions).toBe(0)
+      expect(result.newMutants).toBe(0)
+      expect(result.removedMutants).toBe(0)
+    })
+
+    it('includes new files in fileDeltas with null before', () => {
+      runDiffJson(
+        { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } },
+        { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] },
+          'b.js': { mutants: [makeMutant('m2', 'y', 'Survived')] } }
+      )
+
+      const json = parsedOutput()
+      expect(json.fileDeltas['b.js']).toMatchObject({
+        before: null,
+        after: 0,
+        delta: 0
+      })
+    })
+
+    it('includes removed files in fileDeltas with null after', () => {
+      runDiffJson(
+        { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] },
+          'b.js': { mutants: [makeMutant('m2', 'y', 'Killed')] } },
+        { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } }
+      )
+
+      const json = parsedOutput()
+      expect(json.fileDeltas['b.js']).toMatchObject({
+        before: 100,
+        after: null,
+        delta: 0
+      })
+    })
+
+    it('does not print text report headers in JSON mode', () => {
+      runDiffJson(
+        { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } },
+        { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } }
+      )
+
+      expect(output()).not.toContain('MUTATION DIFF')
+    })
+  })
 })

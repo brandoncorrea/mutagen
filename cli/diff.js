@@ -3,15 +3,17 @@
  * Compare two reports to find regressions, improvements, and new mutants.
  */
 
-import { mutantKey, isKilled, isAlive, tryLoadJson } from '../core/report-data.js'
+import { mutantKey, isKilled, isAlive, tryLoadJson, countStatuses, mutationScore } from '../core/report-data.js'
 import { printDiffReport } from './diff-print.js'
 
 /**
  * Diff two mutation reports and print a summary of changes.
  * @param {string} beforeFile - path to the baseline report JSON
  * @param {string} afterFile - path to the new report JSON
+ * @param {Function} [out=console.log] - output function
+ * @param {boolean} [jsonOutput=false] - when true, output structured JSON instead of text
  */
-export function diffReports(beforeFile, afterFile, out = console.log) {
+export function diffReports(beforeFile, afterFile, out = console.log, jsonOutput = false) {
   const before = tryLoadJson(beforeFile, out)
   const after = tryLoadJson(afterFile, out)
 
@@ -20,7 +22,10 @@ export function diffReports(beforeFile, afterFile, out = console.log) {
   const changes = classifyChanges(before, after)
   const fileDeltas = computeFileDeltas(before, after)
 
-  printDiffReport({ beforeFile, afterFile, before, after }, changes, fileDeltas, out)
+  if (jsonOutput)
+    printJsonDiff(before, after, changes, fileDeltas, out)
+  else
+    printDiffReport({ beforeFile, afterFile, before, after }, changes, fileDeltas, out)
 
   return {
     newlyKilled: changes.newlyKilled.length,
@@ -28,6 +33,37 @@ export function diffReports(beforeFile, afterFile, out = console.log) {
     newMutants: changes.newMutants.length,
     removedMutants: changes.removedMutants.length
   }
+}
+
+function printJsonDiff(before, after, changes, fileDeltas, out) {
+  const bCounts = countStatuses(before)
+  const aCounts = countStatuses(after)
+  const beforeScore = mutationScore(bCounts)
+  const afterScore = mutationScore(aCounts)
+
+  const fileDeltaMap = {}
+  for (const d of fileDeltas) {
+    fileDeltaMap[d.file] = {
+      before: d.before ?? null,
+      after: d.after ?? null,
+      delta: d.delta
+    }
+  }
+
+  out(JSON.stringify({
+    beforeScore,
+    afterScore,
+    delta: afterScore - beforeScore,
+    newlyKilled: changes.newlyKilled.map(({ after }) => formatMutant(after)),
+    regressions: changes.regressions.map(({ after }) => formatMutant(after)),
+    newMutants: changes.newMutants.map(formatMutant),
+    removedMutants: changes.removedMutants.map(formatMutant),
+    fileDeltas: fileDeltaMap
+  }, null, 2))
+}
+
+function formatMutant({ id, file, line, mutatorName, status }) {
+  return { id, file, line, mutatorName, status }
 }
 
 function classifyChanges(beforeData, afterData) {
