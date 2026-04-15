@@ -358,6 +358,23 @@ describe('createVitestRunner', () => {
       ])
     })
 
+    it('handles extensionless source files in tier splitting', async () => {
+      const specs = [
+        { moduleId: 'test/utils.test.js' },
+        { moduleId: 'test/other.test.js' }
+      ]
+      const mock = createMockVitest()
+      mock.globTestSpecifications.mockResolvedValue(specs)
+      startVitest.mockResolvedValue(mock)
+
+      const runner = await createVitestRunner('src/utils')
+      await runner.run()
+
+      const runCalls = mock.runTestSpecifications.mock.calls
+      expect(runCalls[runCalls.length - 2][0]).toEqual([{ moduleId: 'test/utils.test.js' }])
+      expect(runCalls[runCalls.length - 1][0]).toEqual([{ moduleId: 'test/other.test.js' }])
+    })
+
     it('runs all specs in tiers when no module graph is available', async () => {
       const specs = [
         { moduleId: 'test/a.test.js' },
