@@ -439,18 +439,28 @@ describe('createVitestRunner', () => {
     })
   })
 
-  describe('in-memory mutant switching', () => {
-    it('warm runner exposes setMutant and clearMutant', async () => {
+  describe('no in-memory mutant switching (forces file-I/O fallback)', () => {
+    it('warm runner does not expose setMutant or clearMutant', async () => {
       const mock = createMockVitest()
       startVitest.mockResolvedValue(mock)
 
       const runner = await createVitestRunner('src/a.js')
 
-      expect(runner.setMutant).toBeTypeOf('function')
-      expect(runner.clearMutant).toBeTypeOf('function')
+      expect(runner.setMutant).toBeUndefined()
+      expect(runner.clearMutant).toBeUndefined()
     })
 
-    it('injects mutagen plugin into vitest options', async () => {
+    it('cold runner does not expose setMutant or clearMutant', async () => {
+      const mock = createMockVitest()
+      startVitest.mockResolvedValue(mock)
+
+      const runner = await createVitestRunner('src/a.js', { warm: false })
+
+      expect(runner.setMutant).toBeUndefined()
+      expect(runner.clearMutant).toBeUndefined()
+    })
+
+    it('does not inject mutagen plugin into vitest options', async () => {
       const mock = createMockVitest()
       startVitest.mockResolvedValue(mock)
 
@@ -458,72 +468,7 @@ describe('createVitestRunner', () => {
 
       const opts = startVitest.mock.calls[0][2]
       const plugin = opts.plugins?.find(p => p.name === 'mutagen-mutant')
-      expect(plugin).toBeDefined()
-      expect(plugin.enforce).toBe('pre')
-      expect(plugin.load).toBeTypeOf('function')
-    })
-
-    it('setMutant makes plugin load hook return mutated source', async () => {
-      const mock = createMockVitest()
-      startVitest.mockResolvedValue(mock)
-
-      const runner = await createVitestRunner('src/a.js')
-      runner.setMutant('mutated code')
-
-      const opts = startVitest.mock.calls[0][2]
-      const plugin = opts.plugins.find(p => p.name === 'mutagen-mutant')
-      expect(plugin.load('src/a.js')).toBe('mutated code')
-    })
-
-    it('clearMutant makes plugin load hook return null', async () => {
-      const mock = createMockVitest()
-      startVitest.mockResolvedValue(mock)
-
-      const runner = await createVitestRunner('src/a.js')
-      runner.setMutant('mutated code')
-      runner.clearMutant()
-
-      const opts = startVitest.mock.calls[0][2]
-      const plugin = opts.plugins.find(p => p.name === 'mutagen-mutant')
-      expect(plugin.load('src/a.js')).toBeNull()
-    })
-
-    it('cold runner also exposes setMutant and clearMutant', async () => {
-      const mock = createMockVitest()
-      startVitest.mockResolvedValue(mock)
-
-      const runner = await createVitestRunner('src/a.js', { warm: false })
-
-      expect(runner.setMutant).toBeTypeOf('function')
-      expect(runner.clearMutant).toBeTypeOf('function')
-    })
-
-    it('cold runner clearMutant clears the plugin state', async () => {
-      const mock = createMockVitest()
-      startVitest.mockResolvedValue(mock)
-
-      const runner = await createVitestRunner('src/a.js', { warm: false })
-      runner.setMutant('mutated code')
-      runner.clearMutant()
-      await runner.run()
-
-      const opts = startVitest.mock.calls[0][2]
-      const plugin = opts.plugins?.find(p => p.name === 'mutagen-mutant')
-      expect(plugin.load('src/a.js')).toBeNull()
-    })
-
-    it('cold runner injects plugin into each run', async () => {
-      const mock = createMockVitest()
-      startVitest.mockResolvedValue(mock)
-
-      const runner = await createVitestRunner('src/a.js', { warm: false })
-      runner.setMutant('cold mutated')
-      await runner.run()
-
-      const opts = startVitest.mock.calls[0][2]
-      const plugin = opts.plugins?.find(p => p.name === 'mutagen-mutant')
-      expect(plugin).toBeDefined()
-      expect(plugin.load('src/a.js')).toBe('cold mutated')
+      expect(plugin).toBeUndefined()
     })
   })
 
