@@ -14,7 +14,7 @@ import { tmpdir } from 'node:os'
 export function createWorktree(projectRoot) {
   const root = makeRoot(projectRoot)
   function unresolve(tempPath) {
-    return join(projectRoot, relative(root, tempPath))
+    return relative(root, tempPath)
   }
   return {
     root,

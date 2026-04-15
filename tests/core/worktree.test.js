@@ -113,7 +113,7 @@ describe('createWorktree', () => {
     const wt = tracked(createWorktree(project))
     const tempPath = join(wt.root, 'src', 'a.js')
 
-    expect(wt.unresolve(tempPath)).toBe(join(project, 'src', 'a.js'))
+    expect(wt.unresolve(tempPath)).toBe('src/a.js')
   })
 
   it('mapPaths() maps an array of temp paths back to project paths', () => {
@@ -127,8 +127,8 @@ describe('createWorktree', () => {
     ]
 
     expect(wt.mapPaths(tempPaths)).toEqual([
-      join(project, 'src', 'a.js'),
-      join(project, 'src', 'b.js')
+      'src/a.js',
+      'src/b.js'
     ])
   })
 
