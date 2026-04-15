@@ -116,10 +116,18 @@ async function run(ctx, argv) {
 
   if (parsed.diffMode)
     return runDiffMode(runCtx, parsed)
-  if (parsed.dryRunMode && parsed.allMode)
-    return runAllDryRun(runCtx)
-  if (parsed.dryRunMode)
-    return dryRun(parsed.sourceFile, runCtx.mutationConfig, parsed.targetLine, runCtx.out) && 0
+  if (parsed.dryRunMode && parsed.allMode) {
+    const { total, fileCount } = runAllDryRun(runCtx)
+    if (quiet)
+      process.stderr.write(`${total} mutations across ${fileCount} files\n`)
+    return 0
+  }
+  if (parsed.dryRunMode) {
+    const count = dryRun(parsed.sourceFile, runCtx.mutationConfig, parsed.targetLine, runCtx.out)
+    if (quiet)
+      process.stderr.write(`${count} mutations across 1 files\n`)
+    return 0
+  }
 
   const { parallel, survivorsOnly, minScore } = parsed
   const pCtx = {
@@ -158,7 +166,7 @@ function runAllDryRun({ sources, mutationConfig, out }) {
   for (const source of sources)
     total += dryRun(resolve(source), mutationConfig, null, out)
   out(`\n  Grand total: ${total} mutations across ${sources.length} files`)
-  return 0
+  return { total, fileCount: sources.length }
 }
 
 async function runIncrementalMode(ctx, jsonOutput, timeout) {

@@ -516,6 +516,51 @@ describe('createManualRunner', () => {
       stderrSpy.mockRestore()
     })
 
+    it('--dry-run --quiet outputs just mutation count summary to stderr', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const lines = []
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+
+      const manual = _createManualRunner({
+        patterns, sources: ['src/a.js'],
+        createRunner: vi.fn(),
+        out: msg => lines.push(msg)
+      })
+      const code = await manual.run(['src/a.js', '--dry-run', '--quiet'])
+
+      expect(lines).toEqual([])
+      expect(stderrSpy).toHaveBeenCalled()
+      const stderrOutput = stderrSpy.mock.calls.map(c => c[0]).join('')
+      expect(stderrOutput).toBe('1 mutations across 1 files\n')
+      expect(code).toBe(0)
+
+      stderrSpy.mockRestore()
+    })
+
+    it('--all --dry-run --quiet outputs just mutation count summary to stderr', async () => {
+      mockFs({
+        [resolve('src/a.js')]: sourceCode,
+        [resolve('src/b.js')]: 'if (x === y) {}'
+      })
+      const lines = []
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+
+      const manual = _createManualRunner({
+        patterns, sources: ['src/a.js', 'src/b.js'],
+        createRunner: vi.fn(),
+        out: msg => lines.push(msg)
+      })
+      const code = await manual.run(['--all', '--dry-run', '--quiet'])
+
+      expect(lines).toEqual([])
+      expect(stderrSpy).toHaveBeenCalled()
+      const stderrOutput = stderrSpy.mock.calls.map(c => c[0]).join('')
+      expect(stderrOutput).toBe('2 mutations across 2 files\n')
+      expect(code).toBe(0)
+
+      stderrSpy.mockRestore()
+    })
+
     it('passes --survivors-only through to text output filtering in single mode', async () => {
       mockFs({ [resolve('src/a.js')]: sourceCode })
       const runner = fakeRunner([
