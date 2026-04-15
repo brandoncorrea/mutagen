@@ -291,6 +291,67 @@ describe('runSingle', () => {
     expect(result.jsonData.mutants[0].coveredBy).toEqual(['test/a.test.js'])
   })
 
+  it('classifies timeout errors as timed out', async () => {
+    mockFs({ [resolve('src/a.js')]: sourceCode })
+    const runner = {
+      run: vi.fn()
+        .mockResolvedValueOnce({ passed: true })
+        .mockRejectedValueOnce(new Error('Mutation timed out after 5000ms')),
+      close: vi.fn().mockResolvedValue(undefined)
+    }
+
+    const result = await runSingle({
+      sourceFile: resolve('src/a.js'),
+      mutationConfig,
+      createRunner: vi.fn().mockResolvedValue(runner),
+      out: noop
+    })
+
+    expect(result.timedOut).toBe(1)
+  })
+
+  it('suppresses timeout report with survivorsOnly', async () => {
+    mockFs({ [resolve('src/a.js')]: sourceCode })
+    const runner = {
+      run: vi.fn()
+        .mockResolvedValueOnce({ passed: true })
+        .mockRejectedValueOnce(new Error('Mutation timed out after 5000ms')),
+      close: vi.fn().mockResolvedValue(undefined)
+    }
+
+    const lines = []
+    await runSingle({
+      sourceFile: resolve('src/a.js'),
+      mutationConfig,
+      createRunner: vi.fn().mockResolvedValue(runner),
+      survivorsOnly: true,
+      out: msg => lines.push(msg)
+    })
+
+    expect(lines.some(l => l.includes('TIMEOUT'))).toBe(false)
+  })
+
+  it('suppresses error report with survivorsOnly', async () => {
+    mockFs({ [resolve('src/a.js')]: sourceCode })
+    const runner = {
+      run: vi.fn()
+        .mockResolvedValueOnce({ passed: true })
+        .mockRejectedValueOnce(new Error('SIGTERM')),
+      close: vi.fn().mockResolvedValue(undefined)
+    }
+
+    const lines = []
+    await runSingle({
+      sourceFile: resolve('src/a.js'),
+      mutationConfig,
+      createRunner: vi.fn().mockResolvedValue(runner),
+      survivorsOnly: true,
+      out: msg => lines.push(msg)
+    })
+
+    expect(lines.some(l => l.includes('killed (error)'))).toBe(false)
+  })
+
   it('classifies non-timeout errors as killed, not timed out', async () => {
     mockFs({ [resolve('src/a.js')]: sourceCode })
     const runner = {

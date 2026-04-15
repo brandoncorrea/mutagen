@@ -552,5 +552,79 @@ describe('createManualRunner', () => {
       expect(report.files['src/b.js']).toBeDefined()
       expect(report.files['deleted.js']).toBeUndefined()
     })
+
+    it('skips cached files not in previous report when writing structured report', async () => {
+      const srcA = resolve('src/a.js')
+      const srcB = resolve('src/b.js')
+      const hashA = hashOf(sourceCode)
+      const hashB = hashOf('const y = 1')
+
+      existsSync.mockReturnValue(true)
+      mockFs({
+        [srcA]: sourceCode,
+        [srcB]: 'const y = 1',
+        [reportPath]: JSON.stringify({
+          schemaVersion: '1',
+          files: {
+            'src/a.js': {
+              mutants: [{ location: { start: { line: 1 } }, mutatorName: '=== → !==', replacement: ' !== ', status: 'Killed' }]
+            }
+            // src/b.js intentionally absent from previous report files
+          },
+          sourceHashes: { 'src/a.js': hashA, 'src/b.js': hashB },
+          testHashes: {}
+        })
+      })
+
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js', 'src/b.js'],
+        createRunner: vi.fn()
+      })
+      await manual.runIncremental('reports/custom.json', null)
+
+      const customCalls = writeFileSync.mock.calls.filter(
+        ([p]) => p === resolve('reports/custom.json')
+      )
+      expect(customCalls).toHaveLength(1)
+      const report = JSON.parse(customCalls[0][1])
+      // Only src/a.js should be in files (src/b.js not in previous report)
+      expect(report.files['src/a.js']).toBeDefined()
+      expect(report.files['src/b.js']).toBeUndefined()
+      stderrSpy.mockRestore()
+    })
+
+    it('writes structured report to json path when no sources changed', async () => {
+      const src = resolve('src/a.js')
+      const hash = hashOf(sourceCode)
+
+      existsSync.mockReturnValue(true)
+      mockFs({
+        [src]: sourceCode,
+        [reportPath]: JSON.stringify({
+          schemaVersion: '1',
+          files: {
+            'src/a.js': {
+              mutants: [{ location: { start: { line: 1 } }, mutatorName: '=== → !==', replacement: ' !== ', status: 'Killed' }]
+            }
+          },
+          sourceHashes: { 'src/a.js': hash },
+          testHashes: {}
+        })
+      })
+
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js'],
+        createRunner: vi.fn()
+      })
+      await manual.runIncremental('reports/custom.json', null)
+
+      const customCalls = writeFileSync.mock.calls.filter(
+        ([p]) => p === resolve('reports/custom.json')
+      )
+      expect(customCalls).toHaveLength(1)
+      stderrSpy.mockRestore()
+    })
   })
 })

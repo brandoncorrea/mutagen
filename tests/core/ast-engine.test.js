@@ -249,4 +249,30 @@ describe('ast-engine generateMutations', () => {
     expect(mutations).toHaveLength(1)
     expect(mutations[0].mutated).toBe('const el = <div>{a !== b ? "yes" : "no"}</div>')
   })
+
+  it('returns empty array when mutators list is empty', () => {
+    expect(generateMutations('const x = 1', [])).toEqual([])
+  })
+
+  it('skips mutations when mutate returns null', () => {
+    const nullMutator = {
+      name: 'null mutator',
+      types: ['BinaryExpression'],
+      test: () => true,
+      mutate: () => null
+    }
+    const mutations = generateMutations('if (a === b) {}', [nullMutator])
+    expect(mutations).toHaveLength(0)
+  })
+
+  it('supports old-style mutators with singular type property', () => {
+    const oldStyleMutator = {
+      name: 'true → false',
+      type: 'BooleanLiteral',
+      mutate: (node) => ({ start: node.start, end: node.end, replacement: 'false' })
+    }
+    const mutations = generateMutations('const x = true', [oldStyleMutator])
+    expect(mutations).toHaveLength(1)
+    expect(mutations[0].name).toBe('true → false')
+  })
 })

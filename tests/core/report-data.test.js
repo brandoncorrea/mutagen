@@ -14,7 +14,7 @@ vi.mock('node:fs', async (importOriginal) => {
 import {
   mutantKey, countStatuses, totalMutants, mutationScore,
   toJsonMutants, createReport, writeReportFile, tryLoadJson,
-  combineReportData
+  combineReportData, writeStructuredReportFile
 } from '../../core/report-data.js'
 
 describe('mutantKey', () => {
@@ -521,5 +521,131 @@ describe('combineReportData', () => {
   it('returns empty files for empty input', () => {
     const merged = combineReportData([], () => {})
     expect(Object.keys(merged.files)).toHaveLength(0)
+  })
+})
+
+describe('writeStructuredReportFile', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+  })
+
+  it('counts killed mutants and writes report', () => {
+    writeStructuredReportFile('out.json', 1, {
+      'a.js': { mutants: [{ status: 'Killed', mutatorName: 'x', description: 'a → b' }] }
+    })
+
+    const written = JSON.parse(writeFileSync.mock.calls[0][1])
+    expect(written.killed).toBe(1)
+    expect(written.survived).toBe(0)
+  })
+
+  it('counts survived mutants and includes them in survivors', () => {
+    writeStructuredReportFile('out.json', 1, {
+      'a.js': { mutants: [{ status: 'Survived', mutatorName: 'x', description: 'a → b' }] }
+    })
+
+    const written = JSON.parse(writeFileSync.mock.calls[0][1])
+    expect(written.survived).toBe(1)
+    expect(written.survivors).toHaveLength(1)
+  })
+
+  it('counts timeout mutants as killed', () => {
+    writeStructuredReportFile('out.json', 1, {
+      'a.js': { mutants: [{ status: 'Timeout', mutatorName: 'x' }] }
+    })
+
+    const written = JSON.parse(writeFileSync.mock.calls[0][1])
+    expect(written.killed).toBe(1)
+    expect(written.timedOut).toBe(1)
+  })
+
+  it('handles survived mutants without coveredBy', () => {
+    writeStructuredReportFile('out.json', 1, {
+      'a.js': { mutants: [{ status: 'Survived', mutatorName: 'x' }] }
+    })
+
+    const written = JSON.parse(writeFileSync.mock.calls[0][1])
+    expect(written.survivors[0]).not.toHaveProperty('coveredBy')
+  })
+
+  it('includes coveredBy when present on survived mutants', () => {
+    writeStructuredReportFile('out.json', 1, {
+      'a.js': { mutants: [{ status: 'Survived', mutatorName: 'x', coveredBy: ['t.js'] }] }
+    })
+
+    const written = JSON.parse(writeFileSync.mock.calls[0][1])
+    expect(written.survivors[0].coveredBy).toEqual(['t.js'])
+  })
+
+  it('handles mutants without description', () => {
+    writeStructuredReportFile('out.json', 1, {
+      'a.js': { mutants: [{ status: 'Survived', mutatorName: 'x' }] }
+    })
+
+    const written = JSON.parse(writeFileSync.mock.calls[0][1])
+    expect(written.survivors[0].original).toBe('')
+    expect(written.survivors[0].mutated).toBe('')
+  })
+
+  it('handles description without arrow separator', () => {
+    writeStructuredReportFile('out.json', 1, {
+      'a.js': { mutants: [{ status: 'Survived', mutatorName: 'x', description: 'noarrow' }] }
+    })
+
+    const written = JSON.parse(writeFileSync.mock.calls[0][1])
+    expect(written.survivors[0].original).toBe('noarrow')
+    expect(written.survivors[0].mutated).toBe('')
+  })
+
+  it('defaults score to 100% when no mutants exist', () => {
+    writeStructuredReportFile('out.json', 1, {})
+
+    const written = JSON.parse(writeFileSync.mock.calls[0][1])
+    expect(written.score).toBe(100)
+  })
+
+  it('includes deltas when provided', () => {
+    const deltas = { fixes: [], regressions: [] }
+    writeStructuredReportFile('out.json', 1, {}, deltas)
+
+    const written = JSON.parse(writeFileSync.mock.calls[0][1])
+    expect(written.deltas).toEqual(deltas)
+  })
+
+  it('omits deltas when not provided', () => {
+    writeStructuredReportFile('out.json', 1, {})
+
+    const written = JSON.parse(writeFileSync.mock.calls[0][1])
+    expect(written).not.toHaveProperty('deltas')
+  })
+
+  it('handles mutants without location', () => {
+    writeStructuredReportFile('out.json', 1, {
+      'a.js': { mutants: [{ status: 'Survived', mutatorName: 'x' }] }
+    })
+
+    const written = JSON.parse(writeFileSync.mock.calls[0][1])
+    expect(written.survivors[0].line).toBe(0)
+  })
+
+  it('skips mutants with unrecognized status (neither killed nor alive)', () => {
+    writeStructuredReportFile('out.json', 1, {
+      'a.js': { mutants: [{ status: 'CompileError', mutatorName: 'x' }] }
+    })
+
+    const written = JSON.parse(writeFileSync.mock.calls[0][1])
+    expect(written.killed).toBe(0)
+    expect(written.survived).toBe(0)
+    expect(written.survivors).toHaveLength(0)
+  })
+
+  it('defaults file score to 100% when mutants array is empty', () => {
+    writeStructuredReportFile('out.json', 1, {
+      'a.js': { mutants: [] }
+    })
+
+    const written = JSON.parse(writeFileSync.mock.calls[0][1])
+    expect(written.files['a.js'].score).toBe(100)
   })
 })

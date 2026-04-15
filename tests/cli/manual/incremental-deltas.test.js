@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { resolve } from 'node:path'
+import { computeDeltas } from '../../../cli/incremental-report.js'
 
 vi.mock('node:fs', async (importOriginal) => {
   const actual = await importOriginal()
@@ -295,5 +296,45 @@ describe('incremental deltas', () => {
         name: '=== → !=='
       })
     })
+  })
+})
+
+describe('computeDeltas', () => {
+  it('defaults line to 0 when mutant has no location', () => {
+    const previousReport = {
+      files: {
+        'a.js': {
+          mutants: [{ mutatorName: 'x', replacement: 'y', status: 'Survived' }]
+        }
+      }
+    }
+    const newFileResults = {
+      'a.js': {
+        mutants: [{ mutatorName: 'x', replacement: 'y', status: 'Killed' }]
+      }
+    }
+    const classification = { changedSources: ['a.js'], unchangedSources: [] }
+
+    const deltas = computeDeltas(previousReport, newFileResults, classification)
+    expect(deltas.fixes[0].line).toBe(0)
+  })
+
+  it('defaults description to empty string when missing', () => {
+    const previousReport = {
+      files: {
+        'a.js': {
+          mutants: [{ location: { start: { line: 1 } }, mutatorName: 'x', replacement: 'y', status: 'Survived' }]
+        }
+      }
+    }
+    const newFileResults = {
+      'a.js': {
+        mutants: [{ location: { start: { line: 1 } }, mutatorName: 'x', replacement: 'y', status: 'Killed' }]
+      }
+    }
+    const classification = { changedSources: ['a.js'], unchangedSources: [] }
+
+    const deltas = computeDeltas(previousReport, newFileResults, classification)
+    expect(deltas.fixes[0].description).toBe('')
   })
 })

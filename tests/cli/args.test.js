@@ -201,6 +201,11 @@ describe('parseArgs', () => {
       expect(result.jsonOutput).toBe('output.json')
     })
 
+    it('returns true when --json is last arg in source file mode', () => {
+      const result = parseArgs(['source.js', '--json'])
+      expect(result.jsonOutput).toBe(true)
+    })
+
     it('parses --json with path in source file mode', () => {
       const result = parseArgs(['source.js', '--json', 'output.json'])
       expect(result.jsonOutput).toBe('output.json')
