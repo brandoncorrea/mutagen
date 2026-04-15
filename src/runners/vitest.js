@@ -38,8 +38,23 @@ export async function createVitestRunner(sourceFile, options = {}) {
     async run() {
       if (sourceFile) vitest.invalidateFile(sourceFile)
       const specs = relatedSpecs || await vitest.globTestSpecifications()
-      await vitest.runTestSpecifications(specs)
-      return compileResults(vitest)
+      const { direct, indirect } = splitSpecs(specs, sourceFile)
+
+      const tier1Specs = direct.length ? direct : specs
+      await vitest.runTestSpecifications(tier1Specs)
+      const tier1 = compileResults(vitest)
+
+      if (!tier1.passed || !indirect.length || !direct.length)
+        return tier1
+
+      await vitest.runTestSpecifications(indirect)
+      const tier2 = compileResults(vitest)
+
+      return {
+        passed: tier2.passed,
+        killedBy: tier2.killedBy,
+        coveredBy: [...tier1.coveredBy, ...tier2.coveredBy]
+      }
     },
     async close() {
       await vitest.close()
@@ -124,6 +139,27 @@ function coldRunner(startVitest, testFilter, vitestOpts) {
     },
     async close() {}
   }
+}
+
+function splitSpecs(specs, sourceFile) {
+  if (!sourceFile) return { direct: specs, indirect: [] }
+
+  const stem = fileStem(sourceFile)
+  const direct = []
+  const indirect = []
+  for (const spec of specs)
+    (fileBasename(spec.moduleId).includes(stem) ? direct : indirect).push(spec)
+  return { direct, indirect }
+}
+
+function fileStem(filepath) {
+  const base = fileBasename(filepath)
+  const dot = base.indexOf('.')
+  return dot > 0 ? base.substring(0, dot) : base
+}
+
+function fileBasename(filepath) {
+  return filepath.substring(filepath.lastIndexOf('/') + 1)
 }
 
 function compileResults(vitest) {

@@ -358,7 +358,7 @@ describe('createVitestRunner', () => {
       ])
     })
 
-    it('runs all specs when no module graph is available', async () => {
+    it('runs all specs in tiers when no module graph is available', async () => {
       const specs = [
         { moduleId: 'test/a.test.js' },
         { moduleId: 'test/b.test.js' }
@@ -370,7 +370,10 @@ describe('createVitestRunner', () => {
       const runner = await createVitestRunner('src/a.js')
       await runner.run()
 
-      expect(mock.runTestSpecifications).toHaveBeenLastCalledWith(specs)
+      // Tiering splits by source basename: test/a.test.js is direct, test/b.test.js is indirect
+      const runCalls = mock.runTestSpecifications.mock.calls
+      expect(runCalls[runCalls.length - 2][0]).toEqual([{ moduleId: 'test/a.test.js' }])
+      expect(runCalls[runCalls.length - 1][0]).toEqual([{ moduleId: 'test/b.test.js' }])
     })
 
     it('terminates on circular imports without infinite loop', async () => {
@@ -436,6 +439,177 @@ describe('createVitestRunner', () => {
       await runner.run()
 
       expect(mock.runTestSpecifications).toHaveBeenLastCalledWith(specs)
+    })
+  })
+
+  describe('tiered test execution', () => {
+    it('skips indirect tests when direct test kills the mutation', async () => {
+      const specs = [
+        { moduleId: 'test/engine.test.js' },
+        { moduleId: 'test/integration.test.js' }
+      ]
+      const mock = createMockVitest()
+      mock.globTestSpecifications.mockResolvedValue(specs)
+      mock.projects = [{
+        _vite: {
+          moduleGraph: {
+            getModuleById: vi.fn((id) => {
+              if (id === 'src/engine.js')
+                return { importers: new Set([
+                  { id: 'test/engine.test.js' },
+                  { id: 'test/integration.test.js' }
+                ]) }
+              return null
+            })
+          }
+        }
+      }]
+
+      mock.state.getFiles = vi.fn()
+        .mockReturnValueOnce([])  // warm rerun
+        .mockReturnValue([
+          { result: { state: 'fail' }, filepath: 'test/engine.test.js' }
+        ])
+
+      startVitest.mockResolvedValue(mock)
+
+      const runner = await createVitestRunner('src/engine.js')
+      const result = await runner.run()
+
+      expect(result).toEqual({
+        passed: false,
+        killedBy: ['test/engine.test.js'],
+        coveredBy: ['test/engine.test.js']
+      })
+
+      // Only direct spec should have been run (after warm rerun)
+      const runCalls = mock.runTestSpecifications.mock.calls
+      expect(runCalls[runCalls.length - 1][0]).toEqual([
+        { moduleId: 'test/engine.test.js' }
+      ])
+    })
+
+    it('runs indirect tests when direct test passes', async () => {
+      const specs = [
+        { moduleId: 'test/engine.test.js' },
+        { moduleId: 'test/integration.test.js' }
+      ]
+      const mock = createMockVitest()
+      mock.globTestSpecifications.mockResolvedValue(specs)
+      mock.projects = [{
+        _vite: {
+          moduleGraph: {
+            getModuleById: vi.fn((id) => {
+              if (id === 'src/engine.js')
+                return { importers: new Set([
+                  { id: 'test/engine.test.js' },
+                  { id: 'test/integration.test.js' }
+                ]) }
+              return null
+            })
+          }
+        }
+      }]
+
+      mock.state.getFiles = vi.fn()
+        .mockReturnValueOnce([])  // warm rerun
+        .mockReturnValueOnce([    // tier 1: direct passes
+          { result: { state: 'pass' }, filepath: 'test/engine.test.js' }
+        ])
+        .mockReturnValue([        // tier 2: indirect fails
+          { result: { state: 'fail' }, filepath: 'test/integration.test.js' }
+        ])
+
+      startVitest.mockResolvedValue(mock)
+
+      const runner = await createVitestRunner('src/engine.js')
+      const result = await runner.run()
+
+      expect(result).toEqual({
+        passed: false,
+        killedBy: ['test/integration.test.js'],
+        coveredBy: ['test/engine.test.js', 'test/integration.test.js']
+      })
+
+      // Both tiers were run
+      const runCalls = mock.runTestSpecifications.mock.calls
+      expect(runCalls[runCalls.length - 2][0]).toEqual([{ moduleId: 'test/engine.test.js' }])
+      expect(runCalls[runCalls.length - 1][0]).toEqual([{ moduleId: 'test/integration.test.js' }])
+    })
+
+    it('returns survived when both tiers pass', async () => {
+      const specs = [
+        { moduleId: 'test/engine.test.js' },
+        { moduleId: 'test/integration.test.js' }
+      ]
+      const mock = createMockVitest()
+      mock.globTestSpecifications.mockResolvedValue(specs)
+      mock.projects = [{
+        _vite: {
+          moduleGraph: {
+            getModuleById: vi.fn((id) => {
+              if (id === 'src/engine.js')
+                return { importers: new Set([
+                  { id: 'test/engine.test.js' },
+                  { id: 'test/integration.test.js' }
+                ]) }
+              return null
+            })
+          }
+        }
+      }]
+
+      mock.state.getFiles = vi.fn()
+        .mockReturnValueOnce([])  // warm rerun
+        .mockReturnValueOnce([    // tier 1: direct passes
+          { result: { state: 'pass' }, filepath: 'test/engine.test.js' }
+        ])
+        .mockReturnValue([        // tier 2: indirect also passes
+          { result: { state: 'pass' }, filepath: 'test/integration.test.js' }
+        ])
+
+      startVitest.mockResolvedValue(mock)
+
+      const runner = await createVitestRunner('src/engine.js')
+      const result = await runner.run()
+
+      expect(result).toEqual({
+        passed: true,
+        killedBy: [],
+        coveredBy: ['test/engine.test.js', 'test/integration.test.js']
+      })
+    })
+
+    it('runs all specs as one tier when no direct test matches', async () => {
+      const specs = [
+        { moduleId: 'test/integration.test.js' },
+        { moduleId: 'test/e2e.test.js' }
+      ]
+      const mock = createMockVitest()
+      mock.globTestSpecifications.mockResolvedValue(specs)
+      mock.projects = [{
+        _vite: {
+          moduleGraph: {
+            getModuleById: vi.fn((id) => {
+              if (id === 'src/engine.js')
+                return { importers: new Set([
+                  { id: 'test/integration.test.js' },
+                  { id: 'test/e2e.test.js' }
+                ]) }
+              return null
+            })
+          }
+        }
+      }]
+
+      startVitest.mockResolvedValue(mock)
+
+      const runner = await createVitestRunner('src/engine.js')
+      await runner.run()
+
+      // No direct match for "engine" → all specs run together
+      const runCalls = mock.runTestSpecifications.mock.calls
+      expect(runCalls[runCalls.length - 1][0]).toEqual(specs)
     })
   })
 
