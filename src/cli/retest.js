@@ -69,6 +69,24 @@ export async function runRetest(ctx, parsed) {
   out(`   Report: ${reportPath}`)
   out(`   Survivors to retest: ${survivorKeys.size} across ${files.length} file(s)\n`)
 
+  const result = await retestFiles(files, { mutationConfig, createRunner, timeout, survivorKeys, parallel: parsed.parallel, out })
+
+  writeRetestReport(parsed, files.length, result.fileResults)
+  printRetestSummary(out, result)
+
+  return {
+    exitCode: result.totalSurvived > 0 || result.failures > 0 ? 1 : 0,
+    stats: {
+      killed: result.totalKilled,
+      survived: result.totalSurvived,
+      timedOut: result.totalTimedOut,
+      skipped: result.totalSkipped,
+      fileCount: files.length
+    }
+  }
+}
+
+async function retestFiles(files, { mutationConfig, createRunner, timeout, survivorKeys, parallel, out }) {
   let totalKilled = 0
   let totalSurvived = 0
   let totalTimedOut = 0
@@ -105,15 +123,14 @@ export async function runRetest(ctx, parsed) {
       sourceFile: absPath,
       mutationConfig,
       createRunner,
-      targetLine: null,
       timeout,
       survivorsOnly: false,
       out,
       retestMutations: matched
     }
 
-    const result = parsed.parallel
-      ? await runParallel({ ...opts, workerCount: typeof parsed.parallel === 'number' ? parsed.parallel : undefined })
+    const result = parallel
+      ? await runParallel({ ...opts, workerCount: isNumber(parallel) ? parallel : undefined })
       : await runSingle(opts)
 
     if (result.error) {
@@ -126,11 +143,17 @@ export async function runRetest(ctx, parsed) {
     }
   }
 
-  if (typeof parsed.jsonOutput === 'string')
-    writeStructuredReportFile(parsed.jsonOutput, files.length, fileResults)
-  else if (parsed.jsonOutput)
-    writeStructuredReportFile(`reports/mutation/retest-report.json`, files.length, fileResults)
+  return { totalKilled, totalSurvived, totalTimedOut, totalSkipped, failures, fileResults }
+}
 
+function writeRetestReport(parsed, fileCount, fileResults) {
+  if (isString(parsed.jsonOutput))
+    writeStructuredReportFile(parsed.jsonOutput, fileCount, fileResults)
+  else if (parsed.jsonOutput)
+    writeStructuredReportFile('reports/mutation/retest-report.json', fileCount, fileResults)
+}
+
+function printRetestSummary(out, { totalKilled, totalSurvived, totalTimedOut, totalSkipped, failures }) {
   out(`\n${HEADER_SEPARATOR}`)
   out(`RETEST SUMMARY`)
   out(HEADER_SEPARATOR)
@@ -145,21 +168,16 @@ export async function runRetest(ctx, parsed) {
   else if (allKilled)
     out(`\nAll retestable survivors are now killed. ${totalSkipped} could not be retested (code changed).`)
   out('')
-
-  const exitCode = totalSurvived > 0 || failures > 0 ? 1 : 0
-
-  return {
-    exitCode,
-    stats: {
-      killed: totalKilled,
-      survived: totalSurvived,
-      timedOut: totalTimedOut,
-      skipped: totalSkipped,
-      fileCount: files.length
-    }
-  }
 }
 
 function survivorKey(file, line, name) {
   return `${file}:${line}:${name}`
+}
+
+function isString(value) {
+  return typeof value === 'string'
+}
+
+function isNumber(value) {
+  return typeof value === 'number'
 }

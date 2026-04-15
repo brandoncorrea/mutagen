@@ -113,6 +113,16 @@ function isInSkipRange(node, ranges) {
   return ranges.some(([start, end]) => node.start >= start && node.end <= end)
 }
 
+/**
+ * Match an AST node against a pattern object.
+ * Each key in the pattern is compared against the corresponding node property.
+ * String values match either string properties or identifier names.
+ * Object values are matched recursively.
+ *
+ * @param {Object} node - AST node to test
+ * @param {Object} pattern - pattern to match (e.g. { type: 'CallExpression', callee: { name: 'foo' } })
+ * @returns {boolean}
+ */
 export function matchesPattern(node, pattern) {
   if (!isObject(node) || !isObject(pattern)) return false
   for (const key of Object.keys(pattern)) {

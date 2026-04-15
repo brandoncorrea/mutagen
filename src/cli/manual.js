@@ -128,7 +128,7 @@ async function run(ctx, argv) {
   if (quiet && stats)
     process.stderr.write(formatQuietSummary(stats) + '\n')
 
-  if ((minScore || minScore === 0) && stats)
+  if (minScore != null && stats)
     return scoreExitCode(stats, minScore)
 
   return exitCode
@@ -136,7 +136,7 @@ async function run(ctx, argv) {
 
 async function getRunResults(parsed, pCtx, timeout) {
   if (parsed.retestMode)
-    return await runRetestMode(pCtx, { ...parsed, timeout })
+    return await runRetest(pCtx, { ...parsed, timeout })
   if (parsed.incrementalMode)
     return await runIncrementalMode(pCtx, parsed.jsonOutput, timeout)
   if (parsed.allMode)
@@ -147,10 +147,6 @@ async function getRunResults(parsed, pCtx, timeout) {
 function runDiffMode(ctx, parsed) {
   const result = diffReports(parsed.beforeFile, parsed.afterFile, ctx.out, parsed.jsonOutput)
   return !result || result.regressions ? 1 : 0
-}
-
-async function runRetestMode(ctx, parsed) {
-  return await runRetest(ctx, parsed)
 }
 
 function runAllDryRun({ sources, mutationConfig, out }) {

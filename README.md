@@ -47,6 +47,15 @@ npx mutagen --all --quiet --survivors-only
 # Incremental: only re-test changed files, JSON report
 npx mutagen --incremental --quiet --json reports/mutation.json
 
+# Only mutate files changed in git (pairs with --all or --incremental)
+npx mutagen --all --changed --quiet --json reports/mutation.json
+
+# Retest: re-run only previously-surviving mutations from a report
+npx mutagen --retest reports/mutation.json --quiet --json reports/retest.json
+
+# Fail if mutation score drops below 80%
+npx mutagen --all --quiet --min-score 80
+
 # Compare reports for regressions (exit code 1 = regressions found)
 npx mutagen --diff before.json after.json --json
 ```
@@ -110,11 +119,18 @@ export default {
   createRunner: async (sourceFile) => runner,  // Test runner factory
   reportDir: 'reports/mutation',               // Directory for JSON reports
   reportFile: 'manual-report.json',            // Report filename
-  timeout: null                // Default per-mutation timeout in ms
+  skipNodes: [],                 // AST node patterns to exclude from mutation (optional)
+  timeout: null                  // Default per-mutation timeout in ms
 }
 ```
 
 Use `mutators` for AST-based mutations (recommended) and `patterns` for regex-based mutations. Both can be used together — AST mutations run first, then regex.
+
+`skipNodes` accepts AST node pattern objects. Any node matching a pattern is excluded from mutation along with all its children. Example: skip all `console.log` calls:
+
+```js
+skipNodes: [{ type: 'CallExpression', callee: { object: { name: 'console' } } }]
+```
 
 ## CLI flags
 
@@ -132,10 +148,13 @@ Use `mutators` for AST-based mutations (recommended) and `patterns` for regex-ba
 --parallel N                    Run with N parallel workers
 --quiet                         Suppress verbose output, one-line summary to stderr
 --survivors-only                Only report surviving mutations
+--changed                       Only mutate files with uncommitted git changes
+--min-score N                   Exit 1 if mutation score is below N%
+--retest <report.json>          Re-run only previously-surviving mutations
 --diff <before> <after>         Compare two JSON report files
 ```
 
-`--json`, `--timeout`, `--parallel`, `--quiet`, and `--survivors-only` work across single-file, `--all`, and `--incremental` modes.
+`--json`, `--timeout`, `--parallel`, `--quiet`, `--survivors-only`, and `--changed` work across single-file, `--all`, and `--incremental` modes.
 
 ## Programmatic API
 
