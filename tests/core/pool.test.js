@@ -63,6 +63,18 @@ describe('createPool', () => {
       expect(results.killed).toEqual([])
     })
 
+    it('includes coveredBy on survived mutations from runner result', async () => {
+      const runner = fakeRunner({ passed: true, killedBy: [], coveredBy: ['test/a.test.js'] })
+      const createRunner = vi.fn().mockResolvedValue(runner)
+      const pool = createPool({ workerCount: 1, createRunner })
+      const mutations = [fakeMutation()]
+
+      const results = await pool.run(mutations)
+      await pool.close()
+
+      expect(results.survived[0].coveredBy).toEqual(['test/a.test.js'])
+    })
+
     it('distributes mutations across multiple workers', async () => {
       const runners = []
       const createRunner = vi.fn().mockImplementation(async () => {

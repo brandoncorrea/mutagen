@@ -68,7 +68,7 @@ async function runMutation(opts, total, outcomes, mutation) {
     const result = await withTimeout(runner.run, timeout)
 
     if (result.passed) {
-      outcomes.survived.push(mutation)
+      outcomes.survived.push({ ...mutation, coveredBy: result.coveredBy })
       reportMutation(out, total, mutation, 'SURVIVED')
     } else {
       outcomes.killed.push({ ...mutation, killedBy: result.killedBy })

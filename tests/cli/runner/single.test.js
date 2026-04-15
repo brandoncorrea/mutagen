@@ -202,6 +202,25 @@ describe('runSingle', () => {
     expect(events.indexOf('mutation-complete')).toBeLessThan(events.indexOf('close'))
   })
 
+  it('includes coveredBy on survived mutations from runner result', async () => {
+    mockFs({ [resolve('src/a.js')]: sourceCode })
+    const runner = {
+      run: vi.fn()
+        .mockResolvedValueOnce({ passed: true })
+        .mockResolvedValueOnce({ passed: true, coveredBy: ['test/a.test.js'] }),
+      close: vi.fn().mockResolvedValue(undefined)
+    }
+
+    const result = await runSingle({
+      sourceFile: resolve('src/a.js'),
+      mutationConfig,
+      createRunner: vi.fn().mockResolvedValue(runner),
+      out: noop
+    })
+
+    expect(result.jsonData.mutants[0].coveredBy).toEqual(['test/a.test.js'])
+  })
+
   it('classifies non-timeout errors as killed, not timed out', async () => {
     mockFs({ [resolve('src/a.js')]: sourceCode })
     const runner = {

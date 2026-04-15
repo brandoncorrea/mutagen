@@ -116,7 +116,8 @@ export function writeStructuredReportFile(outputPath, fileCount, fileResults) {
           line: m.location?.start?.line || 0,
           name: m.mutatorName,
           original: extractDescription(m.description, 0),
-          mutated: extractDescription(m.description, 1)
+          mutated: extractDescription(m.description, 1),
+          ...(m.coveredBy?.length && { coveredBy: m.coveredBy })
         })
       }
     }
@@ -199,7 +200,7 @@ function deduplicateMutants(entries) {
 }
 
 function toMutant(relPath, mutation, status) {
-  const { line, name, original, mutated, killedBy } = mutation
+  const { line, name, original, mutated, killedBy, coveredBy } = mutation
   return {
     id: `mutagen-${relPath}-${line}-${name}`,
     mutatorName: name,
@@ -209,6 +210,7 @@ function toMutant(relPath, mutation, status) {
       end: { line, column: 0 }
     },
     description: `${original} → ${mutated}`,
-    ...(killedBy?.length && { killedBy })
+    ...(killedBy?.length && { killedBy }),
+    ...(coveredBy?.length && { coveredBy })
   }
 }

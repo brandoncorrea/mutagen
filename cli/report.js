@@ -59,8 +59,10 @@ function writeSurvivors(out, mutations) {
     writeMutation(out, mutation)
 }
 
-function writeMutation(out, { line, name, original, mutated }) {
+function writeMutation(out, { line, name, original, mutated, coveredBy }) {
   out(`\n  Line ${line}: ${name}`)
   out(`  Original: ${original}`)
   out(`  Mutated:  ${mutated}`)
+  if (coveredBy?.length)
+    out(`  Test:     ${coveredBy.join(', ')}`)
 }

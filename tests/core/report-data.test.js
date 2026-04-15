@@ -201,6 +201,49 @@ describe('toJsonMutants', () => {
     expect(output.mutants[0].mutatorName).toBe('&& → ||')
   })
 
+  it('includes coveredBy on survived mutations when present', () => {
+    const results = {
+      killed: [],
+      survived: [
+        {
+          line: 10,
+          name: '+ → -',
+          original: 'a + b',
+          mutated: 'a - b',
+          coveredBy: ['tests/math.test.js']
+        }
+      ]
+    }
+
+    const output = toJsonMutants('/project/src/foo.js', results)
+    const survived = output.mutants[0]
+    expect(survived.coveredBy).toEqual(['tests/math.test.js'])
+  })
+
+  it('excludes coveredBy when it is an empty array', () => {
+    const results = {
+      killed: [],
+      survived: [
+        { line: 10, name: 'x', original: 'a', mutated: 'b', coveredBy: [] }
+      ]
+    }
+
+    const output = toJsonMutants('/project/src/foo.js', results)
+    expect(output.mutants[0]).not.toHaveProperty('coveredBy')
+  })
+
+  it('excludes coveredBy when not present on mutation', () => {
+    const results = {
+      killed: [],
+      survived: [
+        { line: 10, name: 'x', original: 'a', mutated: 'b' }
+      ]
+    }
+
+    const output = toJsonMutants('/project/src/foo.js', results)
+    expect(output.mutants[0]).not.toHaveProperty('coveredBy')
+  })
+
   it('produces a relative path', () => {
     const output = toJsonMutants(process.cwd() + '/src/foo.js', { killed: [], survived: [] })
     expect(output.path).toBe('src/foo.js')
