@@ -152,6 +152,7 @@ skipNodes: [{ type: 'CallExpression', callee: { object: { name: 'console' } } }]
 --min-score N                   Exit 1 if mutation score is below N%
 --retest <report.json>          Re-run only previously-surviving mutations
 --diff <before> <after>         Compare two JSON report files
+--help, -h                      Show usage information
 ```
 
 `--json`, `--timeout`, `--parallel`, `--quiet`, `--survivors-only`, and `--changed` work across single-file, `--all`, and `--incremental` modes.
