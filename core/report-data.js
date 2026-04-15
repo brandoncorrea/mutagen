@@ -96,39 +96,7 @@ export function toJsonMutants(sourceFile, results, { survivorsOnly } = {}) {
  * @param {Object} [deltas] - incremental deltas (fixes, regressions, rerunFiles, cachedFiles)
  */
 export function writeStructuredReportFile(outputPath, fileCount, fileResults, deltas) {
-  let totalKilled = 0
-  let totalSurvived = 0
-  let totalTimedOut = 0
-  const files = {}
-  const survivors = []
-
-  for (const [path, fileData] of Object.entries(fileResults)) {
-    const mutants = fileData.mutants
-    let fileKilled = 0
-
-    for (const m of mutants) {
-      if (isKilled(m)) {
-        fileKilled++
-        totalKilled++
-        if (m.status === 'Timeout') totalTimedOut++
-      } else if (isAlive(m)) {
-        totalSurvived++
-        survivors.push({
-          file: path,
-          line: m.location?.start?.line || 0,
-          name: m.mutatorName,
-          original: extractDescription(m.description, 0),
-          mutated: extractDescription(m.description, 1),
-          ...(m.coveredBy?.length && { coveredBy: m.coveredBy })
-        })
-      }
-    }
-
-    const fileTotal = mutants.length
-    const fileScore = fileTotal ? (fileKilled / fileTotal) * 100 : 100
-    files[path] = { score: round1(fileScore), killed: fileKilled, total: fileTotal }
-  }
-
+  const { files, survivors, totalKilled, totalSurvived, totalTimedOut } = collectStats(fileResults)
   const total = totalKilled + totalSurvived
   const score = total ? (totalKilled / total) * 100 : 100
 
@@ -147,8 +115,48 @@ export function writeStructuredReportFile(outputPath, fileCount, fileResults, de
   mkdirSync(dirname(absPath), { recursive: true })
   writeFileSync(absPath, JSON.stringify(report, null, 2))
 
-  const summary = `Score: ${round1(score)}% (${totalKilled}/${total}) | ${totalSurvived} survivors | ${fileCount} files → ${outputPath}`
-  process.stderr.write(summary + '\n')
+  process.stderr.write(`Score: ${round1(score)}% (${totalKilled}/${total}) | ${totalSurvived} survivors | ${fileCount} files → ${outputPath}\n`)
+}
+
+function collectStats(fileResults) {
+  let totalKilled = 0
+  let totalSurvived = 0
+  let totalTimedOut = 0
+  const files = {}
+  const survivors = []
+
+  for (const [path, fileData] of Object.entries(fileResults)) {
+    const mutants = fileData.mutants
+    let fileKilled = 0
+
+    for (const m of mutants) {
+      if (isKilled(m)) {
+        fileKilled++
+        totalKilled++
+        if (m.status === 'Timeout') totalTimedOut++
+      } else if (isAlive(m)) {
+        totalSurvived++
+        survivors.push(toSurvivor(path, m))
+      }
+    }
+
+    const fileTotal = mutants.length
+    const fileScore = fileTotal ? (fileKilled / fileTotal) * 100 : 100
+    files[path] = { score: round1(fileScore), killed: fileKilled, total: fileTotal }
+  }
+
+  return { files, survivors, totalKilled, totalSurvived, totalTimedOut }
+}
+
+function toSurvivor(file, m) {
+  return {
+    file,
+    line: m.location?.start?.line || 0,
+    name: m.mutatorName,
+    original: extractDescription(m.description, 0),
+    mutated: extractDescription(m.description, 1),
+    ...(m.coveredBy?.length && { coveredBy: m.coveredBy })
+  }
 }
 
 function round1(n) {
