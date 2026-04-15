@@ -1,6 +1,6 @@
 # @bwawan/mutagen
 
-A lightweight, regex-based mutation testing engine for JavaScript/JSX projects.
+A lightweight mutation testing engine for JavaScript/TypeScript projects. AST-based mutations with automatic worktree isolation — original source files are never modified.
 
 Requires Node.js >= 20.11.0.
 
@@ -13,22 +13,12 @@ npm install @bwawan/mutagen
 1. Create `mutagen.config.js` in your project root:
 
 ```js
-import { patterns, createVitestRunner } from '@bwawan/mutagen'
+import { mutators, createVitestRunner } from '@bwawan/mutagen'
 
 export default {
-  patterns: [...patterns.javascript],
+  mutators: [...mutators.javascript],
   include: ['src/**/*.js'],
-  exclude: ['**/*.test.js', '**/node_modules'],
-  createRunner: sourceFile => createVitestRunner(sourceFile)
-}
-```
-
-Or list source files explicitly:
-
-```js
-export default {
-  patterns: [...patterns.javascript],
-  sources: ['src/foo.js', 'src/bar.js'],
+  exclude: ['**/*.test.js'],
   createRunner: sourceFile => createVitestRunner(sourceFile)
 }
 ```
@@ -50,45 +40,30 @@ The `mutagen.config.js` default export is passed directly to `createManualRunner
 
 ```js
 export default {
-  patterns: [...],            // Mutation patterns (see Pattern format)
-  include: ['src/**/*.js'],   // Glob patterns for source files to mutate
+  mutators: [...],            // AST mutators (primary — see Mutator format)
+  patterns: [...],            // Regex patterns (secondary — see Pattern format)
+  include: ['src/**/*.js'],   // Glob patterns for source files
   exclude: ['**/*.test.js'],  // Glob patterns to exclude (optional)
   sources: ['src/foo.js'],    // Explicit source files (takes precedence over include/exclude)
-  cwd: process.cwd(),        // Base directory for glob resolution (default: cwd)
-  testSources: [],            // Test files to track for incremental invalidation
+  cwd: process.cwd(),         // Base directory for glob resolution (default: cwd)
+  testSources: [],             // Test files to track for incremental invalidation
   createRunner: async (sourceFile) => runner,  // Test runner factory
   reportDir: 'reports/mutation',               // Directory for JSON reports
   reportFile: 'manual-report.json',            // Report filename
-  timeout: null               // Default per-mutation timeout in ms
+  timeout: null                // Default per-mutation timeout in ms
 }
 ```
 
-Use `include`/`exclude` glob patterns to select source files dynamically. If `sources` is provided (non-empty), it takes precedence over `include`/`exclude`. Use `sources` when you need an explicit file list.
+Use `mutators` for AST-based mutations (recommended) and `patterns` for regex-based mutations. Both can be used together — AST mutations run first, then regex.
 
 ## Programmatic API
 
-For custom scripts, use `createManualRunner` directly:
-
 ```js
-import { createManualRunner, patterns, createVitestRunner } from '@bwawan/mutagen'
+import { createManualRunner, mutators, createVitestRunner } from '@bwawan/mutagen'
 
-// With glob patterns
 const runner = createManualRunner({
-  patterns: [...patterns.javascript],
+  mutators: [...mutators.javascript],
   include: ['src/**/*.js'],
-  exclude: ['**/*.test.js'],
-  createRunner: sourceFile => createVitestRunner(sourceFile)
-})
-
-runner.main()
-```
-
-Or with explicit sources:
-
-```js
-const runner = createManualRunner({
-  patterns: [...patterns.javascript],
-  sources: ['src/foo.js', 'src/bar.js'],
   createRunner: sourceFile => createVitestRunner(sourceFile)
 })
 
@@ -116,9 +91,7 @@ runner.main()
 
 ## Runner interface
 
-The `createRunner` callback receives a source file path and returns a runner object. Two modes are supported:
-
-**File-I/O mode** (basic — mutagen writes mutated source to disk):
+The `createRunner` callback receives a source file path and returns a runner object:
 
 ```js
 async function createRunner(sourceFile) {
@@ -129,24 +102,11 @@ async function createRunner(sourceFile) {
 }
 ```
 
-**In-memory mode** (faster — no file I/O per mutation, required for `--parallel`):
-
-```js
-async function createRunner(sourceFile) {
-  return {
-    async run() { return { passed: true, killedBy: [] } },
-    async close() {},
-    setMutant(source) { /* swap source in memory */ },
-    clearMutant() { /* restore original */ }
-  }
-}
-```
-
-If `setMutant` is present, mutagen uses in-memory switching automatically. The built-in Vitest runner supports both modes.
+Mutagen creates a temporary worktree (project copy) and writes mutations there. Original source files are never modified. The runner receives the worktree path as `sourceFile` and an `options.root` pointing to the worktree root.
 
 ## Vitest runner
 
-Built-in adapter for Vitest with warm/cold fallback, module-graph-based test narrowing, and in-memory mutant switching via a Vite plugin:
+Built-in adapter for Vitest with warm/cold fallback and module-graph-based test narrowing:
 
 ```js
 import { createVitestRunner } from '@bwawan/mutagen/runners/vitest'
@@ -162,31 +122,26 @@ createVitestRunner(sourceFile, {
 })
 ```
 
-## Parallel execution
+## Mutator format (AST)
 
-The `--parallel` flag runs mutations concurrently using an in-process worker pool. Each worker holds its own runner instance with in-memory mutant switching — no file I/O during mutation.
-
-```bash
-npx mutagen src/foo.js --parallel       # 2 workers (default)
-npx mutagen --all --parallel 8          # 8 workers across all sources
-npx mutagen --incremental --parallel 4  # Incremental + parallel
-```
-
-For programmatic use:
+AST mutators target specific node types in the parsed syntax tree:
 
 ```js
-import { createPool, runParallel } from '@bwawan/mutagen'
-
-// Low-level pool API
-const pool = createPool({ workerCount: 4, createRunner })
-const outcomes = await pool.run(mutations, { timeout, onResult })
-await pool.close()
-
-// High-level parallel runner (same interface as runSingle)
-const result = await runParallel({ sourceFile, prepared, createRunner, workerCount: 4 })
+{
+  name: '=== → !==',               // Human-readable name
+  types: ['BinaryExpression'],      // ESTree/Babel node types to visit
+  test(node, source, parent) {},    // Return true if this node should be mutated
+  mutate(node, source, parent) {}   // Return { start, end, replacement } or null
+}
 ```
 
-## Pattern format
+The built-in `mutators.javascript` set covers equality, logical, arithmetic, boolean, conditional, method, string, array, object, bitwise, update, unary, async, optional chaining, nullish coalescing, spread, void, throw, and property access operators.
+
+AST mutations are precise — they understand syntax structure, so they never accidentally mutate inside strings, comments, or JSX attributes.
+
+## Pattern format (regex)
+
+Regex patterns are available as a secondary mutation mode:
 
 ```js
 {
@@ -199,7 +154,17 @@ const result = await runParallel({ sourceFile, prepared, createRunner, workerCou
 }
 ```
 
-The built-in `patterns.javascript` set covers equality, logical, arithmetic, boolean, method, string, array, object, bitwise, and control-flow operators.
+The built-in `patterns.javascript` and `patterns.typescript` sets are available for projects that prefer regex-based mutations.
+
+## Parallel execution
+
+The `--parallel` flag runs mutations concurrently using an in-process worker pool. Each worker operates in its own worktree for crash-safe isolation.
+
+```bash
+npx mutagen src/foo.js --parallel       # 2 workers (default)
+npx mutagen --all --parallel 8          # 8 workers across all sources
+npx mutagen --incremental --parallel 4  # Incremental + parallel
+```
 
 ## Incremental mode
 
