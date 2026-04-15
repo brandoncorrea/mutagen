@@ -12,8 +12,11 @@ vi.mock('node:fs', async (importOriginal) => {
   }
 })
 
+vi.mock('../../../core/worktree.js')
+
 import { runSingle } from '../../../cli/runner/index.js'
 import { preparePatterns } from '../../../core/engine.js'
+import { createWorktree } from '../../../core/worktree.js'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { patterns, sourceCode, mockFs as _mockFs, noop } from '../helpers.js'
 
@@ -21,80 +24,26 @@ const prepared = preparePatterns(patterns)
 
 function mockFs(files) { _mockFs(readFileSync, files) }
 
+function fakeWorktree() {
+  const tempRoot = '/tmp/mutagen-test'
+  return {
+    root: tempRoot,
+    resolve: vi.fn((path) => path.replace(resolve('.'), tempRoot)),
+    cleanup: vi.fn()
+  }
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
+  createWorktree.mockReturnValue(fakeWorktree())
 })
 
-describe('in-memory mutant switching', () => {
-  it('uses setMutant instead of writeFileSync when runner supports it', async () => {
+describe('worktree-based mutation isolation', () => {
+  it('creates a worktree for mutation isolation', async () => {
     mockFs({ [resolve('src/a.js')]: sourceCode })
     const runner = {
       run: vi.fn()
-        .mockResolvedValueOnce({ passed: true })  // preflight
-        .mockResolvedValueOnce({ passed: false }),
-      close: vi.fn().mockResolvedValue(undefined),
-      setMutant: vi.fn(),
-      clearMutant: vi.fn()
-    }
-
-    await runSingle({
-      sourceFile: resolve('src/a.js'),
-      prepared,
-      createRunner: vi.fn().mockResolvedValue(runner),
-      out: noop
-    })
-
-    expect(runner.setMutant).toHaveBeenCalledOnce()
-    expect(runner.setMutant.mock.calls[0][0]).toContain('!==')
-  })
-
-  it('calls clearMutant after each mutation', async () => {
-    mockFs({ [resolve('src/a.js')]: sourceCode })
-    const runner = {
-      run: vi.fn()
-        .mockResolvedValueOnce({ passed: true })  // preflight
-        .mockResolvedValueOnce({ passed: false }),
-      close: vi.fn().mockResolvedValue(undefined),
-      setMutant: vi.fn(),
-      clearMutant: vi.fn()
-    }
-
-    await runSingle({
-      sourceFile: resolve('src/a.js'),
-      prepared,
-      createRunner: vi.fn().mockResolvedValue(runner),
-      out: noop
-    })
-
-    expect(runner.clearMutant).toHaveBeenCalledOnce()
-  })
-
-  it('does not write to disk when runner supports in-memory switching', async () => {
-    mockFs({ [resolve('src/a.js')]: sourceCode })
-    const runner = {
-      run: vi.fn()
-        .mockResolvedValueOnce({ passed: true })  // preflight
-        .mockResolvedValueOnce({ passed: false }),
-      close: vi.fn().mockResolvedValue(undefined),
-      setMutant: vi.fn(),
-      clearMutant: vi.fn()
-    }
-
-    await runSingle({
-      sourceFile: resolve('src/a.js'),
-      prepared,
-      createRunner: vi.fn().mockResolvedValue(runner),
-      out: noop
-    })
-
-    expect(writeFileSync).not.toHaveBeenCalled()
-  })
-
-  it('falls back to writeFileSync when runner lacks setMutant', async () => {
-    mockFs({ [resolve('src/a.js')]: sourceCode })
-    const runner = {
-      run: vi.fn()
-        .mockResolvedValueOnce({ passed: true })  // preflight
+        .mockResolvedValueOnce({ passed: true })
         .mockResolvedValueOnce({ passed: false }),
       close: vi.fn().mockResolvedValue(undefined)
     }
@@ -106,18 +55,16 @@ describe('in-memory mutant switching', () => {
       out: noop
     })
 
-    expect(writeFileSync).toHaveBeenCalled()
+    expect(createWorktree).toHaveBeenCalledWith(process.cwd())
   })
 
-  it('calls clearMutant in finally block even when run throws', async () => {
+  it('writes mutations to temp file, not original source', async () => {
     mockFs({ [resolve('src/a.js')]: sourceCode })
     const runner = {
       run: vi.fn()
-        .mockResolvedValueOnce({ passed: true })  // preflight
-        .mockRejectedValueOnce(new Error('boom')),
-      close: vi.fn().mockResolvedValue(undefined),
-      setMutant: vi.fn(),
-      clearMutant: vi.fn()
+        .mockResolvedValueOnce({ passed: true })
+        .mockResolvedValueOnce({ passed: false }),
+      close: vi.fn().mockResolvedValue(undefined)
     }
 
     await runSingle({
@@ -127,7 +74,100 @@ describe('in-memory mutant switching', () => {
       out: noop
     })
 
-    expect(runner.clearMutant).toHaveBeenCalledOnce()
+    // writeFileSync should write to the temp path, not the original
+    const writeCalls = writeFileSync.mock.calls
+    for (const [path] of writeCalls) {
+      expect(path).toContain('/tmp/mutagen-test')
+      expect(path).not.toBe(resolve('src/a.js'))
+    }
+  })
+
+  it('passes temp root to createRunner', async () => {
+    mockFs({ [resolve('src/a.js')]: sourceCode })
+    const runner = {
+      run: vi.fn()
+        .mockResolvedValueOnce({ passed: true })
+        .mockResolvedValueOnce({ passed: false }),
+      close: vi.fn().mockResolvedValue(undefined)
+    }
+    const createRunner = vi.fn().mockResolvedValue(runner)
+
+    await runSingle({
+      sourceFile: resolve('src/a.js'),
+      prepared,
+      createRunner,
+      out: noop
+    })
+
+    expect(createRunner).toHaveBeenCalledWith(
+      expect.stringContaining('/tmp/mutagen-test'),
+      expect.objectContaining({ root: '/tmp/mutagen-test' })
+    )
+  })
+
+  it('cleans up worktree after completion', async () => {
+    mockFs({ [resolve('src/a.js')]: sourceCode })
+    const runner = {
+      run: vi.fn()
+        .mockResolvedValueOnce({ passed: true })
+        .mockResolvedValueOnce({ passed: false }),
+      close: vi.fn().mockResolvedValue(undefined)
+    }
+    const wt = fakeWorktree()
+    createWorktree.mockReturnValue(wt)
+
+    await runSingle({
+      sourceFile: resolve('src/a.js'),
+      prepared,
+      createRunner: vi.fn().mockResolvedValue(runner),
+      out: noop
+    })
+
+    expect(wt.cleanup).toHaveBeenCalled()
+  })
+
+  it('cleans up worktree even when runner throws', async () => {
+    mockFs({ [resolve('src/a.js')]: sourceCode })
+    const runner = {
+      run: vi.fn()
+        .mockResolvedValueOnce({ passed: true })
+        .mockRejectedValueOnce(new Error('boom')),
+      close: vi.fn().mockResolvedValue(undefined)
+    }
+    const wt = fakeWorktree()
+    createWorktree.mockReturnValue(wt)
+
+    await runSingle({
+      sourceFile: resolve('src/a.js'),
+      prepared,
+      createRunner: vi.fn().mockResolvedValue(runner),
+      out: noop
+    })
+
+    expect(wt.cleanup).toHaveBeenCalled()
+  })
+
+  it('never writes to the original source file', async () => {
+    mockFs({ [resolve('src/a.js')]: sourceCode })
+    const runner = {
+      run: vi.fn()
+        .mockResolvedValueOnce({ passed: true })
+        .mockResolvedValueOnce({ passed: true }),
+      close: vi.fn().mockResolvedValue(undefined)
+    }
+
+    await runSingle({
+      sourceFile: resolve('src/a.js'),
+      prepared,
+      createRunner: vi.fn().mockResolvedValue(runner),
+      out: noop
+    })
+
+    // Original source file should never appear as a writeFileSync target
+    const originalPath = resolve('src/a.js')
+    for (const [path] of writeFileSync.mock.calls) {
+      expect(path).not.toBe(originalPath)
+    }
   })
 })
 

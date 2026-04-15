@@ -1,11 +1,7 @@
 /**
  * Sequential single-file mutation execution.
- *
- * Runner interface:
- *   { run, close }                       — file-I/O mode (writes mutated source to disk)
- *   { run, close, setMutant, clearMutant } — in-memory mode (no file I/O per mutation)
- *
- * The runner is duck-typed: if setMutant exists, in-memory mode is used.
+ * Creates a temp project copy (worktree) and writes mutations there.
+ * Original source files are never modified (crash-safe).
  */
 
 import { readFileSync, writeFileSync } from 'node:fs'
@@ -13,6 +9,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { generateMutations } from '../../core/generate.js'
 import { withTimeout } from '../../core/timeout.js'
 import { toJsonMutants } from '../../core/report-data.js'
+import { createWorktree } from '../../core/worktree.js'
 import { printRunReport } from '../report.js'
 import { runPreflightTests, reportMutation, printBanner } from './shared.js'
 
@@ -20,16 +17,20 @@ export async function runSingle(options) {
   const { sourceFile, mutationConfig, prepared, createRunner, targetLine, timeout, out = console.log } = options
   const config = mutationConfig || prepared
   const original = readFileSync(sourceFile, 'utf-8')
+  const worktree = createWorktree(process.cwd())
 
   printBanner(out, 'MUTAGEN', sourceFile, targetLine, timeout)
 
-  const runner = await createRunner(sourceFile)
-  const opts = { out, runner, timeout, sourceFile, targetLine, original, mutationConfig: config }
+  const tempSourceFile = worktree.resolve(sourceFile)
+  const runner = await createRunner(tempSourceFile, { root: worktree.root })
+
+  const opts = { out, runner, timeout, sourceFile, tempSourceFile, targetLine, original, mutationConfig: config }
 
   try {
     return await runMutations(opts)
   } finally {
     await runner.close()
+    worktree.cleanup()
   }
 }
 
@@ -61,11 +62,9 @@ async function runMutations(opts) {
 }
 
 async function runMutation(opts, total, outcomes, mutation) {
-  const { out, runner, timeout, sourceFile, original } = opts
-  const inMemory = typeof runner.setMutant === 'function'
+  const { out, runner, timeout, tempSourceFile } = opts
   try {
-    if (inMemory) runner.setMutant(mutation.source)
-    else writeFileSync(sourceFile, mutation.source)
+    writeFileSync(tempSourceFile, mutation.source)
 
     const result = await withTimeout(runner.run, timeout)
 
@@ -84,8 +83,5 @@ async function runMutation(opts, total, outcomes, mutation) {
       outcomes.killed.push(mutation)
       reportMutation(out, total, mutation, 'killed (error)')
     }
-  } finally {
-    if (inMemory) runner.clearMutant()
-    else writeFileSync(sourceFile, original)
   }
 }
