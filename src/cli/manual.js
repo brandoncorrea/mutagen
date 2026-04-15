@@ -54,11 +54,9 @@ export function createManualRunner(config) {
     out = console.log
   } = config
 
-  const sources = explicitSources && explicitSources.length
-    ? explicitSources
-    : include
-      ? resolveGlobs({ include, exclude, cwd })
-      : []
+  const sources = explicitSources?.length ? explicitSources
+    : include ? resolveGlobs({ include, exclude, cwd })
+    : []
 
   const mutationConfig = prepareMutationConfig({ mutators, patterns })
   const reportPath = `${reportDir}/${reportFile}`
@@ -112,22 +110,26 @@ async function run(ctx, argv) {
   if (parsed.dryRunMode)
     return dryRun(parsed.sourceFile, runCtx.mutationConfig, parsed.targetLine, runCtx.out) && 0
 
-  const parallel = parsed.parallel
-  const survivorsOnly = parsed.survivorsOnly
-  const pCtx = { ...runCtx, ...(parallel && { parallel }), ...(survivorsOnly && { survivorsOnly }) }
+  const { parallel, survivorsOnly } = parsed
+  const pCtx = {
+    ...runCtx,
+    ...(parallel && { parallel }),
+    ...(survivorsOnly && { survivorsOnly })
+  }
 
-  let result
+  const { stats, exitCode } = await getRunResults(parsed, pCtx, timeout)
+  if (quiet && stats)
+    process.stderr.write(formatQuietSummary(stats) + '\n')
+
+  return exitCode
+}
+
+async function getRunResults(parsed, pCtx, timeout) {
   if (parsed.incrementalMode)
-    result = await runIncrementalMode(pCtx, parsed.jsonOutput, timeout)
+    return await runIncrementalMode(pCtx, parsed.jsonOutput, timeout)
   else if (parsed.allMode)
-    result = await runBatchMode(pCtx, parsed.jsonOutput, timeout)
-  else
-    result = await runSingleMode(pCtx, parsed, timeout)
-
-  if (quiet && result.stats)
-    process.stderr.write(formatQuietSummary(result.stats) + '\n')
-
-  return result.exitCode
+    return await runBatchMode(pCtx, parsed.jsonOutput, timeout)
+  return await runSingleMode(pCtx, parsed, timeout)
 }
 
 function runDiffMode(ctx, parsed) {
@@ -150,7 +152,12 @@ async function runIncrementalMode(ctx, jsonOutput, timeout) {
   const exitCode = (totalSurvived + failures) ? 1 : 0
   return {
     exitCode,
-    stats: { killed: totalKilled, survived: totalSurvived, timedOut: 0, fileCount: sources.length }
+    stats: {
+      killed: totalKilled,
+      survived: totalSurvived,
+      timedOut: 0,
+      fileCount: sources.length
+    }
   }
 }
 
@@ -160,7 +167,12 @@ async function runBatchMode(ctx, jsonOutput, timeout) {
   const exitCode = (totalSurvived + failures) ? 1 : 0
   return {
     exitCode,
-    stats: { killed: totalKilled, survived: totalSurvived, timedOut: totalTimedOut, fileCount: Object.keys(fileResults).length }
+    stats: {
+      killed: totalKilled,
+      survived: totalSurvived,
+      timedOut: totalTimedOut,
+      fileCount: Object.keys(fileResults).length
+    }
   }
 }
 
@@ -174,14 +186,30 @@ async function runSingleMode(ctx, parsed, timeout) {
     survivorsOnly: ctx.survivorsOnly,
     out: ctx.out
   }
-  const result = ctx.parallel
-    ? await runParallel({ ...opts, workerCount: typeof ctx.parallel === 'number' ? ctx.parallel : undefined })
-    : await runSingle(opts)
-  const exitCode = result.error || result.survived ? 1 : 0
+  const { error, survived, killed, timedOut } = await getSingleRunResult(ctx, opts)
   return {
-    exitCode,
-    stats: { killed: result.killed || 0, survived: result.survived || 0, timedOut: result.timedOut || 0, fileCount: 1 }
+    exitCode: error || survived ? 1 : 0,
+    stats: {
+      killed: killed || 0,
+      survived: survived || 0,
+      timedOut: timedOut || 0,
+      fileCount: 1
+    }
   }
+}
+
+async function getSingleRunResult(context, options) {
+  if (context.parallel)
+    return await runParallel({
+      ...options,
+      workerCount: parallelWorkerCount(context)
+    })
+  return await runSingle(options)
+}
+
+function parallelWorkerCount({ parallel }) {
+  if (typeof parallel === 'number')
+    return parallel
 }
 
 async function runBatch(ctx, jsonOutput, timeout, sourcesToRun) {

@@ -110,8 +110,8 @@ function argsToOptions(args) {
 
 function parseParallel(args) {
   const idx = args.indexOf('--parallel')
-  if (idx < 0) return
-  return parseParallelValue(args, idx)
+  if (idx >= 0)
+    return parseParallelValue(args, idx)
 }
 
 function parseParallelValue(args, idx) {

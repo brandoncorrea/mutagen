@@ -87,9 +87,9 @@ export function printAllCachedSummary(out, sources, previous, classification) {
 }
 
 export function computeDeltas(previousReport, newFileResults, classification) {
-  if (!previousReport) return undefined
+  if (!previousReport) return
 
-  const { changedSources, unchangedSources } = classification
+  const { unchangedSources } = classification
   const fixes = []
   const regressions = []
 

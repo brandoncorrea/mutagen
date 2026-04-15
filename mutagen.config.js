@@ -9,13 +9,7 @@ export default {
   // Regex patterns (secondary mode) — for quick pattern-based mutations
   patterns: regexPatterns,
 
-  include: ['**/*.js'],
-  exclude: [
-    'tests/**/*',
-    'node_modules/**/*',
-    'coverage/**/*',
-    '**/*.config.js'
-  ],
+  include: ['src/**/*.js'],
   createRunner: (sourceFile, opts = {}) => createVitestRunner(sourceFile, {
     config: 'vitest.config.js',
     ...opts

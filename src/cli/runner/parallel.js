@@ -64,24 +64,29 @@ async function runAfterPreflight(preflightRunner, options) {
 }
 
 async function executeWithPool(mutations, options) {
-  const { sourceFile, createRunner, workerCount, survivorsOnly } = options
+  const { workerCount } = options
+  const createRunner = async () => await createRunnerWithOptions(options)
+  const pool = createPool({ workerCount, createRunner })
 
-  const workerCreateRunner = async () => {
-    const wt = createWorktree(process.cwd())
-    const tempSource = wt.resolve(sourceFile)
-    const runner = await createRunner(tempSource, { root: wt.root })
-    return {
-      applyMutation(source) { writeFileSync(tempSource, source) },
-      run: () => runner.run(),
-      async close() { await runner.close(); wt.cleanup() }
-    }
-  }
-
-  const pool = createPool({ workerCount, createRunner: workerCreateRunner })
   try {
     return await runPool(pool, mutations, options)
   } finally {
     await pool.close()
+  }
+}
+
+async function createRunnerWithOptions(options) {
+  const { sourceFile, createRunner } = options
+  const wt = createWorktree(process.cwd())
+  const tempSource = wt.resolve(sourceFile)
+  const runner = await createRunner(tempSource, { root: wt.root })
+  return {
+    applyMutation(source) { writeFileSync(tempSource, source) },
+    run: () => runner.run(),
+    async close() {
+      await runner.close()
+      wt.cleanup()
+    }
   }
 }
 

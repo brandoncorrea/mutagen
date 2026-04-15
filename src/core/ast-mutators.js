@@ -90,8 +90,8 @@ function methodNameSwap(name, from, to) {
   return {
     name,
     types: ['CallExpression'],
-    test: (node) => isMemberCall(node, from),
-    mutate: (node) => {
+    test: node => isMemberCall(node, from),
+    mutate: node => {
       const prop = node.callee.property
       return { start: prop.start, end: prop.end, replacement: to }
     }

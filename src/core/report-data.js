@@ -168,8 +168,6 @@ function extractDescription(description, index) {
   return description.split(' → ')[index] || ''
 }
 
-// --- Private helpers ---
-
 function countStatus(statuses, { status }) {
   if (status === 'Killed')
     statuses.killed++

@@ -29,9 +29,7 @@ export function generateMutations(source, mutators, targetLine) {
   const mutations = []
 
   walk(ast.program, null, (node, parent) => {
-    const handlers = mutatorsByType[node.type]
-    if (!handlers) return
-
+    const handlers = mutatorsByType[node.type] || []
     for (const handler of handlers) {
       if (handler.test && !handler.test(node, source, parent)) continue
 
@@ -60,31 +58,39 @@ export function generateMutations(source, mutators, targetLine) {
 
 function groupByType(mutators) {
   const map = {}
-  for (const m of mutators) {
-    const types = m.types || [m.type]
+  for (const mutator of mutators) {
+    const types = mutator.types || [mutator.type]
     for (const type of types) {
       if (!map[type]) map[type] = []
-      map[type].push(m)
+      map[type].push(mutator)
     }
   }
   return map
 }
 
 function walk(node, parent, visitor) {
-  if (!node || typeof node !== 'object') return
+  if (!isObject(node)) return
   visitor(node, parent)
 
-  for (const key of Object.keys(node)) {
-    if (key === 'type' || key === 'start' || key === 'end' || key === 'loc') continue
+  for (const key of Object.keys(node).filter(walkableKey)) {
     const child = node[key]
-    if (Array.isArray(child)) {
+    if (Array.isArray(child))
       child.forEach(c => walk(c, node, visitor))
-    } else if (child && typeof child === 'object' && child.type) {
+    else if (isObject(child) && child.type)
       walk(child, node, visitor)
-    }
   }
+}
+
+
+const IGNORED_KEYS = new Set(['type', 'start', 'end', 'loc'])
+function walkableKey(key) {
+  return !IGNORED_KEYS.has(key)
 }
 
 function applyRangeMutation(source, start, end, replacement) {
   return source.slice(0, start) + replacement + source.slice(end)
+}
+
+function isObject(value) {
+  return value && typeof value === 'object'
 }

@@ -42,13 +42,12 @@ function printJsonDiff(before, after, changes, fileDeltas, out) {
   const afterScore = mutationScore(aCounts)
 
   const fileDeltaMap = {}
-  for (const d of fileDeltas) {
-    fileDeltaMap[d.file] = {
-      before: d.before ?? null,
-      after: d.after ?? null,
-      delta: d.delta
+  for (const delta of fileDeltas)
+    fileDeltaMap[delta.file] = {
+      before: delta.before ?? null,
+      after: delta.after ?? null,
+      delta: delta.delta
     }
-  }
 
   out(JSON.stringify({
     beforeScore,

@@ -32,22 +32,25 @@ export async function runIncremental(config, jsonOutput, timeout, out = console.
   printIncrementalHeader(out, sources, classification)
 
   if (!classification.changedSources.length) {
-    if (typeof jsonOutput === 'string' && previous.previousReport) {
+    if (isString(jsonOutput) && previous.previousReport)
       writeStructuredIncrementalReport(jsonOutput, sources.length, previous, classification)
-    } else if (jsonOutput && previous.previousReport) {
+    else if (jsonOutput && previous.previousReport)
       updateCachedReportHashes(config.reportPath, previous.previousReport, classification)
-    }
     return printAllCachedSummary(out, sources, previous, classification)
   }
 
   const batchResult = await runBatch(false, timeout, classification.changedSources)
 
-  if (typeof jsonOutput === 'string')
+  if (isString(jsonOutput))
     writeStructuredIncrementalReport(jsonOutput, sources.length, previous, classification, batchResult.fileResults)
   else if (jsonOutput)
     writeMergedReport(out, { config, previous, classification, fileResults: batchResult.fileResults })
 
   return printIncrementalSummary(out, batchResult, sources, previous, classification)
+}
+
+function isString(value) {
+  return typeof value === 'string'
 }
 
 function classifyAllSources(sources, testSources, previous) {

@@ -19,19 +19,16 @@ import { generateMutations as regexGenerate, preparePatterns } from './engine.js
  */
 export function generateMutations(source, config, targetLine) {
   // Backward compat: plain array is treated as prepared regex patterns
-  if (Array.isArray(config)) {
+  if (Array.isArray(config))
     return regexGenerate(source, config, targetLine)
-  }
 
   const mutations = []
 
-  if (config.mutators?.length) {
+  if (config.mutators?.length)
     mutations.push(...astGenerate(source, config.mutators, targetLine))
-  }
 
-  if (config.prepared?.length) {
+  if (config.prepared?.length)
     mutations.push(...regexGenerate(source, config.prepared, targetLine))
-  }
 
   return mutations
 }
