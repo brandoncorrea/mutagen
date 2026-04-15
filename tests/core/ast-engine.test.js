@@ -397,4 +397,8 @@ describe('matchesPattern', () => {
   it('returns false when pattern key is missing from node', () => {
     expect(matchesPattern({ type: 'Foo' }, { type: 'Foo', bar: 'baz' })).toBe(false)
   })
+
+  it('returns false when pattern string does not match non-string non-object node value', () => {
+    expect(matchesPattern({ type: 'Literal', value: 42 }, { type: 'Literal', value: 'hello' })).toBe(false)
+  })
 })

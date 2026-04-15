@@ -82,6 +82,13 @@ describe('loadRetestTargets', () => {
     expect(targets.files).toEqual([])
     expect(targets.survivorKeys.size).toBe(0)
   })
+
+  it('handles report with missing survivors key', () => {
+    const report = { score: 100, total: 0, killed: 0, survived: 0, files: {} }
+    const targets = loadRetestTargets(report)
+    expect(targets.files).toEqual([])
+    expect(targets.survivorKeys.size).toBe(0)
+  })
 })
 
 describe('filterMutationsToSurvivors', () => {

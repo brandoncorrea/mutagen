@@ -564,5 +564,18 @@ describe('createManualRunner', () => {
       expect(code).toBe(0)
       expect(lines.join('\n')).toContain('Timeout: 3000ms')
     })
+
+    it('returns 0 with --min-score when source has no mutable code', async () => {
+      mockFs({ [resolve('src/a.js')]: 'const x = 42' }) // no === to mutate
+      const runner = fakeRunner([{ passed: true }])
+
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner)
+      })
+      const code = await manual.run(['src/a.js', '--min-score', '100'])
+
+      expect(code).toBe(0)
+    })
   })
 })

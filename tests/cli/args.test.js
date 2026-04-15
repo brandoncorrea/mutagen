@@ -308,6 +308,12 @@ describe('parseArgs', () => {
     it('returns error when --min-score value is non-numeric', () =>
       expectErrorResult('--all', '--min-score', 'abc'))
 
+    it('returns error when --min-score value is non-numeric (source file)', () =>
+      expectErrorResult('source.js', '--min-score', 'abc'))
+
+    it('returns error when --min-score value is non-numeric (incremental)', () =>
+      expectErrorResult('--incremental', '--min-score', 'abc'))
+
     it('returns error when --min-score value is negative', () =>
       expectErrorResult('--all', '--min-score', '-1'))
 

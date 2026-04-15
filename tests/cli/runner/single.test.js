@@ -15,6 +15,7 @@ vi.mock('node:fs', async (importOriginal) => {
 vi.mock('../../../src/core/worktree.js')
 
 import { runSingle } from '../../../src/cli/runner/index.js'
+import { reportMutation } from '../../../src/cli/runner/shared.js'
 import { prepareMutationConfig } from '../../../src/core/generate.js'
 import { createWorktree } from '../../../src/core/worktree.js'
 import { readFileSync, writeFileSync } from 'node:fs'
@@ -352,6 +353,12 @@ describe('runSingle', () => {
     })
 
     expect(lines.some(l => l.includes('killed (error)'))).toBe(false)
+  })
+
+  it('reportMutation omits id tag when mutation has no id', () => {
+    const lines = []
+    reportMutation(msg => lines.push(msg), 3, { number: 1, line: 5, name: '=== → !==' }, 'killed')
+    expect(lines[0]).toBe('[1/3] Line 5: === → !== ... killed')
   })
 
   it('classifies non-timeout errors as killed, not timed out', async () => {

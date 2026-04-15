@@ -122,6 +122,7 @@ export async function runRetest(ctx, parsed) {
       totalKilled += result.killed
       totalSurvived += result.survived
       totalTimedOut += result.timedOut || 0
+      /* v8 ignore next -- runSingle/runParallel always return jsonData */
       if (result.jsonData)
         fileResults[result.jsonData.path] = { mutants: result.jsonData.mutants }
     }
