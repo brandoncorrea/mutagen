@@ -5,7 +5,7 @@ export default defineConfig({
     fileParallelism: false,
     coverage: {
       provider: 'v8',
-      exclude: ['tests/**/*.js']
+      include: ['src/**/*.js']
     }
   }
 })
