@@ -86,7 +86,11 @@ async function createRunnerWithOptions(options) {
     applyMutation(source) { writeFileSync(tempSource, source) },
     async run() {
       const result = await runner.run()
-      return { ...result, killedBy: wt.mapPaths(result.killedBy), coveredBy: wt.mapPaths(result.coveredBy) }
+      return {
+        ...result,
+        killedBy: wt.mapPaths(result.killedBy),
+        coveredBy: wt.mapPaths(result.coveredBy)
+      }
     },
     async close() {
       await runner.close()

@@ -122,7 +122,7 @@ async function run(ctx, argv) {
   if (quiet && stats)
     process.stderr.write(formatQuietSummary(stats) + '\n')
 
-  if (minScore != null && stats)
+  if ((minScore || minScore === 0) && stats)
     return scoreExitCode(stats, minScore)
 
   return exitCode
@@ -262,16 +262,16 @@ async function accumulateResults(filesToRun, { mutationConfig, createRunner, tim
 
   for (const source of filesToRun) {
     const opts = { sourceFile: resolve(source), mutationConfig, createRunner, timeout, survivorsOnly, out }
-    const result = parallel
+    const { error, survived, killed, timedOut, jsonData } = parallel
       ? await runParallel({ ...opts, workerCount: parallelWorkerCount({ parallel }) })
       : await runSingle(opts)
-    if (result.error) {
+    if (error) {
       failures++
     } else {
-      totalSurvived += result.survived
-      totalKilled += result.killed
-      totalTimedOut += result.timedOut || 0
-      fileResults[result.jsonData.path] = { mutants: result.jsonData.mutants }
+      totalSurvived += survived
+      totalKilled += killed
+      totalTimedOut += timedOut || 0
+      fileResults[jsonData.path] = { mutants: jsonData.mutants }
     }
   }
 

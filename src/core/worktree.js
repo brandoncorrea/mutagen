@@ -13,16 +13,17 @@ import { tmpdir } from 'node:os'
 
 export function createWorktree(projectRoot) {
   const root = makeRoot(projectRoot)
+  function unresolve(tempPath) {
+    return join(projectRoot, relative(root, tempPath))
+  }
   return {
     root,
     resolve(originalPath) {
       return join(root, relative(projectRoot, originalPath))
     },
-    unresolve(tempPath) {
-      return join(projectRoot, relative(root, tempPath))
-    },
+    unresolve,
     mapPaths(paths) {
-      return paths?.map(p => join(projectRoot, relative(root, p)))
+      return paths?.map(unresolve)
     },
     cleanup() {
       rmSync(root, { recursive: true, force: true })

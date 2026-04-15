@@ -30,14 +30,14 @@ export async function run(args, { config, configPath, out = console.log, err = c
   return createManualRunner({ out, ...config }).run(args)
 }
 
-function toBaseName(path) {
-  return path.replace(/.*[\\/]/, '')
-}
-
 export function isMain(argv) {
   const scriptPath = argv[1]
   if (scriptPath)
     return import.meta.url.endsWith(toBaseName(scriptPath))
+}
+
+function toBaseName(path) {
+  return path.replace(/.*[\\/]/, '')
 }
 
 /* v8 ignore next 2 */
