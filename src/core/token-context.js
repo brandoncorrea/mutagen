@@ -4,16 +4,7 @@
  * falls within code, a string, a comment, or JSX markup.
  */
 
-// js-tokens v4 is CJS — createRequire is needed because vitest's ESM
-// transform handles CJS default interop differently from Node's native loader
-import { createRequire } from 'node:module'
-const require = createRequire(import.meta.url)
-const jsTokens = require('js-tokens')
-
-const regex = jsTokens.default
-const matchToToken = jsTokens.matchToToken
-
-const pattern = new RegExp(regex.source, regex.flags)
+import jsTokens from 'js-tokens'
 
 export function isArrowOperator(line, position) {
   return position
@@ -25,7 +16,7 @@ export function getTokenContextAt(line, position) {
   const spans = tokenizeLine(line)
   for (const { start, end, type } of spans)
     if (position >= start && position < end)
-      return isWhitespace(type) ? 'code' : type
+      return type === 'whitespace' ? 'code' : type
   return 'code'
 }
 
@@ -40,17 +31,13 @@ export function isInJsxTag(line, position) {
 }
 
 function shouldIgnoreSpan({ start, type }, position) {
-  return start >= position || isWhitespace(type)
+  return start >= position || type === 'whitespace'
 }
 
 function tokenizeLine(line) {
-  pattern.lastIndex = 0
   const spans = []
-  let match
-
-  while (match = pattern.exec(line)) {
-    const token = matchToToken(match)
-    const start = match.index
+  for (const token of jsTokens(line)) {
+    const start = spans.length ? spans[spans.length - 1].end : 0
     spans.push({
       start,
       end: start + token.value.length,
@@ -59,7 +46,6 @@ function tokenizeLine(line) {
       tokenType: token.type
     })
   }
-
   return spans
 }
 
@@ -71,13 +57,17 @@ function spanType(type) {
 }
 
 function isString(type) {
-  return type === 'string' || type === 'template'
+  return type === 'StringLiteral'
+    || type === 'NoSubstitutionTemplate'
+    || type === 'TemplateHead'
+    || type === 'TemplateMiddle'
+    || type === 'TemplateTail'
 }
 
 function isComment(type) {
-  return type === 'comment'
+  return type === 'SingleLineComment' || type === 'MultiLineComment'
 }
 
 function isWhitespace(type) {
-  return type === 'whitespace'
+  return type === 'WhiteSpace' || type === 'LineTerminatorSequence'
 }
