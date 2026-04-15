@@ -5,10 +5,32 @@
 import { resolve } from 'node:path'
 
 const usageMessage = `\
-Usage: <script> <source-file> [--line N] [--json [path]] [--dry-run] [--timeout N] [--parallel [N]] [--quiet] [--survivors-only] [--min-score N]
-       <script> --all [--changed] [--json [path]] [--dry-run] [--timeout N] [--parallel [N]] [--quiet] [--survivors-only] [--min-score N]
-       <script> --incremental [--changed] [--json [path]] [--timeout N] [--parallel [N]] [--quiet] [--survivors-only] [--min-score N]
-       <script> --retest <report.json> [--json [path]] [--timeout N] [--parallel [N]] [--quiet]`
+Usage: mutagen <source-file> [options]
+       mutagen --all [options]
+       mutagen --incremental [options]
+       mutagen --retest <report.json> [options]
+       mutagen --diff <before.json> <after.json> [--json]
+
+Modes:
+  --all              Run mutations on all configured source files
+  --incremental      Skip source files that haven't changed since last report
+  --retest <file>    Re-run only survived/timed-out mutants from a previous report
+  --diff <a> <b>     Compare two JSON reports and show regressions
+
+Options:
+  --line N           Only mutate the specified line number (single-file mode)
+  --json [path]      Output JSON report (to stdout, or to path if given)
+  --dry-run          List mutations without running tests
+  --timeout N        Per-mutation timeout in milliseconds
+  --parallel [N]     Run mutations in parallel (default: CPU count, max 32)
+  --quiet            Suppress per-mutation output; print summary to stderr
+  --survivors-only   Only display surviving mutations in output
+  --min-score N      Exit 1 if mutation score is below N percent
+  --changed          Only test files changed in git (--all and --incremental)
+
+Exit codes:
+  0    All mutants were killed (or dry-run/diff succeeded)
+  1    Surviving mutants detected, errors occurred, or score below --min-score`
 
 const diffMessage = 'Usage: <script> --diff <before.json> <after.json> [--json]'
 const retestMessage = 'Usage: <script> --retest <report.json> [--json [path]] [--timeout N] [--parallel [N]] [--quiet]'

@@ -23,6 +23,39 @@ describe('parseArgs', () => {
       const result = parseArgs(['--all', '--help'])
       expect(result.help).toContain('Usage:')
     })
+
+    it('includes flag descriptions', () => {
+      const result = parseArgs(['--help'])
+      expect(result.help).toContain('--line N')
+      expect(result.help).toContain('--json')
+      expect(result.help).toContain('--dry-run')
+      expect(result.help).toContain('--timeout N')
+      expect(result.help).toContain('--parallel')
+      expect(result.help).toContain('--quiet')
+      expect(result.help).toContain('--survivors-only')
+      expect(result.help).toContain('--min-score N')
+      expect(result.help).toContain('--changed')
+      // Each flag should have a description after it
+      expect(result.help).toMatch(/--timeout N\s+.+/)
+      expect(result.help).toMatch(/--parallel\s+.+/)
+      expect(result.help).toMatch(/--quiet\s+.+/)
+    })
+
+    it('includes mode explanations', () => {
+      const result = parseArgs(['--help'])
+      expect(result.help).toContain('Modes:')
+      expect(result.help).toMatch(/--all\s+.+/)
+      expect(result.help).toMatch(/--incremental\s+.+/)
+      expect(result.help).toMatch(/--retest\s+.+/)
+      expect(result.help).toMatch(/--diff\s+.+/)
+    })
+
+    it('includes exit code documentation', () => {
+      const result = parseArgs(['--help'])
+      expect(result.help).toContain('Exit codes:')
+      expect(result.help).toContain('0')
+      expect(result.help).toContain('1')
+    })
   })
 
   describe('unknown flags', () => {
