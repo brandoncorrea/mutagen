@@ -15,7 +15,7 @@ vi.mock('node:fs', async (importOriginal) => {
 vi.mock('../../../src/core/pool.js')
 vi.mock('../../../src/core/worktree.js')
 
-import { runParallel } from '../../../src/cli/runner/index.js'
+import { runParallel, createBatchPool } from '../../../src/cli/runner/index.js'
 import { prepareMutationConfig } from '../../../src/core/generate.js'
 import { createPool } from '../../../src/core/pool.js'
 import { createWorktree } from '../../../src/core/worktree.js'
@@ -513,5 +513,54 @@ describe('runParallel', () => {
 
     expect(firstRunner.close).toHaveBeenCalled()
     expect(userCreateRunner).toHaveBeenCalledTimes(3) // preflight + first worker + recreated worker
+  })
+})
+
+describe('createBatchPool', () => {
+  it('creates a pool with the specified workerCount', () => {
+    createPool.mockReturnValue({ run: vi.fn(), close: vi.fn() })
+
+    createBatchPool({
+      workerCount: 4,
+      sourceFile: resolve('src/a.js'),
+      createRunner: vi.fn()
+    })
+
+    expect(createPool).toHaveBeenCalledWith({
+      workerCount: 4,
+      createRunner: expect.any(Function)
+    })
+  })
+
+  it('defaults workerCount to 2', () => {
+    createPool.mockReturnValue({ run: vi.fn(), close: vi.fn() })
+
+    createBatchPool({
+      sourceFile: resolve('src/a.js'),
+      createRunner: vi.fn()
+    })
+
+    expect(createPool).toHaveBeenCalledWith({
+      workerCount: 2,
+      createRunner: expect.any(Function)
+    })
+  })
+
+  it('factory creates a runner with worktree isolation', async () => {
+    createPool.mockReturnValue({ run: vi.fn(), close: vi.fn() })
+    const mockRunner = fakePoolRunner([])
+
+    createBatchPool({
+      workerCount: 1,
+      sourceFile: resolve('src/a.js'),
+      createRunner: vi.fn().mockResolvedValue(mockRunner)
+    })
+
+    const factory = createPool.mock.calls[0][0].createRunner
+    const worker = await factory()
+    expect(worker).toHaveProperty('run')
+    expect(worker).toHaveProperty('close')
+    expect(worker).toHaveProperty('applyMutation')
+    expect(createWorktree).toHaveBeenCalled()
   })
 })
