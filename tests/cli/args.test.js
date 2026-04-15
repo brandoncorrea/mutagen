@@ -24,6 +24,19 @@ describe('parseArgs', () => {
     })
   })
 
+  describe('unknown flags', () => {
+    it('does not treat unknown flags as source files', () => {
+      const result = parseArgs(['--typo'])
+      expect(result.error).toContain('Usage:')
+    })
+
+    it('does not treat unknown flags as source files alongside valid args', () => {
+      const result = parseArgs(['source.js', '--unknown'])
+      expect(result.sourceFile).toContain('source.js')
+      // --unknown is silently ignored, not treated as a second source file
+    })
+  })
+
   describe('--diff mode', () => {
     it('returns error when only one file provided after --diff', () =>
       expectErrorResult('--diff', 'before.json'))

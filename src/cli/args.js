@@ -196,7 +196,6 @@ function isInvalidNumber(value) {
   return Number.isNaN(value) || value < 0
 }
 
-const FLAG_OPTIONS = new Set(['--json', '--dry-run', '--parallel', '--quiet', '--survivors-only', '--min-score', '--changed'])
 function isPositionalArg(arg) {
-  return !FLAG_OPTIONS.has(arg)
+  return !arg.startsWith('-')
 }
