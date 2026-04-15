@@ -7,7 +7,7 @@ import { readFileSync, existsSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { resolve, relative } from 'node:path'
 
-import { tryLoadJson } from '../core/report-data.js'
+import { tryLoadJson, writeStructuredReportFile } from '../core/report-data.js'
 import { printIncrementalHeader, updateCachedReportHashes, printAllCachedSummary, writeMergedReport, printIncrementalSummary } from './incremental-report.js'
 
 const HASH_PREFIX_LENGTH = 16
@@ -32,14 +32,19 @@ export async function runIncremental(config, jsonOutput, timeout, out = console.
   printIncrementalHeader(out, sources, classification)
 
   if (!classification.changedSources.length) {
-    if (jsonOutput && previous.previousReport)
+    if (typeof jsonOutput === 'string' && previous.previousReport) {
+      writeStructuredIncrementalReport(jsonOutput, sources.length, previous, classification)
+    } else if (jsonOutput && previous.previousReport) {
       updateCachedReportHashes(config.reportPath, previous.previousReport, classification)
+    }
     return printAllCachedSummary(out, sources, previous, classification)
   }
 
   const batchResult = await runBatch(false, timeout, classification.changedSources)
 
-  if (jsonOutput)
+  if (typeof jsonOutput === 'string')
+    writeStructuredIncrementalReport(jsonOutput, sources.length, previous, classification, batchResult.fileResults)
+  else if (jsonOutput)
     writeMergedReport(out, { config, previous, classification, fileResults: batchResult.fileResults })
 
   return printIncrementalSummary(out, batchResult, sources, previous, classification)
@@ -127,4 +132,14 @@ function findTestInvalidatedSources(changedTestFiles, previousReport) {
 function isInvalidatedMutant({ killedBy, status }, changedTestAbs) {
   return killedBy?.some(t => changedTestAbs.has(t))
     || status === 'Survived'
+}
+
+function writeStructuredIncrementalReport(outputPath, fileCount, previous, classification, freshFileResults) {
+  const mergedFiles = { ...freshFileResults }
+  if (previous.previousReport)
+    for (const relPath of classification.unchangedSources)
+      if (previous.previousReport.files[relPath])
+        mergedFiles[relPath] = previous.previousReport.files[relPath]
+
+  writeStructuredReportFile(outputPath, fileCount, mergedFiles)
 }

@@ -183,6 +183,96 @@ describe('createManualRunner', () => {
       expect(result.totalTimedOut).toBe(1)
     })
 
+    it('writes structured report to custom path when jsonOutput is a path', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: false, killedBy: ['t.test.js'] }
+      ])
+
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner)
+      })
+      await manual.runBatch('reports/custom.json', null)
+
+      const reportCalls = writeFileSync.mock.calls.filter(
+        ([p]) => p === resolve('reports/custom.json')
+      )
+      expect(reportCalls).toHaveLength(1)
+
+      const report = JSON.parse(reportCalls[0][1])
+      expect(report).toHaveProperty('score')
+      expect(report).toHaveProperty('total')
+      expect(report).toHaveProperty('killed')
+      expect(report).toHaveProperty('survived')
+      expect(report).toHaveProperty('timedOut')
+      expect(report).toHaveProperty('files')
+      expect(report).toHaveProperty('survivors')
+    })
+
+    it('structured report has correct counts', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const runner = fakeRunner([
+        { passed: true },  // preflight
+        { passed: true }   // survived
+      ])
+
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner)
+      })
+      await manual.runBatch('reports/out.json', null)
+
+      const reportCalls = writeFileSync.mock.calls.filter(
+        ([p]) => p === resolve('reports/out.json')
+      )
+      const report = JSON.parse(reportCalls[0][1])
+      expect(report.total).toBe(1)
+      expect(report.survived).toBe(1)
+      expect(report.killed).toBe(0)
+      expect(report.survivors).toHaveLength(1)
+    })
+
+    it('prints score summary to stderr when jsonOutput is a path', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: false, killedBy: ['t.test.js'] }
+      ])
+
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner)
+      })
+      await manual.runBatch('reports/out.json', null)
+
+      const stderrOutput = stderrSpy.mock.calls.map(c => c[0]).join('')
+      expect(stderrOutput).toContain('Score:')
+      expect(stderrOutput).toContain('reports/out.json')
+      stderrSpy.mockRestore()
+    })
+
+    it('does not write to default report path when jsonOutput is a custom path', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: false }
+      ])
+
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner)
+      })
+      await manual.runBatch('reports/custom.json', null)
+
+      const defaultReportCalls = writeFileSync.mock.calls.filter(
+        ([p]) => p.includes('manual-report.json')
+      )
+      expect(defaultReportCalls).toHaveLength(0)
+    })
+
     it('prints correct file count in batch summary', async () => {
       mockFs({ [resolve('src/a.js')]: sourceCode })
       const runner = fakeRunner([

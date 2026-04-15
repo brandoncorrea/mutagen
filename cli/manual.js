@@ -6,9 +6,9 @@
  *   createManualRunner({ patterns, sources, createRunner }).main()
  *
  * CLI:
- *   node mutate.js <source> [--line N] [--json] [--dry-run] [--timeout N]
- *   node mutate.js --all [--json] [--dry-run] [--timeout N]
- *   node mutate.js --incremental [--json] [--timeout N]
+ *   node mutate.js <source> [--line N] [--json [path]] [--dry-run] [--timeout N]
+ *   node mutate.js --all [--json [path]] [--dry-run] [--timeout N]
+ *   node mutate.js --incremental [--json [path]] [--timeout N]
  *   node mutate.js --diff <before.json> <after.json>
  */
 
@@ -16,7 +16,7 @@ import { resolve } from 'node:path'
 
 import { prepareMutationConfig } from '../core/generate.js'
 import { resolveGlobs } from '../core/resolve-globs.js'
-import { HEADER_SEPARATOR, createReport, writeReportFile } from '../core/report-data.js'
+import { HEADER_SEPARATOR, createReport, writeReportFile, writeStructuredReportFile } from '../core/report-data.js'
 import { diffReports } from './diff.js'
 import { parseArgs } from './args.js'
 import { runSingle, runParallel, dryRun } from './runner/index.js'
@@ -169,7 +169,9 @@ async function runBatch(ctx, jsonOutput, timeout, sourcesToRun) {
 
   const result = await accumulateResults(filesToRun, { mutationConfig, createRunner, timeout, parallel: ctx.parallel, out })
 
-  if (jsonOutput)
+  if (typeof jsonOutput === 'string')
+    writeStructuredReportFile(jsonOutput, filesToRun.length, result.fileResults)
+  else if (jsonOutput)
     writeReport(out, reportDir, reportPath, result.fileResults)
 
   printBatchSummary(out, filesToRun.length, result)

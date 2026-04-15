@@ -5,9 +5,9 @@
 import { resolve } from 'node:path'
 
 const usageMessage = `\
-Usage: <script> <source-file> [--line N] [--json] [--dry-run] [--timeout N] [--parallel [N]]
-       <script> --all [--json] [--dry-run] [--timeout N] [--parallel [N]]
-       <script> --incremental [--json] [--timeout N] [--parallel [N]]`
+Usage: <script> <source-file> [--line N] [--json [path]] [--dry-run] [--timeout N] [--parallel [N]]
+       <script> --all [--json [path]] [--dry-run] [--timeout N] [--parallel [N]]
+       <script> --incremental [--json [path]] [--timeout N] [--parallel [N]]`
 
 const diffMessage = 'Usage: <script> --diff <before.json> <after.json>'
 
@@ -27,7 +27,7 @@ function incrementalOptions(argv) {
     incrementalMode: true,
     timeout,
     parallel,
-    jsonOutput: hasFlag(argv, '--json')
+    jsonOutput: parseJsonOutput(argv)
   }
 }
 
@@ -40,7 +40,7 @@ function allOptions(argv) {
     allMode: true,
     timeout,
     parallel,
-    jsonOutput: hasFlag(argv, '--json'),
+    jsonOutput: parseJsonOutput(argv),
     dryRunMode: hasFlag(argv, '--dry-run')
   }
 }
@@ -67,7 +67,7 @@ function sourceFileOptions(argv) {
   return {
     sourceFile: resolve(filtered[0]),
     targetLine,
-    jsonOutput: hasFlag(argv, '--json'),
+    jsonOutput: parseJsonOutput(argv),
     dryRunMode: hasFlag(argv, '--dry-run'),
     timeout,
     parallel
@@ -91,6 +91,9 @@ function argsToOptions(args) {
       parallel = parseParallelValue(args, i)
       if (parallel?.error) return parallel
       if (typeof parallel === 'number') i++
+    } else if (arg === '--json') {
+      const next = args[i + 1]
+      if (next && !next.startsWith('--')) i++
     } else if (isPositionalArg(arg)) {
       filtered.push(arg)
     }
@@ -121,6 +124,15 @@ function parseTimeout(args) {
   if (isInvalidNumber(value))
     return { error: '--timeout requires a numeric value' }
   return value
+}
+
+function parseJsonOutput(argv) {
+  const idx = argv.indexOf('--json')
+  if (idx < 0) return false
+  const next = argv[idx + 1]
+  if (!next || next.startsWith('--'))
+    return true
+  return next
 }
 
 function hasFlag(argv, flag) {

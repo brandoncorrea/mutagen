@@ -4,7 +4,7 @@
  */
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
-import { relative } from 'node:path'
+import { resolve, relative, dirname } from 'node:path'
 
 export const HEADER_SEPARATOR = '═'.repeat(60)
 export const SECTION_SEPARATOR = '─'.repeat(60)
@@ -83,6 +83,77 @@ export function toJsonMutants(sourceFile, results) {
       ...(results.timedOut || []).map(m => toMutant(relPath, m, 'Timeout'))
     ]
   }
+}
+
+/**
+ * Build a structured report from file results and write to outputPath.
+ * Prints a one-line score summary to stderr.
+ *
+ * @param {string} outputPath - path to write the JSON report
+ * @param {number} fileCount - number of source files (for summary line)
+ * @param {Object} fileResults - { [path]: { mutants: [...] } }
+ */
+export function writeStructuredReportFile(outputPath, fileCount, fileResults) {
+  let totalKilled = 0
+  let totalSurvived = 0
+  let totalTimedOut = 0
+  const files = {}
+  const survivors = []
+
+  for (const [path, fileData] of Object.entries(fileResults)) {
+    const mutants = fileData.mutants
+    let fileKilled = 0
+
+    for (const m of mutants) {
+      if (isKilled(m)) {
+        fileKilled++
+        totalKilled++
+        if (m.status === 'Timeout') totalTimedOut++
+      } else if (isAlive(m)) {
+        totalSurvived++
+        survivors.push({
+          file: path,
+          line: m.location?.start?.line || 0,
+          name: m.mutatorName,
+          original: extractDescription(m.description, 0),
+          mutated: extractDescription(m.description, 1)
+        })
+      }
+    }
+
+    const fileTotal = mutants.length
+    const fileScore = fileTotal ? (fileKilled / fileTotal) * 100 : 100
+    files[path] = { score: round1(fileScore), killed: fileKilled, total: fileTotal }
+  }
+
+  const total = totalKilled + totalSurvived
+  const score = total ? (totalKilled / total) * 100 : 100
+
+  const report = {
+    score: round1(score),
+    total,
+    killed: totalKilled,
+    survived: totalSurvived,
+    timedOut: totalTimedOut,
+    files,
+    survivors
+  }
+
+  const absPath = resolve(outputPath)
+  mkdirSync(dirname(absPath), { recursive: true })
+  writeFileSync(absPath, JSON.stringify(report, null, 2))
+
+  const summary = `Score: ${round1(score)}% (${totalKilled}/${total}) | ${totalSurvived} survivors | ${fileCount} files → ${outputPath}`
+  process.stderr.write(summary + '\n')
+}
+
+function round1(n) {
+  return Math.round(n * 10) / 10
+}
+
+function extractDescription(description, index) {
+  if (!description) return ''
+  return description.split(' → ')[index] || ''
 }
 
 // --- Private helpers ---

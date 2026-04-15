@@ -416,6 +416,100 @@ describe('createManualRunner', () => {
       expect(lines.join('\n')).not.toContain('Changed tests')
     })
 
+    it('writes structured report to custom path when jsonOutput is a path', async () => {
+      const src = resolve('src/a.js')
+      existsSync.mockReturnValue(false)
+      mockFs({ [src]: sourceCode })
+
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: true } // survived
+      ])
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+      const manual = createManualRunner({
+        patterns, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner)
+      })
+      await manual.runIncremental('reports/custom.json', null)
+
+      const customCalls = writeFileSync.mock.calls.filter(
+        ([p]) => p === resolve('reports/custom.json')
+      )
+      expect(customCalls).toHaveLength(1)
+
+      const report = JSON.parse(customCalls[0][1])
+      expect(report).toHaveProperty('score')
+      expect(report).toHaveProperty('total')
+      expect(report).toHaveProperty('killed')
+      expect(report).toHaveProperty('survived')
+      expect(report).toHaveProperty('files')
+      expect(report).toHaveProperty('survivors')
+
+      // Should not write to default report path
+      const defaultCalls = writeFileSync.mock.calls.filter(
+        ([p]) => p === reportPath
+      )
+      expect(defaultCalls).toHaveLength(0)
+
+      const stderrOutput = stderrSpy.mock.calls.map(c => c[0]).join('')
+      expect(stderrOutput).toContain('Score:')
+      stderrSpy.mockRestore()
+    })
+
+    it('writes structured report with cached + fresh results when jsonOutput is a path', async () => {
+      const srcA = resolve('src/a.js')
+      const srcB = resolve('src/b.js')
+      const codeA = 'const a = 1'
+      const codeB = 'if (a === b) {}'
+
+      existsSync.mockReturnValue(true)
+      mockFs({
+        [srcA]: codeA,
+        [srcB]: codeB,
+        [reportPath]: JSON.stringify({
+          files: {
+            'src/a.js': {
+              mutants: [
+                { status: 'Killed', mutatorName: 'eq', location: { start: { line: 1 } }, description: '== → !=' },
+                { status: 'Survived', mutatorName: 'eq2', location: { start: { line: 2 } }, description: '== → ===' }
+              ]
+            }
+          },
+          sourceHashes: {
+            'src/a.js': hashOf(codeA),
+            'src/b.js': 'stale'
+          },
+          testHashes: {}
+        })
+      })
+
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: false, killedBy: ['t.test.js'] }
+      ])
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+      const manual = createManualRunner({
+        patterns,
+        sources: ['src/a.js', 'src/b.js'],
+        createRunner: vi.fn().mockResolvedValue(runner)
+      })
+      await manual.runIncremental('reports/merged.json', null)
+
+      const reportCalls = writeFileSync.mock.calls.filter(
+        ([p]) => p === resolve('reports/merged.json')
+      )
+      expect(reportCalls).toHaveLength(1)
+
+      const report = JSON.parse(reportCalls[0][1])
+      // a.js cached: 1 killed + 1 survived; b.js fresh: 1 killed
+      expect(report.killed).toBe(2)
+      expect(report.survived).toBe(1)
+      expect(report.total).toBe(3)
+      expect(report.survivors).toHaveLength(1)
+      expect(report.survivors[0].file).toBe('src/a.js')
+      stderrSpy.mockRestore()
+    })
+
     it('prunes stale carried-forward files using normalized source paths', async () => {
       const srcA = resolve('./src/a.js')
       const srcB = resolve('./src/b.js')

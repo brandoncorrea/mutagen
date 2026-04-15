@@ -164,6 +164,44 @@ describe('parseArgs', () => {
     })
   })
 
+  describe('--json flag', () => {
+    it('returns true when --json is used without a path', () => {
+      const result = parseArgs(['--all', '--json'])
+      expect(result.jsonOutput).toBe(true)
+    })
+
+    it('returns the path when --json is followed by a non-flag argument', () => {
+      const result = parseArgs(['--all', '--json', 'reports/out.json'])
+      expect(result.jsonOutput).toBe('reports/out.json')
+    })
+
+    it('returns true when --json is followed by another flag', () => {
+      const result = parseArgs(['--all', '--json', '--dry-run'])
+      expect(result.jsonOutput).toBe(true)
+    })
+
+    it('returns false when --json is absent', () => {
+      const result = parseArgs(['--all'])
+      expect(result.jsonOutput).toBe(false)
+    })
+
+    it('parses --json with path in incremental mode', () => {
+      const result = parseArgs(['--incremental', '--json', 'output.json'])
+      expect(result.jsonOutput).toBe('output.json')
+    })
+
+    it('parses --json with path in source file mode', () => {
+      const result = parseArgs(['source.js', '--json', 'output.json'])
+      expect(result.jsonOutput).toBe('output.json')
+    })
+
+    it('does not consume --json path as source file', () => {
+      const result = parseArgs(['source.js', '--json', 'output.json'])
+      expect(result.sourceFile).toContain('source.js')
+      expect(result.sourceFile).not.toContain('output.json')
+    })
+  })
+
   describe('--timeout at index 0', () => {
     it('parses --timeout when it appears first in argv', () => {
       const result = parseArgs(['--timeout', '5000', '--incremental'])
