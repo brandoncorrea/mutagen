@@ -12,7 +12,10 @@ vi.mock('node:fs', async (importOriginal) => {
   }
 })
 
+vi.mock('../../../core/worktree.js')
+
 import { createManualRunner as _createManualRunner } from '../../../cli/manual.js'
+import { createWorktree } from '../../../core/worktree.js'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { patterns, sourceCode, fakeRunner, mockFs as _mockFs, noop } from '../helpers.js'
 
@@ -21,10 +24,20 @@ function createManualRunner(config) {
   return _createManualRunner({ out: noop, ...config })
 }
 
+function fakeWorktree() {
+  const tempRoot = '/tmp/mutagen-batch'
+  return {
+    root: tempRoot,
+    resolve: vi.fn((path) => path.replace(resolve('.'), tempRoot)),
+    cleanup: vi.fn()
+  }
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
   vi.spyOn(console, 'error').mockImplementation(() => {})
   existsSync.mockReturnValue(false)
+  createWorktree.mockReturnValue(fakeWorktree())
 })
 
 describe('createManualRunner', () => {
@@ -103,7 +116,7 @@ describe('createManualRunner', () => {
       expect(Object.keys(report.files)).toHaveLength(1)
     })
 
-    it('restores original source after each mutation', async () => {
+    it('writes mutations to temp copy, never to original source', async () => {
       const src = resolve('src/a.js')
       mockFs({ [src]: sourceCode })
       const runner = fakeRunner([
@@ -117,9 +130,9 @@ describe('createManualRunner', () => {
       })
       await manual.runBatch(false, null)
 
+      // Mutation writes should go to temp path, not original
       const srcWrites = writeFileSync.mock.calls.filter(([p]) => p === src)
-      // Last write restores original
-      expect(srcWrites.at(-1)[1]).toBe(sourceCode)
+      expect(srcWrites).toHaveLength(0)
     })
 
     it('closes the runner after execution', async () => {
@@ -141,7 +154,6 @@ describe('createManualRunner', () => {
     it('counts runner errors as killed', async () => {
       mockFs({ [resolve('src/a.js')]: sourceCode })
       const runner = fakeRunner([{ passed: true }])
-      // After preflight, runner.run throws on mutation
       runner.run.mockResolvedValueOnce({ passed: true }) // preflight
         .mockRejectedValue(new Error('runner crashed'))
 

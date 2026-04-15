@@ -20,10 +20,13 @@ vi.mock('node:fs', async (importOriginal) => {
   }
 })
 
+vi.mock('../../../core/worktree.js')
+
 // NOTE: pool.js is NOT mocked — we use the real pool for determinism verification
 
 import { runSingle, runParallel } from '../../../cli/runner/index.js'
 import { preparePatterns } from '../../../core/engine.js'
+import { createWorktree } from '../../../core/worktree.js'
 import { readFileSync } from 'node:fs'
 import { noop, mockFs as _mockFs } from '../helpers.js'
 
@@ -44,6 +47,15 @@ const multiSource = [
 ].join('\n')
 
 function mockFs(files) { _mockFs(readFileSync, files) }
+
+function fakeWorktree() {
+  const tempRoot = '/tmp/mutagen-det'
+  return {
+    root: tempRoot,
+    resolve: vi.fn((path) => path.replace(resolve('.'), tempRoot)),
+    cleanup: vi.fn()
+  }
+}
 
 /**
  * Create a runner factory with all-killed mutation behavior.
@@ -73,14 +85,14 @@ function killedRunnerFactory() {
         return Promise.resolve({ passed: false, killedBy: ['spec.js'] })
       }),
       close: vi.fn().mockResolvedValue(),
-      setMutant: vi.fn(),
-      clearMutant: vi.fn()
+      applyMutation: vi.fn()
     }
   })
 }
 
 beforeEach(() => {
   vi.clearAllMocks()
+  createWorktree.mockImplementation(() => fakeWorktree())
 })
 
 describe('runSingle vs runParallel result determinism', () => {

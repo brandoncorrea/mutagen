@@ -31,11 +31,8 @@ function deterministicRunner() {
       return Promise.resolve({ passed: false, killedBy: ['test.js'] })
     }),
     close: vi.fn().mockResolvedValue(),
-    setMutant: vi.fn().mockImplementation(source => {
+    applyMutation: vi.fn().mockImplementation(source => {
       currentSource = source
-    }),
-    clearMutant: vi.fn().mockImplementation(() => {
-      currentSource = null
     })
   }
 }

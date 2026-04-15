@@ -16,8 +16,9 @@ export default {
     'coverage/**/*',
     '**/*.config.js'
   ],
-  createRunner: sourceFile => createVitestRunner(sourceFile, {
-    config: 'vitest.config.js'
+  createRunner: (sourceFile, opts = {}) => createVitestRunner(sourceFile, {
+    config: 'vitest.config.js',
+    ...opts
   }),
   timeout: 30000,
   reportDir: 'reports/mutation'
