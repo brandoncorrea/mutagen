@@ -80,12 +80,11 @@ async function createRunnerWithOptions(options) {
   const wt = createWorktree(process.cwd())
   const tempSource = wt.resolve(sourceFile)
   const runner = await createRunner(tempSource, { root: wt.root })
-  const mapPaths = paths => paths?.map(p => wt.unresolve(p))
   return {
     applyMutation(source) { writeFileSync(tempSource, source) },
     async run() {
       const result = await runner.run()
-      return { ...result, killedBy: mapPaths(result.killedBy), coveredBy: mapPaths(result.coveredBy) }
+      return { ...result, killedBy: wt.mapPaths(result.killedBy), coveredBy: wt.mapPaths(result.coveredBy) }
     },
     async close() {
       await runner.close()

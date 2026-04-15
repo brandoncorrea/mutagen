@@ -19,8 +19,10 @@ export function createWorktree(projectRoot) {
       return join(root, relative(projectRoot, originalPath))
     },
     unresolve(tempPath) {
-      if (!tempPath.startsWith(root)) return tempPath
       return join(projectRoot, relative(root, tempPath))
+    },
+    mapPaths(paths) {
+      return paths?.map(p => join(projectRoot, relative(root, p)))
     },
     cleanup() {
       rmSync(root, { recursive: true, force: true })

@@ -30,6 +30,7 @@ function fakeWorktree() {
     root: tempRoot,
     resolve: vi.fn((path) => path.replace(resolve('.'), tempRoot)),
     unresolve: vi.fn((path) => path.startsWith(tempRoot) ? path.replace(tempRoot, resolve('.')) : path),
+    mapPaths: vi.fn(paths => paths?.map(p => p.startsWith(tempRoot) ? p.replace(tempRoot, resolve(".")) : p)),
     cleanup: vi.fn()
   }
 }

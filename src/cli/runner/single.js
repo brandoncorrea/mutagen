@@ -23,8 +23,7 @@ export async function runSingle(options) {
   const tempSourceFile = worktree.resolve(sourceFile)
   const runner = await createRunner(tempSourceFile, { root: worktree.root })
 
-  const mapPaths = paths => paths?.map(p => worktree.unresolve(p))
-  const opts = { out, runner, timeout, sourceFile, tempSourceFile, targetLine, original, mutationConfig, survivorsOnly, mapPaths }
+  const opts = { out, runner, timeout, sourceFile, tempSourceFile, targetLine, original, mutationConfig, survivorsOnly, worktree }
 
   try {
     return await runMutations(opts)
@@ -62,17 +61,17 @@ async function runMutations(opts) {
 }
 
 async function runMutation(opts, total, outcomes, mutation) {
-  const { out, runner, timeout, tempSourceFile, survivorsOnly, mapPaths } = opts
+  const { out, runner, timeout, tempSourceFile, survivorsOnly, worktree } = opts
   try {
     writeFileSync(tempSourceFile, mutation.source)
 
     const result = await withTimeout(runner.run, timeout)
 
     if (result.passed) {
-      outcomes.survived.push({ ...mutation, coveredBy: mapPaths(result.coveredBy) })
+      outcomes.survived.push({ ...mutation, coveredBy: worktree.mapPaths(result.coveredBy) })
       reportMutation(out, total, mutation, 'SURVIVED')
     } else {
-      outcomes.killed.push({ ...mutation, killedBy: mapPaths(result.killedBy) })
+      outcomes.killed.push({ ...mutation, killedBy: worktree.mapPaths(result.killedBy) })
       if (!survivorsOnly) reportMutation(out, total, mutation, 'killed')
     }
   } catch (err) {
