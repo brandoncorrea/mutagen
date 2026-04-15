@@ -124,13 +124,9 @@ describe('createVitestRunner', () => {
 
     it('returns failed with killedBy paths', async () => {
       const mock = createMockVitest()
-      // First getFiles call: testWarmRerun ([] → vacuously passes)
-      // Second getFiles call: actual run
-      mock.state.getFiles = vi.fn()
-        .mockReturnValueOnce([]) // testWarmRerun
-        .mockReturnValue([
-          { result: { state: 'fail' }, filepath: 'test/b.test.js' }
-        ])
+      mock.state.getFiles.mockReturnValue([
+        { result: { state: 'fail' }, filepath: 'test/b.test.js' }
+      ])
       startVitest.mockResolvedValue(mock)
 
       const runner = await createVitestRunner('src/a.js')
@@ -139,50 +135,39 @@ describe('createVitestRunner', () => {
       expect(result).toEqual({ passed: false, killedBy: ['test/b.test.js'], coveredBy: ['test/b.test.js'] })
     })
 
-    it('falls back to cold when warm rerun produces failures', async () => {
-      const warmMock = createMockVitest()
-      warmMock.state.getFiles.mockReturnValue([
-        { result: { state: 'fail' }, filepath: 'a.test.js' }
+    it('exposes preflight.passed = true when initial run passes', async () => {
+      const mock = createMockVitest()
+      mock.state.getFiles.mockReturnValue([
+        { result: { state: 'pass' }, filepath: 'test/a.test.js' }
       ])
-
-      const coldMock = createMockVitest()
-      coldMock.state.getFiles.mockReturnValue([
-        { result: { state: 'pass' }, filepath: 'a.test.js' }
-      ])
-
-      startVitest
-        .mockResolvedValueOnce(warmMock)
-        .mockResolvedValue(coldMock)
+      startVitest.mockResolvedValue(mock)
 
       const runner = await createVitestRunner('src/a.js')
 
-      expect(warmMock.close).toHaveBeenCalled()
-
-      const result = await runner.run()
-      expect(result.passed).toBe(true)
-      expect(startVitest).toHaveBeenLastCalledWith(
-        'test', [], expect.objectContaining({ watch: false })
-      )
+      expect(runner.preflight).toEqual({ passed: true })
     })
 
-    it('falls back to cold when warm rerun throws', async () => {
-      const warmMock = createMockVitest()
-      warmMock.globTestSpecifications.mockRejectedValue(new Error('crash'))
-
-      const coldMock = createMockVitest()
-      coldMock.state.getFiles.mockReturnValue([
-        { result: { state: 'pass' }, filepath: 'a.test.js' }
+    it('exposes preflight.passed = false when initial run has failures', async () => {
+      const mock = createMockVitest()
+      mock.state.getFiles.mockReturnValue([
+        { result: { state: 'fail' }, filepath: 'test/a.test.js' }
       ])
-
-      startVitest
-        .mockResolvedValueOnce(warmMock)
-        .mockResolvedValue(coldMock)
+      startVitest.mockResolvedValue(mock)
 
       const runner = await createVitestRunner('src/a.js')
-      expect(warmMock.close).toHaveBeenCalled()
 
-      const result = await runner.run()
-      expect(result.passed).toBe(true)
+      expect(runner.preflight).toEqual({ passed: false })
+    })
+
+    it('does not perform a second test run during creation', async () => {
+      const mock = createMockVitest()
+      startVitest.mockResolvedValue(mock)
+
+      await createVitestRunner('src/a.js')
+
+      // startVitest runs tests once during creation (watch mode).
+      // No additional runTestSpecifications should be called during creation.
+      expect(mock.runTestSpecifications).not.toHaveBeenCalled()
     })
 
     it('close shuts down vitest', async () => {
@@ -483,7 +468,6 @@ describe('createVitestRunner', () => {
       }]
 
       mock.state.getFiles = vi.fn()
-        .mockReturnValueOnce([])  // warm rerun
         .mockReturnValue([
           { result: { state: 'fail' }, filepath: 'test/engine.test.js' }
         ])
@@ -499,7 +483,7 @@ describe('createVitestRunner', () => {
         coveredBy: ['test/engine.test.js']
       })
 
-      // Only direct spec should have been run (after warm rerun)
+      // Only direct spec should have been run
       const runCalls = mock.runTestSpecifications.mock.calls
       expect(runCalls[runCalls.length - 1][0]).toEqual([
         { moduleId: 'test/engine.test.js' }
@@ -529,7 +513,10 @@ describe('createVitestRunner', () => {
       }]
 
       mock.state.getFiles = vi.fn()
-        .mockReturnValueOnce([])  // warm rerun
+        .mockReturnValueOnce([    // initial run (preflight)
+          { result: { state: 'pass' }, filepath: 'test/engine.test.js' },
+          { result: { state: 'pass' }, filepath: 'test/integration.test.js' }
+        ])
         .mockReturnValueOnce([    // tier 1: direct passes
           { result: { state: 'pass' }, filepath: 'test/engine.test.js' }
         ])
@@ -577,7 +564,10 @@ describe('createVitestRunner', () => {
       }]
 
       mock.state.getFiles = vi.fn()
-        .mockReturnValueOnce([])  // warm rerun
+        .mockReturnValueOnce([    // initial run (preflight)
+          { result: { state: 'pass' }, filepath: 'test/engine.test.js' },
+          { result: { state: 'pass' }, filepath: 'test/integration.test.js' }
+        ])
         .mockReturnValueOnce([    // tier 1: direct passes
           { result: { state: 'pass' }, filepath: 'test/engine.test.js' }
         ])
@@ -691,45 +681,17 @@ describe('createVitestRunner', () => {
       for (let i = 0; i < 10; i++) await Promise.resolve()
     }
 
-    it('warm startup awaits waitForTestRunEnd before checking warm rerun', async () => {
+    it('warm startup awaits waitForTestRunEnd before building runner', async () => {
       const mock = createMockVitest()
       const d = deferred()
       mock.waitForTestRunEnd.mockReturnValue(d.promise)
-
-      let warmRerunStarted = false
-      mock.globTestSpecifications.mockImplementation(async () => {
-        warmRerunStarted = true
-        return []
-      })
       startVitest.mockResolvedValue(mock)
-
-      const promise = createVitestRunner('src/a.js')
-      await flushMicrotasks()
-      expect(warmRerunStarted).toBe(false)
-
-      d.resolve()
-      await promise
-      expect(warmRerunStarted).toBe(true)
-    })
-
-    it('warm-to-cold fallback awaits close before returning cold runner', async () => {
-      const warmMock = createMockVitest()
-      warmMock.globTestSpecifications.mockRejectedValue(new Error('crash'))
-
-      const d = deferred()
-      warmMock.close.mockReturnValue(d.promise)
-
-      const coldMock = createMockVitest()
-      startVitest
-        .mockResolvedValueOnce(warmMock)
-        .mockResolvedValue(coldMock)
 
       let runnerCreated = false
       const promise = createVitestRunner('src/a.js').then(r => {
         runnerCreated = true
         return r
       })
-
       await flushMicrotasks()
       expect(runnerCreated).toBe(false)
 
@@ -743,9 +705,7 @@ describe('createVitestRunner', () => {
       const d = deferred()
       const specs = [{ moduleId: 'test/a.test.js' }]
       mock.globTestSpecifications.mockResolvedValue(specs)
-      mock.runTestSpecifications
-        .mockResolvedValueOnce(undefined)
-        .mockReturnValueOnce(d.promise)
+      mock.runTestSpecifications.mockReturnValue(d.promise)
       mock.state.getFiles.mockReturnValue([
         { result: { state: 'pass' }, filepath: 'a.test.js' }
       ])
@@ -786,28 +746,6 @@ describe('createVitestRunner', () => {
       expect(closeDone).toBe(true)
     })
 
-    it('warmRerunFailed awaits runTestSpecifications before reading state', async () => {
-      const mock = createMockVitest()
-      const d = deferred()
-      mock.runTestSpecifications.mockReturnValue(d.promise)
-      mock.state.getFiles.mockReturnValue([
-        { result: { state: 'pass' }, filepath: 'a.test.js' }
-      ])
-      startVitest.mockResolvedValue(mock)
-
-      let factoryDone = false
-      const promise = createVitestRunner('src/a.js').then(r => {
-        factoryDone = true
-        return r
-      })
-
-      await flushMicrotasks()
-      expect(factoryDone).toBe(false)
-
-      d.resolve()
-      await promise
-      expect(factoryDone).toBe(true)
-    })
 
     it('cold run awaits vitest.close in finally block', async () => {
       const mock = createMockVitest()
@@ -851,37 +789,5 @@ describe('createVitestRunner', () => {
       expect(result).toBe('BLOCKED')
     })
 
-    it('warm-to-cold fallback blocks until close resolves', async () => {
-      const warmMock = createMockVitest()
-      warmMock.state.getFiles.mockReturnValue([
-        { result: { state: 'fail' }, filepath: 'a.test.js' }
-      ])
-      warmMock.close.mockReturnValue(new Promise(() => {}))
-
-      const coldMock = createMockVitest()
-      startVitest
-        .mockResolvedValueOnce(warmMock)
-        .mockResolvedValue(coldMock)
-
-      const result = await Promise.race([
-        createVitestRunner('src/a.js'),
-        new Promise(resolve => setTimeout(() => resolve('BLOCKED'), 50))
-      ])
-
-      expect(result).toBe('BLOCKED')
-    })
-
-    it('warmRerunFailed blocks until runTestSpecifications resolves', async () => {
-      const mock = createMockVitest()
-      mock.runTestSpecifications.mockReturnValue(new Promise(() => {}))
-      startVitest.mockResolvedValue(mock)
-
-      const result = await Promise.race([
-        createVitestRunner('src/a.js'),
-        new Promise(resolve => setTimeout(() => resolve('BLOCKED'), 50))
-      ])
-
-      expect(result).toBe('BLOCKED')
-    })
   })
 })

@@ -5,6 +5,13 @@
 import { HEADER_SEPARATOR } from '../../core/report-data.js'
 
 export async function runPreflightTests(out, runner) {
+  if (runner.preflight) {
+    if (!runner.preflight.passed) {
+      out(`\nABORT: Tests already FAILING on original source. Fix the suite first.`)
+      return { error: true }
+    }
+    return {}
+  }
   out(`\nPre-flight: running tests against original source...`)
   const preflight = await runner.run()
   if (preflight.passed) return {}

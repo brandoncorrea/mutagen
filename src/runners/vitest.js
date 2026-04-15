@@ -24,17 +24,16 @@ export async function createVitestRunner(sourceFile, options = {}) {
   const vitest = await startVitest('test', testFilter, { ...vitestOpts, watch: true })
   await vitest.waitForTestRunEnd()
 
-  // Verify warm rerun works by re-running without changes
-  if (await warmRerunFailed(vitest)) {
-    await vitest.close()
-    return coldRunner(startVitest, testFilter, vitestOpts)
-  }
+  // The initial run serves as preflight — check if tests pass.
+  const initialResults = vitest.state.getFiles()
+  const preflightPassed = initialResults.every(isPassing)
 
   // Build related-test specs by walking the vite module graph.
   // Only test files that transitively import the source file need to run.
   const relatedSpecs = await findRelatedSpecs(vitest, sourceFile)
 
   return {
+    preflight: { passed: preflightPassed },
     async run() {
       if (sourceFile) vitest.invalidateFile(sourceFile)
       const specs = relatedSpecs || await vitest.globTestSpecifications()
@@ -112,19 +111,6 @@ function enqueueModule({ graph, queue }, moduleId) {
     for (const { id } of mod.importers)
       if (id)
         queue.push(id)
-}
-
-async function warmRerunFailed(vitest) {
-  try {
-    const specs = await vitest.globTestSpecifications()
-    await vitest.runTestSpecifications(specs)
-    return !vitest
-      .state
-      .getFiles()
-      .every(isPassing)
-  } catch {
-    return true
-  }
 }
 
 function coldRunner(startVitest, testFilter, vitestOpts) {
