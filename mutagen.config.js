@@ -3,6 +3,7 @@ import { createVitestRunner } from './runners/vitest.js'
 
 export default {
   patterns: javascript,
+  include: ['**/*.js'],
   exclude: [
     'tests/**/*',
     'node_modules/**/*',
