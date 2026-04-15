@@ -16,6 +16,7 @@ import { resolve } from 'node:path'
 
 import { prepareMutationConfig } from '../core/generate.js'
 import { resolveGlobs } from '../core/resolve-globs.js'
+import { gitChangedFiles } from '../core/git-changed.js'
 import { HEADER_SEPARATOR, createReport, writeReportFile, writeStructuredReportFile } from '../core/report-data.js'
 import { diffReports } from './diff.js'
 import { parseArgs } from './args.js'
@@ -100,8 +101,13 @@ async function run(ctx, argv) {
   }
 
   const quiet = parsed.quiet
-  const runCtx = quiet ? { ...ctx, out: () => {} } : ctx
+  let runCtx = quiet ? { ...ctx, out: () => {} } : ctx
   const timeout = parsed.timeout || ctx.configTimeout
+
+  if (parsed.changed) {
+    const filtered = filterChanged(runCtx.sources)
+    runCtx = { ...runCtx, sources: filtered }
+  }
 
   if (parsed.diffMode)
     return runDiffMode(runCtx, parsed)
@@ -283,4 +289,9 @@ function printBatchSummary(out, fileCount, { totalKilled, totalSurvived, totalTi
   if (totalTimedOut)
     out(`Timed out: ${totalTimedOut} (counted as killed)`)
   out(`${HEADER_SEPARATOR}\n`)
+}
+
+function filterChanged(sources) {
+  const changed = new Set(gitChangedFiles())
+  return sources.filter(s => changed.has(s))
 }

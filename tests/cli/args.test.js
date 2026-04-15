@@ -335,6 +335,45 @@ describe('parseArgs', () => {
     })
   })
 
+  describe('--changed flag', () => {
+    it('parses --changed in --all mode', () => {
+      const result = parseArgs(['--all', '--changed'])
+      expect(result.changed).toBe(true)
+    })
+
+    it('parses --changed in --incremental mode', () => {
+      const result = parseArgs(['--incremental', '--changed'])
+      expect(result.changed).toBe(true)
+    })
+
+    it('defaults changed to false when absent in --all mode', () => {
+      const result = parseArgs(['--all'])
+      expect(result.changed).toBeFalsy()
+    })
+
+    it('defaults changed to false when absent in --incremental mode', () => {
+      const result = parseArgs(['--incremental'])
+      expect(result.changed).toBeFalsy()
+    })
+
+    it('composes with --parallel and --json', () => {
+      const result = parseArgs(['--all', '--changed', '--parallel', '4', '--json'])
+      expect(result.changed).toBe(true)
+      expect(result.parallel).toBe(4)
+      expect(result.jsonOutput).toBe(true)
+    })
+
+    it('is not available in --diff mode', () => {
+      const result = parseArgs(['--diff', 'before.json', 'after.json'])
+      expect(result.changed).toBeUndefined()
+    })
+
+    it('is not recognized in single-file mode (no effect)', () => {
+      const result = parseArgs(['source.js', '--changed'])
+      expect(result).not.toHaveProperty('error')
+    })
+  })
+
   describe('--timeout at index 0', () => {
     it('parses --timeout when it appears first in argv', () => {
       const result = parseArgs(['--timeout', '5000', '--incremental'])
