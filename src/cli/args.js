@@ -32,8 +32,8 @@ Exit codes:
   0    All mutants were killed (or dry-run/diff succeeded)
   1    Surviving mutants detected, errors occurred, or score below --min-score`
 
-const diffMessage = 'Usage: <script> --diff <before.json> <after.json> [--json]'
-const retestMessage = 'Usage: <script> --retest <report.json> [--json [path]] [--timeout N] [--parallel [N]] [--quiet]'
+const diffMessage = 'Usage: npx mutagen --diff <before.json> <after.json> [--json]'
+const retestMessage = 'Usage: npx mutagen --retest <report.json> [--json [path]] [--timeout N] [--parallel [N]] [--quiet]'
 
 export function parseArgs(argv = process.argv.slice(2)) {
   if (argv.includes('--help') || argv.includes('-h'))

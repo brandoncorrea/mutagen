@@ -171,6 +171,18 @@ describe('parseArgs', () => {
       expect(result.error).toContain('<before.json>')
       expect(result.error).toContain('<after.json>')
     })
+
+    it('diff error message uses npx mutagen as command prefix', () => {
+      const result = parseArgs(['--diff'])
+      expect(result.error).toContain('npx mutagen')
+      expect(result.error).not.toContain('<script>')
+    })
+
+    it('retest error message uses npx mutagen as command prefix', () => {
+      const result = parseArgs(['--retest'])
+      expect(result.error).toContain('npx mutagen')
+      expect(result.error).not.toContain('<script>')
+    })
   })
 
   describe('default argv from process.argv', () => {
