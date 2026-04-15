@@ -16,7 +16,7 @@ const matchToToken = jsTokens.matchToToken
 const pattern = new RegExp(regex.source, regex.flags)
 
 export function isArrowOperator(line, position) {
-  return position > 0
+  return position
     && line[position - 1] === '='
     && line[position] === '>'
 }

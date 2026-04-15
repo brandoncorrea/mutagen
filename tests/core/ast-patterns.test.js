@@ -22,7 +22,7 @@ const equalityNames = {
 
 const equalityMutator = {
   types: ['BinaryExpression'],
-  test: (node) => Boolean(equalitySwaps[node.operator]),
+  test: node => Boolean(equalitySwaps[node.operator]),
   mutate: (node, source) => {
     const op = node.operator
     const idx = findBetween(source, node.left.end, node.right.start, op)
@@ -37,7 +37,7 @@ const logicalNames = { '&&': '&& → ||', '||': '|| → &&' }
 
 const logicalMutator = {
   types: ['LogicalExpression'],
-  test: (node) => Boolean(logicalSwaps[node.operator]),
+  test: node => Boolean(logicalSwaps[node.operator]),
   mutate: (node, source) => {
     const op = node.operator
     const idx = findBetween(source, node.left.end, node.right.start, op)
@@ -55,7 +55,7 @@ const arithmeticNames = {
 
 const arithmeticMutator = {
   types: ['BinaryExpression'],
-  test: (node) => Boolean(arithmeticSwaps[node.operator]),
+  test: node => Boolean(arithmeticSwaps[node.operator]),
   mutate: (node, source) => {
     const op = node.operator
     const idx = findBetween(source, node.left.end, node.right.start, op)
@@ -68,11 +68,14 @@ const arithmeticMutator = {
 const booleanMutator = {
   types: ['BooleanLiteral'],
   test: () => true,
-  mutate: (node) => {
-    if (node.value === true) {
-      return { start: node.start, end: node.end, replacement: 'false', name: 'true → false' }
+  mutate: node => {
+    const [replacement, name] = node.value ? ['false', 'true → false'] : ['true', 'false → true']
+    return {
+      start: node.start,
+      end: node.end,
+      replacement,
+      name
     }
-    return { start: node.start, end: node.end, replacement: 'true', name: 'false → true' }
   }
 }
 
@@ -81,14 +84,14 @@ const ternaryTruthyMutator = {
   name: 'ternary → always truthy',
   types: ['ConditionalExpression'],
   test: () => true,
-  mutate: (node) => ({ start: node.consequent.start, end: node.consequent.start, replacement: 'true || ' })
+  mutate: node => ({ start: node.consequent.start, end: node.consequent.start, replacement: 'true || ' })
 }
 
 const ternaryFalsyMutator = {
   name: 'ternary → always falsy',
   types: ['ConditionalExpression'],
   test: () => true,
-  mutate: (node) => ({ start: node.consequent.start, end: node.consequent.start, replacement: 'false && ' })
+  mutate: node => ({ start: node.consequent.start, end: node.consequent.start, replacement: 'false && ' })
 }
 
 // --- MethodExpression (CallExpression with MemberExpression callee) ---
@@ -111,12 +114,12 @@ const methodSwaps = {
 
 const methodSwapMutator = {
   types: ['CallExpression'],
-  test: (node) => {
+  test: node => {
     if (node.callee.type !== 'MemberExpression') return false
     const name = node.callee.property.name || node.callee.property.value
     return Boolean(methodSwaps[name])
   },
-  mutate: (node) => {
+  mutate: node => {
     const prop = node.callee.property
     const name = prop.name || prop.value
     const swap = methodSwaps[name]
@@ -127,23 +130,22 @@ const methodSwapMutator = {
 const trimMutator = {
   name: 'trim() → (removed)',
   types: ['CallExpression'],
-  test: (node) => node.callee.type === 'MemberExpression' && node.callee.property.name === 'trim',
-  mutate: (node) => ({ start: node.callee.object.end, end: node.end, replacement: '' })
+  test: node => node.callee.type === 'MemberExpression' && node.callee.property.name === 'trim',
+  mutate: node => ({ start: node.callee.object.end, end: node.end, replacement: '' })
 }
 
 // --- Shift and reverse need special handling ---
 const shiftMutator = {
   types: ['CallExpression'],
-  test: (node) => {
+  test: node => {
     if (node.callee.type !== 'MemberExpression') return false
     const name = node.callee.property.name
     return name === 'shift' || name === 'reverse'
   },
-  mutate: (node) => {
+  mutate: node => {
     const prop = node.callee.property
-    if (prop.name === 'shift') {
+    if (prop.name === 'shift')
       return { start: prop.start, end: prop.end, replacement: 'pop', name: 'shift → pop' }
-    }
     return { start: node.callee.object.end, end: node.end, replacement: '', name: 'reverse() → (removed)' }
   }
 }
@@ -154,8 +156,8 @@ const updateNames = { '++': '++ → --', '--': '-- → ++' }
 
 const updateMutator = {
   types: ['UpdateExpression'],
-  test: (node) => Boolean(updateSwaps[node.operator]),
-  mutate: (node) => {
+  test: node => Boolean(updateSwaps[node.operator]),
+  mutate: node => {
     const op = node.prefix ? node.start : node.argument.end
     return { start: op, end: op + 2, replacement: updateSwaps[node.operator], name: updateNames[node.operator] }
   }
@@ -166,14 +168,14 @@ const awaitMutator = {
   name: 'await → (removed)',
   types: ['AwaitExpression'],
   test: () => true,
-  mutate: (node) => ({ start: node.start, end: node.argument.start, replacement: '' })
+  mutate: node => ({ start: node.start, end: node.argument.start, replacement: '' })
 }
 
 // --- Optional chaining ---
 const optionalChainingMutator = {
   name: '?. → .',
   types: ['OptionalMemberExpression'],
-  test: (node) => node.optional,
+  test: node => node.optional,
   mutate: (node, source) => {
     const idx = source.indexOf('?.', node.object.end)
     if (idx === -1) return null
@@ -185,15 +187,15 @@ const optionalChainingMutator = {
 const negationMutator = {
   name: '!var → var',
   types: ['UnaryExpression'],
-  test: (node) => node.operator === '!' && node.prefix,
-  mutate: (node) => ({ start: node.start, end: node.argument.start, replacement: '' })
+  test: node => node.operator === '!' && node.prefix,
+  mutate: node => ({ start: node.start, end: node.argument.start, replacement: '' })
 }
 
 // --- Nullish coalescing ---
 const nullishMutator = {
   name: '?? → ||',
   types: ['LogicalExpression'],
-  test: (node) => node.operator === '??',
+  test: node => node.operator === '??',
   mutate: (node, source) => {
     const idx = findBetween(source, node.left.end, node.right.start, '??')
     if (idx === -1) return null
@@ -207,7 +209,7 @@ const assignmentNames = { '+=': '+= → -=', '-=': '-= → +=' }
 
 const assignmentMutator = {
   types: ['AssignmentExpression'],
-  test: (node) => Boolean(assignmentSwaps[node.operator]),
+  test: node => Boolean(assignmentSwaps[node.operator]),
   mutate: (node, source) => {
     const op = node.operator
     const idx = findBetween(source, node.left.end, node.right.start, op)
@@ -219,18 +221,23 @@ const assignmentMutator = {
 // --- Numeric boundary ---
 const numericMutator = {
   types: ['NumericLiteral'],
-  test: (node) => node.value === 0 || node.value === 1,
-  mutate: (node) => {
-    if (node.value === 0) return { start: node.start, end: node.end, replacement: '1', name: '0 → 1' }
-    return { start: node.start, end: node.end, replacement: '0', name: '1 → 0' }
+  test: node => !node.value || node.value === 1,
+  mutate: node => {
+    const [replacement, name] = node.value ? ['0', '1 → 0'] : ['1', '0 → 1']
+    return {
+      start: node.start,
+      end: node.end,
+      replacement, 
+      name
+    }
   }
 }
 
 // --- Unary minus for -1 ---
 const unaryMinusMutator = {
   types: ['UnaryExpression'],
-  test: (node) => node.operator === '-' && node.prefix,
-  mutate: (node) => {
+  test: node => node.operator === '-' && node.prefix,
+  mutate: node => {
     if (node.argument.type === 'NumericLiteral' && node.argument.value === 1) {
       return { start: node.start, end: node.end, replacement: '0', name: '-1 → 0' }
     }
@@ -265,12 +272,12 @@ const mathSwaps = {
 
 const mathMutator = {
   types: ['CallExpression'],
-  test: (node) => {
+  test: node => {
     if (node.callee.type !== 'MemberExpression') return false
     if (node.callee.object.type !== 'Identifier' || node.callee.object.name !== 'Math') return false
     return Boolean(mathSwaps[node.callee.property.name]) || node.callee.property.name === 'abs'
   },
-  mutate: (node) => {
+  mutate: node => {
     const prop = node.callee.property
     if (prop.name === 'abs') {
       return { start: node.callee.object.start, end: prop.end, replacement: '', name: 'Math.abs → (removed)' }
@@ -289,12 +296,12 @@ const objectMethodSwaps = {
 
 const objectMethodMutator = {
   types: ['CallExpression'],
-  test: (node) => {
+  test: node => {
     if (node.callee.type !== 'MemberExpression') return false
     if (node.callee.object.type !== 'Identifier' || node.callee.object.name !== 'Object') return false
     return Boolean(objectMethodSwaps[node.callee.property.name])
   },
-  mutate: (node) => {
+  mutate: node => {
     const prop = node.callee.property
     const swap = objectMethodSwaps[prop.name]
     return { start: prop.start, end: prop.end, replacement: swap.to, name: swap.name }
@@ -305,12 +312,12 @@ const objectMethodMutator = {
 const arrayIsArrayMutator = {
   name: 'Array.isArray → !Array.isArray',
   types: ['CallExpression'],
-  test: (node) => {
+  test: node => {
     if (node.callee.type !== 'MemberExpression') return false
     if (node.callee.object.type !== 'Identifier' || node.callee.object.name !== 'Array') return false
     return node.callee.property.name === 'isArray'
   },
-  mutate: (node) => ({ start: node.start, end: node.start, replacement: '!' })
+  mutate: node => ({ start: node.start, end: node.start, replacement: '!' })
 }
 
 // --- Type conversion swaps ---
@@ -321,8 +328,8 @@ const typeConversionSwaps = {
 
 const typeConversionMutator = {
   types: ['CallExpression'],
-  test: (node) => node.callee.type === 'Identifier' && Boolean(typeConversionSwaps[node.callee.name]),
-  mutate: (node) => {
+  test: node => node.callee.type === 'Identifier' && Boolean(typeConversionSwaps[node.callee.name]),
+  mutate: node => {
     const swap = typeConversionSwaps[node.callee.name]
     return { start: node.callee.start, end: node.callee.end, replacement: swap.to, name: swap.name }
   }
@@ -337,7 +344,7 @@ const bitwiseNames = {
 
 const bitwiseMutator = {
   types: ['BinaryExpression'],
-  test: (node) => Boolean(bitwiseSwaps[node.operator]),
+  test: node => Boolean(bitwiseSwaps[node.operator]),
   mutate: (node, source) => {
     const op = node.operator
     const idx = findBetween(source, node.left.end, node.right.start, op)
@@ -350,8 +357,8 @@ const bitwiseMutator = {
 const voidMutator = {
   name: 'void expr → expr',
   types: ['UnaryExpression'],
-  test: (node) => node.operator === 'void' && node.prefix,
-  mutate: (node) => ({ start: node.start, end: node.argument.start, replacement: '' })
+  test: node => node.operator === 'void' && node.prefix,
+  mutate: node => ({ start: node.start, end: node.argument.start, replacement: '' })
 }
 
 

@@ -563,7 +563,10 @@ describe('createVitestRunner', () => {
       const runner = await createVitestRunner('src/a.js')
 
       let runDone = false
-      const runPromise = runner.run().then(r => { runDone = true; return r })
+      const runPromise = runner.run().then(r => {
+        runDone = true
+        return r
+      })
 
       await flushMicrotasks()
       expect(runDone).toBe(false)
@@ -627,7 +630,10 @@ describe('createVitestRunner', () => {
       const runner = await createVitestRunner('src/a.js', { warm: false })
 
       let runDone = false
-      const runPromise = runner.run().then(r => { runDone = true; return r })
+      const runPromise = runner.run().then(r => {
+        runDone = true
+        return r
+      })
 
       await flushMicrotasks()
       expect(runDone).toBe(false)

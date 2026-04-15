@@ -189,7 +189,10 @@ describe('createManualRunner', () => {
         // Guards setTimeout: an immediate reject() would win this race.
         run: vi.fn()
           .mockImplementationOnce(async () => ({ passed: true }))  // preflight
-          .mockImplementationOnce(async () => { await Promise.resolve(); return { passed: true } }),
+          .mockImplementationOnce(async () => {
+            await Promise.resolve()
+            return { passed: true }
+          }),
         close: vi.fn().mockResolvedValue(undefined)
       }
 

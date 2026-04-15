@@ -4,7 +4,7 @@ import { generateMutations, prepareMutationConfig } from '../../src/core/generat
 const equalityMutator = {
   name: '=== → !==',
   types: ['BinaryExpression'],
-  test: (node) => node.operator === '===',
+  test: node => node.operator === '===',
   mutate: (node, source) => {
     const idx = source.indexOf('===', node.left.end)
     if (idx === -1) return null
@@ -15,8 +15,8 @@ const equalityMutator = {
 const boolMutator = {
   name: 'true → false',
   types: ['BooleanLiteral'],
-  test: (node) => node.value === true,
-  mutate: (node) => ({ start: node.start, end: node.end, replacement: 'false' })
+  test: node => node.value === true,
+  mutate: node => ({ start: node.start, end: node.end, replacement: 'false' })
 }
 
 describe('generateMutations (unified)', () => {

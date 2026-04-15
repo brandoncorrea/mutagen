@@ -51,7 +51,7 @@ function binaryOpSwap(name, from, to) {
   return {
     name,
     types: ['BinaryExpression'],
-    test: (node) => node.operator === from,
+    test: node => node.operator === from,
     mutate: (node, source) => {
       const idx = findBetween(source, node.left.end, node.right.start, from)
       if (idx === -1) return null
@@ -64,7 +64,7 @@ function logicalOpSwap(name, from, to) {
   return {
     name,
     types: ['LogicalExpression'],
-    test: (node) => node.operator === from,
+    test: node => node.operator === from,
     mutate: (node, source) => {
       const idx = findBetween(source, node.left.end, node.right.start, from)
       if (idx === -1) return null
@@ -77,7 +77,7 @@ function assignmentOpSwap(name, from, to) {
   return {
     name,
     types: ['AssignmentExpression'],
-    test: (node) => node.operator === from,
+    test: node => node.operator === from,
     mutate: (node, source) => {
       const idx = findBetween(source, node.left.end, node.right.start, from)
       if (idx === -1) return null
@@ -102,8 +102,8 @@ function staticMethodSwap(name, obj, from, to) {
   return {
     name,
     types: ['CallExpression'],
-    test: (node) => isStaticCall(node, obj, from),
-    mutate: (node) => {
+    test: node => isStaticCall(node, obj, from),
+    mutate: node => {
       const prop = node.callee.property
       return { start: prop.start, end: prop.end, replacement: to }
     }
@@ -114,8 +114,8 @@ function globalFnSwap(name, from, to) {
   return {
     name,
     types: ['CallExpression'],
-    test: (node) => node.callee?.type === 'Identifier' && node.callee.name === from,
-    mutate: (node) => ({ start: node.callee.start, end: node.callee.end, replacement: to })
+    test: node => node.callee?.type === 'Identifier' && node.callee.name === from,
+    mutate: node => ({ start: node.callee.start, end: node.callee.end, replacement: to })
   }
 }
 
@@ -154,14 +154,14 @@ const booleanLiterals = [
   {
     name: 'true → false',
     types: ['Literal', 'BooleanLiteral'],
-    test: (node) => node.value === true,
-    mutate: (node) => ({ start: node.start, end: node.end, replacement: 'false' })
+    test: node => node.value === true,
+    mutate: node => ({ start: node.start, end: node.end, replacement: 'false' })
   },
   {
     name: 'false → true',
     types: ['Literal', 'BooleanLiteral'],
-    test: (node) => node.value === false,
-    mutate: (node) => ({ start: node.start, end: node.end, replacement: 'true' })
+    test: node => node.value === false,
+    mutate: node => ({ start: node.start, end: node.end, replacement: 'true' })
   }
 ]
 
@@ -172,7 +172,7 @@ const conditionalExpressions = [
     name: 'ternary → always truthy',
     types: ['ConditionalExpression'],
     test: () => true,
-    mutate: (node) => ({
+    mutate: node => ({
       start: node.consequent.start,
       end: node.consequent.start,
       replacement: 'true || '
@@ -182,7 +182,7 @@ const conditionalExpressions = [
     name: 'ternary → always falsy',
     types: ['ConditionalExpression'],
     test: () => true,
-    mutate: (node) => ({
+    mutate: node => ({
       start: node.consequent.start,
       end: node.consequent.start,
       replacement: 'false && '
@@ -198,8 +198,8 @@ const methodExpressions = [
   {
     name: 'trim() → (removed)',
     types: ['CallExpression'],
-    test: (node) => isMemberCall(node, 'trim') && node.arguments.length === 0,
-    mutate: (node) => ({
+    test: node => isMemberCall(node, 'trim') && !node.arguments.length,
+    mutate: node => ({
       start: node.callee.object.end,
       end: node.end,
       replacement: ''
@@ -208,8 +208,8 @@ const methodExpressions = [
   {
     name: 'filter(predicate) → filter(true) (ignore predicate)',
     types: ['CallExpression'],
-    test: (node) => isMemberCall(node, 'filter') && node.arguments.length > 0,
-    mutate: (node) => ({
+    test: node => isMemberCall(node, 'filter') && node.arguments.length > 0,
+    mutate: node => ({
       start: node.arguments[0].start,
       end: node.arguments[0].start,
       replacement: 'x => true, '
@@ -218,7 +218,7 @@ const methodExpressions = [
   {
     name: 'slice() → slice(1,',
     types: ['CallExpression'],
-    test: (node) => isMemberCall(node, 'slice'),
+    test: node => isMemberCall(node, 'slice'),
     mutate: (node, source) => {
       const openParen = source.indexOf('(', node.callee.end)
       if (openParen === -1) return null
@@ -235,9 +235,12 @@ const stringLiterals = [
     types: ['ReturnStatement'],
     test: (node, source) => {
       const arg = node.argument
-      return arg && isStringLiteral(arg) && arg.value === '' && source[arg.start] === "'"
+      return arg
+        && isStringLiteral(arg)
+        && !arg.value
+        && source[arg.start] === "'"
     },
-    mutate: (node) => ({
+    mutate: node => ({
       start: node.argument.start,
       end: node.argument.end,
       replacement: "'mutant'"
@@ -248,9 +251,12 @@ const stringLiterals = [
     types: ['ReturnStatement'],
     test: (node, source) => {
       const arg = node.argument
-      return arg && isStringLiteral(arg) && arg.value === '' && source[arg.start] === '"'
+      return arg
+        && isStringLiteral(arg)
+        && !arg.value
+        && source[arg.start] === '"'
     },
-    mutate: (node) => ({
+    mutate: node => ({
       start: node.argument.start,
       end: node.argument.end,
       replacement: '"mutant"'
@@ -264,8 +270,8 @@ const blockStatements = [
   {
     name: 'return {} → Object.freeze (syntax break)',
     types: ['ReturnStatement'],
-    test: (node) => node.argument?.type === 'ObjectExpression',
-    mutate: (node) => ({
+    test: node => node.argument?.type === 'ObjectExpression',
+    mutate: node => ({
       start: node.argument.start,
       end: node.argument.start,
       replacement: 'Object.freeze('
@@ -274,7 +280,7 @@ const blockStatements = [
   {
     name: 'return → void',
     types: ['ReturnStatement'],
-    test: (node) =>
+    test: node =>
       node.argument != null
       && node.argument.type !== 'ObjectExpression'
       && node.argument.type !== 'ArrayExpression',
@@ -293,7 +299,7 @@ const asyncMutations = [
     name: 'await → (removed)',
     types: ['AwaitExpression'],
     test: () => true,
-    mutate: (node) => ({
+    mutate: node => ({
       start: node.start,
       end: node.argument.start,
       replacement: ''
@@ -307,11 +313,11 @@ const fallbackRemovals = [
   {
     name: '|| [] → (removed)',
     types: ['LogicalExpression'],
-    test: (node) =>
+    test: node =>
       node.operator === '||'
       && node.right.type === 'ArrayExpression'
-      && node.right.elements.length === 0,
-    mutate: (node) => ({
+      && !node.right.elements.length,
+    mutate: node => ({
       start: node.left.end,
       end: node.end,
       replacement: ''
@@ -320,9 +326,9 @@ const fallbackRemovals = [
   {
     name: "|| '' → (removed)",
     types: ['LogicalExpression'],
-    test: (node) =>
-      node.operator === '||' && isStringLiteral(node.right) && node.right.value === '',
-    mutate: (node) => ({
+    test: node =>
+      node.operator === '||' && isStringLiteral(node.right) && !node.right.value,
+    mutate: node => ({
       start: node.left.end,
       end: node.end,
       replacement: ''
@@ -331,9 +337,9 @@ const fallbackRemovals = [
   {
     name: '|| 0 → (removed)',
     types: ['LogicalExpression'],
-    test: (node) =>
-      node.operator === '||' && isNumericLiteral(node.right) && node.right.value === 0,
-    mutate: (node) => ({
+    test: node =>
+      node.operator === '||' && isNumericLiteral(node.right) && !node.right.value,
+    mutate: node => ({
       start: node.left.end,
       end: node.end,
       replacement: ''
@@ -347,8 +353,8 @@ const updateOperators = [
   {
     name: '++ → --',
     types: ['UpdateExpression'],
-    test: (node) => node.operator === '++',
-    mutate: (node) => {
+    test: node => node.operator === '++',
+    mutate: node => {
       const op = node.prefix ? node.start : node.argument.end
       return { start: op, end: op + 2, replacement: '--' }
     }
@@ -356,8 +362,8 @@ const updateOperators = [
   {
     name: '-- → ++',
     types: ['UpdateExpression'],
-    test: (node) => node.operator === '--',
-    mutate: (node) => {
+    test: node => node.operator === '--',
+    mutate: node => {
       const op = node.prefix ? node.start : node.argument.end
       return { start: op, end: op + 2, replacement: '++' }
     }
@@ -370,7 +376,7 @@ const optionalChaining = [
   {
     name: '?. → .',
     types: ['MemberExpression', 'CallExpression'],
-    test: (node) => node.optional === true,
+    test: node => node.optional === true,
     mutate: (node, source) => {
       const searchFrom = node.object?.end ?? node.callee?.end ?? node.start
       const idx = source.indexOf('?.', searchFrom)
@@ -386,8 +392,8 @@ const negationRemoval = [
   {
     name: '!var → var',
     types: ['UnaryExpression'],
-    test: (node) => node.operator === '!' && node.prefix,
-    mutate: (node) => ({
+    test: node => node.operator === '!' && node.prefix,
+    mutate: node => ({
       start: node.start,
       end: node.argument.start,
       replacement: ''
@@ -414,7 +420,7 @@ const numericBoundary = [
   {
     name: '0 → 1',
     types: ['Literal', 'NumericLiteral'],
-    test: (node) => node.value === 0,
+    test: node => !node.value,
     mutate: (node, source) => {
       const raw = source.slice(node.start, node.end)
       if (/^0[xXoObB]/.test(raw) || raw.includes('.')) return null
@@ -424,23 +430,23 @@ const numericBoundary = [
   {
     name: '1 → 0',
     types: ['Literal', 'NumericLiteral'],
-    test: (node) => node.value === 1,
+    test: node => node.value === 1,
     mutate: (node, source) => {
       const raw = source.slice(node.start, node.end)
       if (/^0[xXoObB]/.test(raw)) return null
-      if (node.start > 0 && /[.\d]/.test(source[node.start - 1])) return null
+      if (node.start && /[.\d]/.test(source[node.start - 1])) return null
       return { start: node.start, end: node.end, replacement: '0' }
     }
   },
   {
     name: '-1 → 0',
     types: ['UnaryExpression'],
-    test: (node) =>
+    test: node =>
       node.operator === '-'
       && node.prefix
       && isNumericLiteral(node.argument)
       && node.argument.value === 1,
-    mutate: (node) => ({
+    mutate: node => ({
       start: node.start,
       end: node.end,
       replacement: '0'
@@ -481,8 +487,8 @@ const mathMethodSwaps = [
   {
     name: 'Math.abs → (removed)',
     types: ['CallExpression'],
-    test: (node) => isStaticCall(node, 'Math', 'abs'),
-    mutate: (node) => ({
+    test: node => isStaticCall(node, 'Math', 'abs'),
+    mutate: node => ({
       start: node.callee.start,
       end: node.callee.end,
       replacement: ''
@@ -501,8 +507,8 @@ const arrayMethodSwaps = [
   {
     name: 'Array.isArray → !Array.isArray',
     types: ['CallExpression'],
-    test: (node) => isStaticCall(node, 'Array', 'isArray'),
-    mutate: (node) => ({
+    test: node => isStaticCall(node, 'Array', 'isArray'),
+    mutate: node => ({
       start: node.start,
       end: node.start,
       replacement: '!'
@@ -512,8 +518,8 @@ const arrayMethodSwaps = [
   {
     name: 'shift → pop',
     types: ['CallExpression'],
-    test: (node) => isMemberCall(node, 'shift') && node.arguments.length === 0,
-    mutate: (node) => {
+    test: node => isMemberCall(node, 'shift') && !node.arguments.length,
+    mutate: node => {
       const prop = node.callee.property
       return { start: prop.start, end: prop.end, replacement: 'pop' }
     }
@@ -524,8 +530,8 @@ const arrayMethodSwaps = [
   {
     name: 'reverse() → (removed)',
     types: ['CallExpression'],
-    test: (node) => isMemberCall(node, 'reverse') && node.arguments.length === 0,
-    mutate: (node) => ({
+    test: node => isMemberCall(node, 'reverse') && !node.arguments.length,
+    mutate: node => ({
       start: node.callee.object.end,
       end: node.end,
       replacement: ''
@@ -540,10 +546,10 @@ const objectMethodSwaps = [
   {
     name: 'Object.keys → Object.values',
     types: ['CallExpression'],
-    test: (node, source, parent) =>
+    test: (node, _source, parent) =>
       isStaticCall(node, 'Object', 'keys')
       && !(parent?.type === 'MemberExpression' && parent.property?.name === 'length'),
-    mutate: (node) => {
+    mutate: node => {
       const prop = node.callee.property
       return { start: prop.start, end: prop.end, replacement: 'values' }
     }
@@ -551,10 +557,10 @@ const objectMethodSwaps = [
   {
     name: 'Object.values → Object.keys',
     types: ['CallExpression'],
-    test: (node, source, parent) =>
+    test: (node, _source, parent) =>
       isStaticCall(node, 'Object', 'values')
       && !(parent?.type === 'MemberExpression' && parent.property?.name === 'length'),
-    mutate: (node) => {
+    mutate: node => {
       const prop = node.callee.property
       return { start: prop.start, end: prop.end, replacement: 'keys' }
     }
@@ -574,11 +580,11 @@ const unaryMinusRemoval = [
   {
     name: 'unary -x → x',
     types: ['UnaryExpression'],
-    test: (node) =>
+    test: node =>
       node.operator === '-'
       && node.prefix
       && node.argument.type === 'Identifier',
-    mutate: (node) => ({
+    mutate: node => ({
       start: node.start,
       end: node.argument.start,
       replacement: ''
@@ -609,7 +615,7 @@ const spreadRemoval = [
   {
     name: '[...x] → x (remove copy)',
     types: ['ArrayExpression'],
-    test: (node) =>
+    test: node =>
       node.elements.length === 1
       && node.elements[0]?.type === 'SpreadElement',
     mutate: (node, source) => ({
@@ -624,10 +630,10 @@ const spreadRemoval = [
   {
     name: '[...x, y] → [y] (remove spread)',
     types: ['ArrayExpression'],
-    test: (node) =>
+    test: node =>
       node.elements.length >= 2
       && node.elements[0]?.type === 'SpreadElement',
-    mutate: (node, source) => ({
+    mutate: (node, _source) => ({
       start: node.start + 1,
       end: node.elements[1].start,
       replacement: ''
@@ -641,8 +647,8 @@ const voidRemoval = [
   {
     name: 'void expr → expr',
     types: ['UnaryExpression'],
-    test: (node) => node.operator === 'void' && node.prefix,
-    mutate: (node) => ({
+    test: node => node.operator === 'void' && node.prefix,
+    mutate: node => ({
       start: node.start,
       end: node.argument.start,
       replacement: ''
@@ -656,8 +662,8 @@ const propertyAccessMutations = [
   {
     name: '.length → .length + 1',
     types: ['MemberExpression'],
-    test: (node) => !node.computed && node.property?.name === 'length',
-    mutate: (node) => ({
+    test: node => !node.computed && node.property?.name === 'length',
+    mutate: node => ({
       start: node.end,
       end: node.end,
       replacement: ' + 1'

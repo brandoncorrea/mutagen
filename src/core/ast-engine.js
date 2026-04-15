@@ -128,20 +128,23 @@ export function matchesPattern(node, pattern) {
   for (const key of Object.keys(pattern)) {
     const patternVal = pattern[key]
     const nodeVal = node[key]
-    if (nodeVal === undefined) return false
+    if (!nodeVal) return false
 
     if (typeof patternVal === 'string') {
       if (typeof nodeVal === 'string') {
-        if (nodeVal !== patternVal) return false
+        if (nodeVal !== patternVal)
+          return false
       } else if (isObject(nodeVal) && nodeVal.type) {
-        if (nodeVal.name !== patternVal) return false
+        if (nodeVal.name !== patternVal)
+          return false
       } else {
         return false
       }
     } else if (isObject(patternVal)) {
-      if (!matchesPattern(nodeVal, patternVal)) return false
-    } else {
-      if (nodeVal !== patternVal) return false
+      if (!matchesPattern(nodeVal, patternVal))
+        return false
+    } else if (nodeVal !== patternVal) {
+      return false
     }
   }
   return true

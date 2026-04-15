@@ -4,7 +4,7 @@
  */
 
 import { readFileSync } from 'node:fs'
-import { resolve, relative } from 'node:path'
+import { resolve } from 'node:path'
 
 import { generateMutations } from '../core/generate.js'
 import { HEADER_SEPARATOR, tryLoadJson, writeStructuredReportFile } from '../core/report-data.js'
@@ -75,7 +75,7 @@ export async function runRetest(ctx, parsed) {
   printRetestSummary(out, result)
 
   return {
-    exitCode: result.totalSurvived > 0 || result.failures > 0 ? 1 : 0,
+    exitCode: result.totalSurvived || result.failures ? 1 : 0,
     stats: {
       killed: result.totalKilled,
       survived: result.totalSurvived,
@@ -162,8 +162,8 @@ function printRetestSummary(out, { totalKilled, totalSurvived, totalTimedOut, to
     out(`Timed out: ${totalTimedOut} (counted as killed)`)
   out(HEADER_SEPARATOR)
 
-  const allKilled = totalSurvived === 0 && failures === 0
-  if (allKilled && totalSkipped === 0)
+  const allKilled = !totalSurvived && !failures
+  if (allKilled && !totalSkipped)
     out(`\nAll previous survivors are now killed!`)
   else if (allKilled)
     out(`\nAll retestable survivors are now killed. ${totalSkipped} could not be retested (code changed).`)

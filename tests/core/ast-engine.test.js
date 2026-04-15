@@ -9,7 +9,7 @@ function findBetween(source, from, to, text) {
 const equalityMutator = {
   name: '=== → !==',
   types: ['BinaryExpression'],
-  test: (node) => node.operator === '===',
+  test: node => node.operator === '===',
   mutate: (node, source) => {
     const idx = findBetween(source, node.left.end, node.right.start, '===')
     if (idx === -1) return null
@@ -20,7 +20,7 @@ const equalityMutator = {
 const inequalityMutator = {
   name: '!== → ===',
   types: ['BinaryExpression'],
-  test: (node) => node.operator === '!==',
+  test: node => node.operator === '!==',
   mutate: (node, source) => {
     const idx = findBetween(source, node.left.end, node.right.start, '!==')
     if (idx === -1) return null
@@ -84,8 +84,8 @@ describe('ast-engine generateMutations', () => {
     const boolMutator = {
       name: 'true → false',
       types: ['BooleanLiteral'],
-      test: (node) => node.value === true,
-      mutate: (node) => ({ start: node.start, end: node.end, replacement: 'false' })
+      test: node => node.value === true,
+      mutate: node => ({ start: node.start, end: node.end, replacement: 'false' })
     }
     const source = 'const x = true'
     const mutations = generateMutations(source, [boolMutator])
@@ -103,8 +103,8 @@ describe('ast-engine generateMutations', () => {
     const boolMutator = {
       name: 'true → false',
       types: ['BooleanLiteral'],
-      test: (node) => node.value === true,
-      mutate: (node) => ({ start: node.start, end: node.end, replacement: 'false' })
+      test: node => node.value === true,
+      mutate: node => ({ start: node.start, end: node.end, replacement: 'false' })
     }
     const source = 'if (a === true) {}'
     const mutations = generateMutations(source, [equalityMutator, boolMutator])
@@ -118,7 +118,7 @@ describe('ast-engine generateMutations', () => {
     const logicalMutator = {
       name: '&& → ||',
       types: ['LogicalExpression'],
-      test: (node) => node.operator === '&&',
+      test: node => node.operator === '&&',
       mutate: (node, source) => {
         const idx = findBetween(source, node.left.end, node.right.start, '&&')
         if (idx === -1) return null
@@ -135,8 +135,8 @@ describe('ast-engine generateMutations', () => {
     const updateMutator = {
       name: '++ → --',
       types: ['UpdateExpression'],
-      test: (node) => node.operator === '++',
-      mutate: (node) => {
+      test: node => node.operator === '++',
+      mutate: node => {
         const op = node.prefix ? node.start : node.argument.end
         return { start: op, end: op + 2, replacement: '--' }
       }
@@ -151,8 +151,8 @@ describe('ast-engine generateMutations', () => {
     const unaryMutator = {
       name: '!x → x',
       types: ['UnaryExpression'],
-      test: (node) => node.operator === '!' && node.prefix,
-      mutate: (node) => ({ start: node.start, end: node.argument.start, replacement: '' })
+      test: node => node.operator === '!' && node.prefix,
+      mutate: node => ({ start: node.start, end: node.argument.start, replacement: '' })
     }
     const source = 'if (!ready) {}'
     const mutations = generateMutations(source, [unaryMutator])
@@ -178,7 +178,7 @@ describe('ast-engine generateMutations', () => {
     const gteLtMutator = {
       name: '>= → <',
       types: ['BinaryExpression'],
-      test: (node) => node.operator === '>=',
+      test: node => node.operator === '>=',
       mutate: (node, source) => {
         const idx = findBetween(source, node.left.end, node.right.start, '>=')
         if (idx === -1) return null
@@ -188,7 +188,7 @@ describe('ast-engine generateMutations', () => {
     const gteGtMutator = {
       name: '>= → >',
       types: ['BinaryExpression'],
-      test: (node) => node.operator === '>=',
+      test: node => node.operator === '>=',
       mutate: (node, source) => {
         const idx = findBetween(source, node.left.end, node.right.start, '>=')
         if (idx === -1) return null
@@ -206,7 +206,7 @@ describe('ast-engine generateMutations', () => {
     const assignMutator = {
       name: '+= → -=',
       types: ['AssignmentExpression'],
-      test: (node) => node.operator === '+=',
+      test: node => node.operator === '+=',
       mutate: (node, source) => {
         const idx = findBetween(source, node.left.end, node.right.start, '+=')
         if (idx === -1) return null
@@ -223,8 +223,8 @@ describe('ast-engine generateMutations', () => {
     const methodMutator = {
       name: 'push → pop',
       types: ['CallExpression'],
-      test: (node) => node.callee.type === 'MemberExpression' && node.callee.property.name === 'push',
-      mutate: (node) => {
+      test: node => node.callee.type === 'MemberExpression' && node.callee.property.name === 'push',
+      mutate: node => {
         const prop = node.callee.property
         return { start: prop.start, end: prop.end, replacement: 'pop' }
       }
@@ -269,7 +269,7 @@ describe('ast-engine generateMutations', () => {
     const oldStyleMutator = {
       name: 'true → false',
       type: 'BooleanLiteral',
-      mutate: (node) => ({ start: node.start, end: node.end, replacement: 'false' })
+      mutate: node => ({ start: node.start, end: node.end, replacement: 'false' })
     }
     const mutations = generateMutations('const x = true', [oldStyleMutator])
     expect(mutations).toHaveLength(1)
