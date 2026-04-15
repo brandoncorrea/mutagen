@@ -12,13 +12,28 @@ vi.mock('../../../src/cli/runner/index.js', () => ({
   dryRun: vi.fn()
 }))
 
+vi.mock('../../../src/core/worktree.js')
+
 import { createManualRunner } from '../../../src/cli/manual.js'
+import { createWorktree } from '../../../src/core/worktree.js'
 import { runSingle } from '../../../src/cli/runner/index.js'
 
 const noop = () => {}
 const patterns = [{ pattern: / === /g, replacement: ' !== ', name: 'test' }]
 
-beforeEach(() => vi.clearAllMocks())
+function fakeWorktree() {
+  const tempRoot = '/tmp/mutagen-test'
+  return {
+    root: tempRoot,
+    resolve: vi.fn((path) => path),
+    cleanup: vi.fn()
+  }
+}
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  createWorktree.mockReturnValue(fakeWorktree())
+})
 
 describe('createManualRunner', () => {
   describe('runBatch', () => {

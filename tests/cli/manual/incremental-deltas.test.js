@@ -13,7 +13,10 @@ vi.mock('node:fs', async (importOriginal) => {
   }
 })
 
+vi.mock('../../../src/core/worktree.js')
+
 import { createManualRunner as _createManualRunner } from '../../../src/cli/manual.js'
+import { createWorktree } from '../../../src/core/worktree.js'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { patterns, sourceCode, hashOf, fakeRunner, mockFs as _mockFs, noop } from '../helpers.js'
 
@@ -22,11 +25,21 @@ function createManualRunner(config) {
   return _createManualRunner({ out: noop, ...config })
 }
 
+function fakeWorktree() {
+  const tempRoot = '/tmp/mutagen-test'
+  return {
+    root: tempRoot,
+    resolve: vi.fn((path) => path.replace(resolve('.'), tempRoot)),
+    cleanup: vi.fn()
+  }
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
   vi.spyOn(console, 'error').mockImplementation(() => {})
   vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
   existsSync.mockReturnValue(false)
+  createWorktree.mockReturnValue(fakeWorktree())
 })
 
 describe('incremental deltas', () => {

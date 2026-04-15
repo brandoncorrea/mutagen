@@ -13,7 +13,10 @@ vi.mock('node:fs', async (importOriginal) => {
   }
 })
 
+vi.mock('../../../src/core/worktree.js')
+
 import { createManualRunner as _createManualRunner } from '../../../src/cli/manual.js'
+import { createWorktree } from '../../../src/core/worktree.js'
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs'
 import { patterns, sourceCode, fakeRunner, mockFs as _mockFs, noop } from '../helpers.js'
 
@@ -22,9 +25,19 @@ function createManualRunner(config) {
   return _createManualRunner({ out: noop, ...config })
 }
 
+function fakeWorktree() {
+  const tempRoot = '/tmp/mutagen-test'
+  return {
+    root: tempRoot,
+    resolve: vi.fn((path) => path.replace(resolve('.'), tempRoot)),
+    cleanup: vi.fn()
+  }
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
   existsSync.mockReturnValue(false)
+  createWorktree.mockReturnValue(fakeWorktree())
 })
 
 describe('createManualRunner with include/exclude globs', () => {

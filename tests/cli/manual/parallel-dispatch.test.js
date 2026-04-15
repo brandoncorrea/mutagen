@@ -13,9 +13,11 @@ vi.mock('node:fs', async (importOriginal) => {
 })
 
 vi.mock('../../../src/core/pool.js')
+vi.mock('../../../src/core/worktree.js')
 
 import { createManualRunner as _createManualRunner } from '../../../src/cli/manual.js'
 import { createPool } from '../../../src/core/pool.js'
+import { createWorktree } from '../../../src/core/worktree.js'
 import { readFileSync, existsSync } from 'node:fs'
 import { patterns, sourceCode, fakeRunner, killedMutation, setupPool as _setupPool, mockFs as _mockFs, noop } from '../helpers.js'
 
@@ -25,10 +27,20 @@ function createManualRunner(config) {
 }
 function setupPool(results) { return _setupPool(createPool, results) }
 
+function fakeWorktree() {
+  const tempRoot = '/tmp/mutagen-test'
+  return {
+    root: tempRoot,
+    resolve: vi.fn((path) => path.replace(resolve('.'), tempRoot)),
+    cleanup: vi.fn()
+  }
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
   vi.spyOn(console, 'error').mockImplementation(() => {})
   existsSync.mockReturnValue(false)
+  createWorktree.mockReturnValue(fakeWorktree())
 })
 
 describe('--parallel flag wiring through manual.js', () => {
