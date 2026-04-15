@@ -55,6 +55,19 @@ describe('generateMutations (unified)', () => {
     expect(names).toContain('=== → !==')
   })
 
+  it('deduplicates mutations that produce identical line + mutated code', () => {
+    // Both AST and regex engines produce === → !== on the same line
+    const config = prepareMutationConfig({
+      mutators: [equalityMutator],
+      patterns: [{ pattern: / === /g, replacement: ' !== ', name: '=== → !==' }]
+    })
+    const source = 'if (a === b) {}'
+    const mutations = generateMutations(source, config)
+    // Should be exactly 1 — the duplicate from regex engine is dropped
+    expect(mutations).toHaveLength(1)
+    expect(mutations[0].name).toBe('=== → !==')
+  })
+
   it('respects targetLine for both engines', () => {
     const config = {
       mutators: [equalityMutator],

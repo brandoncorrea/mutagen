@@ -30,6 +30,16 @@ export function generateMutations(source, config, targetLine) {
   if (config.prepared?.length)
     mutations.push(...regexGenerate(source, config.prepared, targetLine))
 
+  if (config.mutators?.length && config.prepared?.length) {
+    const seen = new Set()
+    return mutations.filter(m => {
+      const key = m.line + ':' + m.mutated
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+  }
+
   return mutations
 }
 
