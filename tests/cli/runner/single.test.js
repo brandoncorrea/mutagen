@@ -380,4 +380,45 @@ describe('runSingle', () => {
     expect(result.killed).toBe(1)
     expect(result.timedOut).toBe(0)
   })
+
+  it('skips live preflight when runner has preflight.passed = true', async () => {
+    mockFs({ [resolve('src/a.js')]: sourceCode })
+    const runner = {
+      run: vi.fn().mockResolvedValue({ passed: false, killedBy: ['t.js'] }),
+      close: vi.fn().mockResolvedValue(undefined),
+      preflight: { passed: true }
+    }
+
+    const result = await runSingle({
+      sourceFile: resolve('src/a.js'),
+      mutationConfig,
+      createRunner: vi.fn().mockResolvedValue(runner),
+      out: noop
+    })
+
+    // run() is called only for mutations, not preflight
+    expect(runner.run).toHaveBeenCalledTimes(1)
+    expect(result.killed).toBe(1)
+  })
+
+  it('aborts immediately when runner has preflight.passed = false', async () => {
+    mockFs({ [resolve('src/a.js')]: sourceCode })
+    const runner = {
+      run: vi.fn(),
+      close: vi.fn().mockResolvedValue(undefined),
+      preflight: { passed: false }
+    }
+
+    const lines = []
+    const result = await runSingle({
+      sourceFile: resolve('src/a.js'),
+      mutationConfig,
+      createRunner: vi.fn().mockResolvedValue(runner),
+      out: msg => lines.push(msg)
+    })
+
+    expect(result.error).toBe(true)
+    expect(runner.run).not.toHaveBeenCalled()
+    expect(lines.some(l => l.includes('ABORT'))).toBe(true)
+  })
 })
