@@ -5,9 +5,9 @@
 import { resolve } from 'node:path'
 
 const usageMessage = `\
-Usage: <script> <source-file> [--line N] [--json [path]] [--dry-run] [--timeout N] [--parallel [N]] [--quiet] [--survivors-only]
-       <script> --all [--json [path]] [--dry-run] [--timeout N] [--parallel [N]] [--quiet] [--survivors-only]
-       <script> --incremental [--json [path]] [--timeout N] [--parallel [N]] [--quiet] [--survivors-only]`
+Usage: <script> <source-file> [--line N] [--json [path]] [--dry-run] [--timeout N] [--parallel [N]] [--quiet] [--survivors-only] [--min-score N]
+       <script> --all [--json [path]] [--dry-run] [--timeout N] [--parallel [N]] [--quiet] [--survivors-only] [--min-score N]
+       <script> --incremental [--json [path]] [--timeout N] [--parallel [N]] [--quiet] [--survivors-only] [--min-score N]`
 
 const diffMessage = 'Usage: <script> --diff <before.json> <after.json> [--json]'
 
@@ -23,13 +23,16 @@ function incrementalOptions(argv) {
   if (timeout?.error) return timeout
   const parallel = parseParallel(argv)
   if (parallel?.error) return parallel
+  const minScore = parseMinScore(argv)
+  if (minScore?.error) return minScore
   return {
     incrementalMode: true,
     timeout,
     parallel,
     jsonOutput: parseJsonOutput(argv),
     quiet: hasFlag(argv, '--quiet'),
-    survivorsOnly: hasFlag(argv, '--survivors-only')
+    survivorsOnly: hasFlag(argv, '--survivors-only'),
+    minScore
   }
 }
 
@@ -38,6 +41,8 @@ function allOptions(argv) {
   if (timeout?.error) return timeout
   const parallel = parseParallel(argv)
   if (parallel?.error) return parallel
+  const minScore = parseMinScore(argv)
+  if (minScore?.error) return minScore
   return {
     allMode: true,
     timeout,
@@ -45,7 +50,8 @@ function allOptions(argv) {
     jsonOutput: parseJsonOutput(argv),
     dryRunMode: hasFlag(argv, '--dry-run'),
     quiet: hasFlag(argv, '--quiet'),
-    survivorsOnly: hasFlag(argv, '--survivors-only')
+    survivorsOnly: hasFlag(argv, '--survivors-only'),
+    minScore
   }
 }
 
@@ -64,7 +70,7 @@ function diffOptions(argv) {
 function sourceFileOptions(argv) {
   const opts = argsToOptions(argv)
   if (opts.error) return opts
-  const { targetLine, timeout, parallel, filtered } = opts
+  const { targetLine, timeout, parallel, minScore, filtered } = opts
 
   if (!filtered.length)
     return { error: usageMessage }
@@ -77,13 +83,14 @@ function sourceFileOptions(argv) {
     quiet: hasFlag(argv, '--quiet'),
     survivorsOnly: hasFlag(argv, '--survivors-only'),
     timeout,
-    parallel
+    parallel,
+    minScore
   }
 }
 
 function argsToOptions(args) {
   const filtered = []
-  let targetLine, timeout, parallel
+  let targetLine, timeout, parallel, minScore
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]
     if (arg === '--line') {
@@ -94,6 +101,10 @@ function argsToOptions(args) {
       timeout = Number(args[++i])
       if (isInvalidNumber(timeout))
         return { error: '--timeout requires a numeric value' }
+    } else if (arg === '--min-score') {
+      minScore = Number(args[++i])
+      if (isInvalidNumber(minScore))
+        return { error: '--min-score requires a numeric value' }
     } else if (arg === '--parallel') {
       parallel = parseParallelValue(args, i)
       if (parallel?.error) return parallel
@@ -105,7 +116,7 @@ function argsToOptions(args) {
       filtered.push(arg)
     }
   }
-  return { targetLine, timeout, parallel, filtered }
+  return { targetLine, timeout, parallel, minScore, filtered }
 }
 
 function parseParallel(args) {
@@ -133,6 +144,15 @@ function parseTimeout(args) {
   return value
 }
 
+function parseMinScore(args) {
+  const idx = args.indexOf('--min-score')
+  if (idx < 0) return
+  const value = Number(args[idx + 1])
+  if (isInvalidNumber(value))
+    return { error: '--min-score requires a numeric value' }
+  return value
+}
+
 function parseJsonOutput(argv) {
   const idx = argv.indexOf('--json')
   if (idx < 0) return false
@@ -150,7 +170,7 @@ function isInvalidNumber(value) {
   return Number.isNaN(value) || value < 0
 }
 
-const FLAG_OPTIONS = new Set(['--json', '--dry-run', '--parallel', '--quiet', '--survivors-only'])
+const FLAG_OPTIONS = new Set(['--json', '--dry-run', '--parallel', '--quiet', '--survivors-only', '--min-score'])
 function isPositionalArg(arg) {
   return !FLAG_OPTIONS.has(arg)
 }

@@ -281,6 +281,60 @@ describe('parseArgs', () => {
     })
   })
 
+  describe('--min-score flag', () => {
+    it('parses --min-score in --all mode', () => {
+      const result = parseArgs(['--all', '--min-score', '95'])
+      expect(result.minScore).toBe(95)
+    })
+
+    it('parses --min-score in --incremental mode', () => {
+      const result = parseArgs(['--incremental', '--min-score', '80'])
+      expect(result.minScore).toBe(80)
+    })
+
+    it('parses --min-score in source file mode', () => {
+      const result = parseArgs(['source.js', '--min-score', '70'])
+      expect(result.minScore).toBe(70)
+    })
+
+    it('returns undefined when --min-score is absent', () => {
+      const result = parseArgs(['--all'])
+      expect(result.minScore).toBeUndefined()
+    })
+
+    it('returns error when --min-score has no value', () =>
+      expectErrorResult('--all', '--min-score'))
+
+    it('returns error when --min-score value is non-numeric', () =>
+      expectErrorResult('--all', '--min-score', 'abc'))
+
+    it('returns error when --min-score value is negative', () =>
+      expectErrorResult('--all', '--min-score', '-1'))
+
+    it('accepts --min-score 0 as valid', () => {
+      const result = parseArgs(['--all', '--min-score', '0'])
+      expect(result.minScore).toBe(0)
+      expect(result).not.toHaveProperty('error')
+    })
+
+    it('accepts --min-score 100 as valid', () => {
+      const result = parseArgs(['--all', '--min-score', '100'])
+      expect(result.minScore).toBe(100)
+    })
+
+    it('composes with other flags', () => {
+      const result = parseArgs(['--all', '--min-score', '90', '--json', '--timeout', '5000'])
+      expect(result.minScore).toBe(90)
+      expect(result.jsonOutput).toBe(true)
+      expect(result.timeout).toBe(5000)
+    })
+
+    it('is not available in --diff mode', () => {
+      const result = parseArgs(['--diff', 'before.json', 'after.json'])
+      expect(result.minScore).toBeUndefined()
+    })
+  })
+
   describe('--timeout at index 0', () => {
     it('parses --timeout when it appears first in argv', () => {
       const result = parseArgs(['--timeout', '5000', '--incremental'])

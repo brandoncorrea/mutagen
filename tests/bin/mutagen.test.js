@@ -166,6 +166,87 @@ describe('bin/mutagen CLI', () => {
     expect(readdirSync).toHaveBeenCalled()
   })
 
+  it('returns 0 when --min-score threshold is met', async () => {
+    const sourceCode = 'if (a === b) {}'
+    readFileSync.mockImplementation((path, enc) => {
+      if (enc === 'utf-8') return sourceCode
+      return Buffer.from(sourceCode)
+    })
+
+    const runner = {
+      run: vi.fn()
+        .mockResolvedValueOnce({ passed: true })                          // preflight
+        .mockResolvedValueOnce({ passed: false, killedBy: ['t.test.js'] }), // mutation killed
+      close: vi.fn().mockResolvedValue(undefined)
+    }
+
+    const code = await run(['src/a.js', '--min-score', '50'], {
+      ...silent,
+      config: {
+        patterns: [{ pattern: / === /g, replacement: ' !== ', name: '=== → !==' }],
+        sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner)
+      }
+    })
+
+    // 1 killed out of 1 = 100% score >= 50 threshold → exit 0
+    expect(code).toBe(0)
+  })
+
+  it('returns 1 when --min-score threshold is not met', async () => {
+    const sourceCode = 'if (a === b) {}'
+    readFileSync.mockImplementation((path, enc) => {
+      if (enc === 'utf-8') return sourceCode
+      return Buffer.from(sourceCode)
+    })
+
+    const runner = {
+      run: vi.fn()
+        .mockResolvedValueOnce({ passed: true })   // preflight
+        .mockResolvedValueOnce({ passed: true }),   // mutation survived
+      close: vi.fn().mockResolvedValue(undefined)
+    }
+
+    // All mutations survive (tests pass for mutated code) → score 0% < 50% → exit 1
+    const code = await run(['src/a.js', '--min-score', '50'], {
+      ...silent,
+      config: {
+        patterns: [{ pattern: / === /g, replacement: ' !== ', name: '=== → !==' }],
+        sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner)
+      }
+    })
+
+    expect(code).toBe(1)
+  })
+
+  it('returns 0 with --min-score 0 even when mutations survive', async () => {
+    const sourceCode = 'if (a === b) {}'
+    readFileSync.mockImplementation((path, enc) => {
+      if (enc === 'utf-8') return sourceCode
+      return Buffer.from(sourceCode)
+    })
+
+    const runner = {
+      run: vi.fn()
+        .mockResolvedValueOnce({ passed: true })   // preflight
+        .mockResolvedValueOnce({ passed: true }),   // mutation survived
+      close: vi.fn().mockResolvedValue(undefined)
+    }
+
+    // score 0% >= 0 threshold → exit 0
+    const code = await run(['src/a.js', '--min-score', '0'], {
+      ...silent,
+      config: {
+        patterns: [{ pattern: / === /g, replacement: ' !== ', name: '=== → !==' }],
+        sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner)
+      }
+    })
+
+    expect(code).toBe(0)
+  })
+
   it('returns 1 when mutations survive', async () => {
     const sourceCode = 'if (a === b) {}'
     readFileSync.mockImplementation((path, enc) => {

@@ -110,7 +110,7 @@ async function run(ctx, argv) {
   if (parsed.dryRunMode)
     return dryRun(parsed.sourceFile, runCtx.mutationConfig, parsed.targetLine, runCtx.out) && 0
 
-  const { parallel, survivorsOnly } = parsed
+  const { parallel, survivorsOnly, minScore } = parsed
   const pCtx = {
     ...runCtx,
     ...(parallel && { parallel }),
@@ -120,6 +120,9 @@ async function run(ctx, argv) {
   const { stats, exitCode } = await getRunResults(parsed, pCtx, timeout)
   if (quiet && stats)
     process.stderr.write(formatQuietSummary(stats) + '\n')
+
+  if (minScore != null && stats)
+    return scoreExitCode(stats, minScore)
 
   return exitCode
 }
@@ -210,6 +213,13 @@ async function getSingleRunResult(context, options) {
 function parallelWorkerCount({ parallel }) {
   if (typeof parallel === 'number')
     return parallel
+}
+
+function scoreExitCode({ killed, survived, timedOut }, minScore) {
+  const effectiveKilled = killed + timedOut
+  const total = effectiveKilled + survived
+  const score = total ? (effectiveKilled / total) * 100 : 100
+  return score >= minScore ? 0 : 1
 }
 
 function isString(value) {
