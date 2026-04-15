@@ -17,8 +17,11 @@ import { runPreflightTests, reportMutation, printBanner } from './shared.js'
 const DEFAULT_WORKER_COUNT = 2
 
 export function createBatchPool({ workerCount = DEFAULT_WORKER_COUNT, sourceFile, createRunner }) {
-  const factory = async () => await createRunnerWithOptions({ sourceFile, createRunner })
-  return createPool({ workerCount, createRunner: factory })
+  return createPool({
+    workerCount,
+    createRunner: async () =>
+      await createRunnerWithOptions({ sourceFile, createRunner })
+  })
 }
 
 export async function runParallel(options) {
