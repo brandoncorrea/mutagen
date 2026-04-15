@@ -2,6 +2,9 @@
  * Worker pool manager for parallel mutation testing.
  * Distributes mutations across in-process runner instances for concurrent execution.
  *
+ * Runner interface:
+ *   { applyMutation(source), run(), close() }
+ *
  * Usage:
  *   const pool = createPool({ workerCount: 4, createRunner })
  *   const results = await pool.run(mutations, { timeout, onResult })
@@ -20,7 +23,7 @@ import { withTimeout } from './timeout.js'
  *
  * @param {Object} options
  * @param {number} options.workerCount - number of concurrent workers
- * @param {Function} options.createRunner - async (sourceFile) => runner
+ * @param {Function} options.createRunner - async () => runner
  * @returns {{ run: Function, close: Function }}
  */
 export function createPool(poolOptions) {
@@ -79,7 +82,7 @@ async function processQueue(runner, queue, outcomes, options) {
 async function runOne(runner, mutation, outcomes, options = {}) {
   const { timeout, onResult } = options
   try {
-    runner.setMutant(mutation.source)
+    runner.applyMutation(mutation.source)
     const { passed, killedBy } = await withTimeout(runner.run, timeout)
 
     if (passed) {
@@ -97,7 +100,5 @@ async function runOne(runner, mutation, outcomes, options = {}) {
       outcomes.killed.push(mutation)
       onResult?.({ mutation, status: 'killed' })
     }
-  } finally {
-    runner.clearMutant()
   }
 }

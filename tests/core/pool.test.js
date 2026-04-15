@@ -9,8 +9,7 @@ function fakeRunner(results = { passed: false, killedBy: ['test.js'] }) {
   return {
     run: vi.fn().mockResolvedValue(results),
     close: vi.fn().mockResolvedValue(),
-    setMutant: vi.fn(),
-    clearMutant: vi.fn()
+    applyMutation: vi.fn()
   }
 }
 
@@ -83,7 +82,6 @@ describe('createPool', () => {
       await pool.close()
 
       expect(results.killed).toHaveLength(4)
-      // With 2 workers, at most 2 runners should have been created
       expect(runners.length).toBeLessThanOrEqual(2)
     })
 
@@ -99,7 +97,7 @@ describe('createPool', () => {
       expect(results.timedOut).toEqual([])
     })
 
-    it('uses setMutant/clearMutant for in-memory mutation switching', async () => {
+    it('calls applyMutation with mutated source before each run', async () => {
       const runner = fakeRunner({ passed: false, killedBy: ['t.js'] })
       const createRunner = vi.fn().mockResolvedValue(runner)
       const pool = createPool({ workerCount: 1, createRunner })
@@ -108,8 +106,7 @@ describe('createPool', () => {
       await pool.run([mutation])
       await pool.close()
 
-      expect(runner.setMutant).toHaveBeenCalledWith('mutated code')
-      expect(runner.clearMutant).toHaveBeenCalled()
+      expect(runner.applyMutation).toHaveBeenCalledWith('mutated code')
     })
 
     it('handles timeout errors as timedOut results', async () => {
@@ -148,18 +145,6 @@ describe('createPool', () => {
 
       expect(createRunner).toHaveBeenCalledTimes(1)
       expect(runner.run).toHaveBeenCalledTimes(2)
-    })
-
-    it('clears mutant even when runner.run throws', async () => {
-      const runner = fakeRunner()
-      runner.run.mockRejectedValue(new Error('crash'))
-      const createRunner = vi.fn().mockResolvedValue(runner)
-      const pool = createPool({ workerCount: 1, createRunner })
-
-      await pool.run([fakeMutation()])
-      await pool.close()
-
-      expect(runner.clearMutant).toHaveBeenCalled()
     })
 
     it('calls onResult callback for each mutation', async () => {
