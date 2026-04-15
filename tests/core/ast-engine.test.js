@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { generateMutations } from '../../src/core/ast-engine.js'
+import { generateMutations, matchesPattern } from '../../src/core/ast-engine.js'
 
 function findBetween(source, from, to, text) {
   const idx = source.indexOf(text, from)
@@ -274,5 +274,127 @@ describe('ast-engine generateMutations', () => {
     const mutations = generateMutations('const x = true', [oldStyleMutator])
     expect(mutations).toHaveLength(1)
     expect(mutations[0].name).toBe('true → false')
+  })
+})
+
+describe('skipNodes', () => {
+  it('skips all mutations inside nodes matching a type-only pattern', () => {
+    const source = 'if (a === b) {}'
+    const skipNodes = [{ type: 'IfStatement' }]
+    const mutations = generateMutations(source, [equalityMutator], undefined, skipNodes)
+    expect(mutations).toEqual([])
+  })
+
+  it('still generates mutations for non-matching nodes', () => {
+    const source = 'const x = a === b'
+    const skipNodes = [{ type: 'IfStatement' }]
+    const mutations = generateMutations(source, [equalityMutator], undefined, skipNodes)
+    expect(mutations).toHaveLength(1)
+  })
+
+  it('skips mutations in descendants of matching nodes', () => {
+    const source = 'if (check()) { if (a === b) {} }'
+    const skipNodes = [
+      { type: 'IfStatement', test: { type: 'CallExpression', callee: 'check' } }
+    ]
+    const mutations = generateMutations(source, [equalityMutator], undefined, skipNodes)
+    expect(mutations).toEqual([])
+  })
+
+  it('matches patterns with nested member expression properties', () => {
+    const source = 'process.exit(a === b ? 0 : 1)'
+    const skipNodes = [
+      { type: 'CallExpression', callee: { object: 'process', property: 'exit' } }
+    ]
+    const mutations = generateMutations(source, [equalityMutator], undefined, skipNodes)
+    expect(mutations).toEqual([])
+  })
+
+  it('does not skip when pattern does not match', () => {
+    const source = 'if (a === b) {}'
+    const skipNodes = [
+      { type: 'CallExpression', callee: { object: 'process', property: 'exit' } }
+    ]
+    const mutations = generateMutations(source, [equalityMutator], undefined, skipNodes)
+    expect(mutations).toHaveLength(1)
+  })
+
+  it('handles multiple skip patterns', () => {
+    const source = 'if (a === b) {}\nprocess.exit(c === d ? 0 : 1)'
+    const skipNodes = [
+      { type: 'IfStatement' },
+      { type: 'CallExpression', callee: { object: 'process', property: 'exit' } }
+    ]
+    const mutations = generateMutations(source, [equalityMutator], undefined, skipNodes)
+    expect(mutations).toEqual([])
+  })
+
+  it('works with empty skipNodes array', () => {
+    const source = 'if (a === b) {}'
+    const mutations = generateMutations(source, [equalityMutator], undefined, [])
+    expect(mutations).toHaveLength(1)
+  })
+
+  it('works when skipNodes is undefined', () => {
+    const source = 'if (a === b) {}'
+    const mutations = generateMutations(source, [equalityMutator], undefined, undefined)
+    expect(mutations).toHaveLength(1)
+  })
+})
+
+describe('matchesPattern', () => {
+  it('matches a node by type', () => {
+    expect(matchesPattern({ type: 'IfStatement' }, { type: 'IfStatement' })).toBe(true)
+  })
+
+  it('rejects a node with wrong type', () => {
+    expect(matchesPattern({ type: 'ForStatement' }, { type: 'IfStatement' })).toBe(false)
+  })
+
+  it('matches nested object properties recursively', () => {
+    const node = {
+      type: 'CallExpression',
+      callee: {
+        type: 'MemberExpression',
+        object: { type: 'Identifier', name: 'process' },
+        property: { type: 'Identifier', name: 'exit' }
+      }
+    }
+    const pattern = {
+      type: 'CallExpression',
+      callee: { object: 'process', property: 'exit' }
+    }
+    expect(matchesPattern(node, pattern)).toBe(true)
+  })
+
+  it('matches string pattern against node name for AST nodes', () => {
+    const node = {
+      type: 'CallExpression',
+      callee: { type: 'Identifier', name: 'isMain' }
+    }
+    expect(matchesPattern(node, { type: 'CallExpression', callee: 'isMain' })).toBe(true)
+  })
+
+  it('rejects when string pattern does not match node name', () => {
+    const node = {
+      type: 'CallExpression',
+      callee: { type: 'Identifier', name: 'other' }
+    }
+    expect(matchesPattern(node, { type: 'CallExpression', callee: 'isMain' })).toBe(false)
+  })
+
+  it('matches primitive values directly', () => {
+    const node = { type: 'BooleanLiteral', value: true }
+    expect(matchesPattern(node, { type: 'BooleanLiteral', value: true })).toBe(true)
+    expect(matchesPattern(node, { type: 'BooleanLiteral', value: false })).toBe(false)
+  })
+
+  it('returns false for non-object inputs', () => {
+    expect(matchesPattern(null, { type: 'Foo' })).toBe(false)
+    expect(matchesPattern({ type: 'Foo' }, null)).toBe(false)
+  })
+
+  it('returns false when pattern key is missing from node', () => {
+    expect(matchesPattern({ type: 'Foo' }, { type: 'Foo', bar: 'baz' })).toBe(false)
   })
 })

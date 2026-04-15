@@ -10,7 +10,7 @@
 
 import { parse } from '@babel/parser'
 
-export function generateMutations(source, mutators, targetLine) {
+export function generateMutations(source, mutators, targetLine, skipNodes) {
   if (!mutators.length) return []
 
   let ast
@@ -24,11 +24,14 @@ export function generateMutations(source, mutators, targetLine) {
     return []
   }
 
+  const skipRanges = collectSkipRanges(ast, skipNodes)
   const mutatorsByType = groupByType(mutators)
   const sourceLines = source.split('\n')
   const mutations = []
 
   walk(ast.program, null, (node, parent) => {
+    if (isInSkipRange(node, skipRanges)) return
+
     const handlers = mutatorsByType[node.type] || []
     for (const handler of handlers) {
       if (handler.test && !handler.test(node, source, parent)) continue
@@ -90,4 +93,46 @@ function applyRangeMutation(source, start, end, replacement) {
 
 function isObject(value) {
   return value && typeof value === 'object'
+}
+
+function collectSkipRanges(ast, skipNodes) {
+  if (!skipNodes?.length) return []
+  const ranges = []
+  walk(ast.program, null, (node) => {
+    for (const pattern of skipNodes) {
+      if (matchesPattern(node, pattern)) {
+        ranges.push([node.start, node.end])
+        break
+      }
+    }
+  })
+  return ranges
+}
+
+function isInSkipRange(node, ranges) {
+  return ranges.some(([start, end]) => node.start >= start && node.end <= end)
+}
+
+export function matchesPattern(node, pattern) {
+  if (!isObject(node) || !isObject(pattern)) return false
+  for (const key of Object.keys(pattern)) {
+    const patternVal = pattern[key]
+    const nodeVal = node[key]
+    if (nodeVal === undefined) return false
+
+    if (typeof patternVal === 'string') {
+      if (typeof nodeVal === 'string') {
+        if (nodeVal !== patternVal) return false
+      } else if (isObject(nodeVal) && nodeVal.type) {
+        if (nodeVal.name !== patternVal) return false
+      } else {
+        return false
+      }
+    } else if (isObject(patternVal)) {
+      if (!matchesPattern(nodeVal, patternVal)) return false
+    } else {
+      if (nodeVal !== patternVal) return false
+    }
+  }
+  return true
 }

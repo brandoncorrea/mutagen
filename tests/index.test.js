@@ -7,6 +7,9 @@ describe('public API (index.js)', () => {
     'generateMutations',
     'prepareMutationConfig',
 
+    // AST node pattern matching (for skipNodes config)
+    'matchesPattern',
+
     // Built-in mutators
     'mutators',
 
