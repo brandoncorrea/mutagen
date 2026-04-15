@@ -1,13 +1,15 @@
 /**
  * Parallel single-file mutation execution.
- * Uses an in-process worker pool for concurrent mutation testing.
+ * Uses an in-process worker pool with per-worker temp project copies.
+ * Each worker writes mutations to its own copy — no file conflicts.
  */
 
-import { readFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 
 import { generateMutations } from '../../core/generate.js'
 import { createPool } from '../../core/pool.js'
 import { toJsonMutants } from '../../core/report-data.js'
+import { createWorktree } from '../../core/worktree.js'
 import { printRunReport } from '../report.js'
 import { runPreflightTests, reportMutation, printBanner } from './shared.js'
 
@@ -62,8 +64,20 @@ async function runAfterPreflight(preflightRunner, options) {
 }
 
 async function executeWithPool(mutations, options) {
-  const { createRunner, workerCount } = options
-  const pool = createPool({ workerCount, createRunner })
+  const { sourceFile, createRunner, workerCount } = options
+
+  const workerCreateRunner = async () => {
+    const wt = createWorktree(process.cwd())
+    const tempSource = wt.resolve(sourceFile)
+    const runner = await createRunner(tempSource, { root: wt.root })
+    return {
+      applyMutation(source) { writeFileSync(tempSource, source) },
+      run: () => runner.run(),
+      async close() { await runner.close(); wt.cleanup() }
+    }
+  }
+
+  const pool = createPool({ workerCount, createRunner: workerCreateRunner })
   try {
     return await runPool(pool, mutations, options)
   } finally {

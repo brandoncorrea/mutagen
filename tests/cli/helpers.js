@@ -40,8 +40,7 @@ export function fakePoolRunner(results = []) {
     run: vi.fn().mockImplementation(() =>
       Promise.resolve(queue.shift() || { passed: true })),
     close: vi.fn().mockResolvedValue(undefined),
-    setMutant: vi.fn(),
-    clearMutant: vi.fn()
+    applyMutation: vi.fn()
   }
 }
 

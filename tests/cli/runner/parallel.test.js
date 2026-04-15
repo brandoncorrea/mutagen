@@ -13,10 +13,12 @@ vi.mock('node:fs', async (importOriginal) => {
 })
 
 vi.mock('../../../core/pool.js')
+vi.mock('../../../core/worktree.js')
 
 import { runParallel } from '../../../cli/runner/index.js'
 import { preparePatterns } from '../../../core/engine.js'
 import { createPool } from '../../../core/pool.js'
+import { createWorktree } from '../../../core/worktree.js'
 import { readFileSync } from 'node:fs'
 import { patterns, sourceCode, noop, fakePoolRunner, mockFs as _mockFs } from '../helpers.js'
 
@@ -24,8 +26,21 @@ const prepared = preparePatterns(patterns)
 
 function mockFs(files) { _mockFs(readFileSync, files) }
 
+let worktreeIndex = 0
+function fakeWorktree() {
+  const idx = worktreeIndex++
+  const tempRoot = `/tmp/mutagen-worker-${idx}`
+  return {
+    root: tempRoot,
+    resolve: vi.fn((path) => path.replace(resolve('.'), tempRoot)),
+    cleanup: vi.fn()
+  }
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
+  worktreeIndex = 0
+  createWorktree.mockImplementation(() => fakeWorktree())
 })
 
 describe('runParallel', () => {
@@ -146,7 +161,6 @@ describe('runParallel', () => {
     mockFs({ [resolve('src/a.js')]: sourceCode })
     const preflightRunner = fakePoolRunner([{ passed: true }])
     const poolRun = vi.fn().mockImplementation((mutations, opts) => {
-      // Simulate pool calling onResult for each mutation
       opts.onResult?.({ mutation: mutations[0], status: 'killed' })
       return { killed: [mutations[0]], survived: [], timedOut: [] }
     })
@@ -161,7 +175,6 @@ describe('runParallel', () => {
       out: msg => lines.push(msg)
     })
 
-    // Pool's onResult should produce progress lines
     const progressLines = lines.filter(l => /\[\d+\/\d+\]/.test(l))
     expect(progressLines.length).toBeGreaterThan(0)
   })
@@ -228,7 +241,6 @@ describe('runParallel', () => {
       out: noop
     })
 
-    // Only line 2 mutations should be dispatched
     const mutations = poolRun.mock.calls[0][0]
     for (const { line } of mutations) {
       expect(line).toBe(2)
@@ -270,5 +282,40 @@ describe('runParallel', () => {
     expect(createPool).toHaveBeenCalledWith(
       expect.objectContaining({ workerCount: 2 })
     )
+  })
+
+  it('pool createRunner creates worktrees per worker', async () => {
+    mockFs({ [resolve('src/a.js')]: sourceCode })
+    const preflightRunner = fakePoolRunner([{ passed: true }])
+
+    // Capture the createRunner passed to createPool
+    let poolCreateRunner
+    createPool.mockImplementation(({ createRunner }) => {
+      poolCreateRunner = createRunner
+      return {
+        run: vi.fn().mockResolvedValue({ killed: [], survived: [], timedOut: [] }),
+        close: vi.fn().mockResolvedValue()
+      }
+    })
+
+    const userCreateRunner = vi.fn().mockResolvedValue({
+      run: vi.fn().mockResolvedValue({ passed: true }),
+      close: vi.fn().mockResolvedValue()
+    })
+
+    await runParallel({
+      sourceFile: resolve('src/a.js'),
+      prepared,
+      createRunner: userCreateRunner,
+      workerCount: 2,
+      out: noop
+    })
+
+    // Each call to poolCreateRunner should create a worktree
+    const worker = await poolCreateRunner()
+    expect(createWorktree).toHaveBeenCalledWith(process.cwd())
+    expect(worker.applyMutation).toBeTypeOf('function')
+    expect(worker.run).toBeTypeOf('function')
+    expect(worker.close).toBeTypeOf('function')
   })
 })
