@@ -21,7 +21,8 @@ describe('public API (index.js)', () => {
 
     // Report utilities
     'combineReportData',
-    'diffReports'
+    'diffReports',
+    'mutationId'
   ]
 
   for (const name of expectedExports) {

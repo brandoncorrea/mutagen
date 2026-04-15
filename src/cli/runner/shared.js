@@ -12,8 +12,9 @@ export async function runPreflightTests(out, runner) {
   return { error: true }
 }
 
-export function reportMutation(out, total, { number, line, name }, status) {
-  out(`[${number}/${total}] Line ${line}: ${name} ... ${status}`)
+export function reportMutation(out, total, { number, id, line, name }, status) {
+  const idTag = id ? ` [${id}]` : ''
+  out(`[${number}/${total}] Line ${line}: ${name}${idTag} ... ${status}`)
 }
 
 export function printBanner(out, label, sourceFile, targetLine, timeout) {

@@ -67,8 +67,9 @@ export function formatQuietSummary({ killed, survived, timedOut, fileCount }) {
   return `Score: ${score}% (${effectiveKilled}/${total}) | ${survived} survivors | ${fileCount} files`
 }
 
-function writeMutation(out, { line, name, original, mutated, coveredBy }) {
-  out(`\n  Line ${line}: ${name}`)
+function writeMutation(out, { id, line, name, original, mutated, coveredBy }) {
+  const prefix = id ? `[${id}] ` : ''
+  out(`\n  ${prefix}Line ${line}: ${name}`)
   out(`  Original: ${original}`)
   out(`  Mutated:  ${mutated}`)
   if (coveredBy?.length)

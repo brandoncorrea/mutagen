@@ -3,6 +3,7 @@
  * Used by CLI, Stryker integration, and diff/incremental modules.
  */
 
+import { createHash } from 'node:crypto'
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { resolve, relative, dirname } from 'node:path'
 
@@ -31,6 +32,16 @@ export function tryLoadJson(path, out) {
     if (out)
       out(`Warning: could not read ${path}: ${err.message}`)
   }
+}
+
+export function mutationId(file, line, name) {
+  return createHash('sha256').update(`${file}:${line}:${name}`).digest('hex').slice(0, 8)
+}
+
+export function assignMutationIds(mutations, filePath) {
+  for (const m of mutations)
+    m.id = mutationId(filePath, m.line, m.name)
+  return mutations
 }
 
 export function mutantKey(path, { location, mutatorName, replacement }) {
@@ -149,9 +160,11 @@ function collectStats(fileResults) {
 }
 
 function toSurvivor(file, m) {
+  const line = m.location?.start?.line || 0
   return {
+    id: mutationId(file, line, m.mutatorName),
     file,
-    line: m.location?.start?.line || 0,
+    line,
     name: m.mutatorName,
     original: extractDescription(m.description, 0),
     mutated: extractDescription(m.description, 1),
@@ -211,7 +224,7 @@ function deduplicateMutants(entries) {
 function toMutant(relPath, mutation, status) {
   const { line, name, original, mutated, killedBy, coveredBy } = mutation
   return {
-    id: `mutagen-${relPath}-${line}-${name}`,
+    id: mutationId(relPath, line, name),
     mutatorName: name,
     status,
     location: {

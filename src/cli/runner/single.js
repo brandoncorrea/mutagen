@@ -5,10 +5,11 @@
  */
 
 import { readFileSync, writeFileSync } from 'node:fs'
+import { relative } from 'node:path'
 
 import { generateMutations } from '../../core/generate.js'
 import { withTimeout } from '../../core/timeout.js'
-import { toJsonMutants } from '../../core/report-data.js'
+import { toJsonMutants, assignMutationIds } from '../../core/report-data.js'
 import { createWorktree } from '../../core/worktree.js'
 import { printRunReport } from '../report.js'
 import { runPreflightTests, reportMutation, printBanner } from './shared.js'
@@ -40,6 +41,7 @@ async function runMutations(opts) {
   out(`Tests pass on original source. Beginning mutations.\n`)
 
   const mutations = retestMutations || generateMutations(original, mutationConfig, targetLine)
+  assignMutationIds(mutations, relative(process.cwd(), sourceFile))
   out(`Found ${mutations.length} mutation(s) to run.\n`)
 
   const outcomes = { killed: [], survived: [], timedOut: [] }

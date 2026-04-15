@@ -121,6 +121,23 @@ describe('printRunReport', () => {
     expect(output).toContain('x - y')
   })
 
+  it('includes mutation ID in surviving mutation output when present', () => {
+    const lines = []
+    const out = msg => lines.push(msg)
+    const mutations = [
+      { line: 2, name: 'b', id: 'a1b2c3d4' }
+    ]
+    const results = {
+      killed: [],
+      survived: [{ line: 2, name: 'b', id: 'a1b2c3d4', original: 'x + y', mutated: 'x - y' }]
+    }
+
+    printRunReport(mutations, results, out)
+
+    const output = lines.join('\n')
+    expect(output).toContain('a1b2c3d4')
+  })
+
   it('prints coveredBy test files for surviving mutations', () => {
     const lines = []
     const out = msg => lines.push(msg)

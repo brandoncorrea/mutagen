@@ -12,10 +12,61 @@ vi.mock('node:fs', async (importOriginal) => {
 })
 
 import {
-  mutantKey, countStatuses, totalMutants, mutationScore,
+  mutantKey, mutationId, assignMutationIds, countStatuses, totalMutants, mutationScore,
   toJsonMutants, createReport, writeReportFile, tryLoadJson,
   combineReportData, writeStructuredReportFile
 } from '../../src/core/report-data.js'
+
+describe('mutationId', () => {
+  it('returns first 8 hex chars of SHA-256 of file:line:name', () => {
+    const id = mutationId('src/foo.js', 10, '=== → !==')
+    expect(id).toMatch(/^[0-9a-f]{8}$/)
+    expect(id).toHaveLength(8)
+  })
+
+  it('is deterministic — same inputs produce same output', () => {
+    const a = mutationId('src/foo.js', 10, '=== → !==')
+    const b = mutationId('src/foo.js', 10, '=== → !==')
+    expect(a).toBe(b)
+  })
+
+  it('differs for different file paths', () => {
+    const a = mutationId('src/foo.js', 10, '=== → !==')
+    const b = mutationId('src/bar.js', 10, '=== → !==')
+    expect(a).not.toBe(b)
+  })
+
+  it('differs for different line numbers', () => {
+    const a = mutationId('src/foo.js', 10, '=== → !==')
+    const b = mutationId('src/foo.js', 11, '=== → !==')
+    expect(a).not.toBe(b)
+  })
+
+  it('differs for different mutation names', () => {
+    const a = mutationId('src/foo.js', 10, '=== → !==')
+    const b = mutationId('src/foo.js', 10, '+ → -')
+    expect(a).not.toBe(b)
+  })
+})
+
+describe('assignMutationIds', () => {
+  it('adds id field to each mutation based on file, line, and name', () => {
+    const mutations = [
+      { line: 5, name: '=== → !==', original: 'a', mutated: 'b' },
+      { line: 10, name: '+ → -', original: 'c', mutated: 'd' }
+    ]
+    assignMutationIds(mutations, 'src/foo.js')
+
+    expect(mutations[0].id).toBe(mutationId('src/foo.js', 5, '=== → !=='))
+    expect(mutations[1].id).toBe(mutationId('src/foo.js', 10, '+ → -'))
+  })
+
+  it('returns the mutations array for chaining', () => {
+    const mutations = [{ line: 1, name: 'x' }]
+    const result = assignMutationIds(mutations, 'file.js')
+    expect(result).toBe(mutations)
+  })
+})
 
 describe('mutantKey', () => {
   it('builds a key from path, line, mutator name, and replacement', () => {
@@ -164,6 +215,19 @@ describe('toJsonMutants', () => {
     const survived = output.mutants.find(m => m.status === 'Survived')
     expect(survived.mutatorName).toBe('+ → -')
     expect(survived.killedBy).toBeUndefined()
+  })
+
+  it('uses deterministic hash-based ID from mutationId', () => {
+    const results = {
+      killed: [{ line: 5, name: '=== → !==', original: 'a', mutated: 'b', killedBy: ['t.js'] }],
+      survived: []
+    }
+
+    const output = toJsonMutants('/project/src/foo.js', results)
+    const relPath = output.path
+    const expectedId = mutationId(relPath, 5, '=== → !==')
+    expect(output.mutants[0].id).toBe(expectedId)
+    expect(output.mutants[0].id).toMatch(/^[0-9a-f]{8}$/)
   })
 
   it('sets column to 0 in start and end locations', () => {
@@ -548,6 +612,16 @@ describe('writeStructuredReportFile', () => {
     const written = JSON.parse(writeFileSync.mock.calls[0][1])
     expect(written.survived).toBe(1)
     expect(written.survivors).toHaveLength(1)
+  })
+
+  it('includes stable mutation ID in each survivor', () => {
+    writeStructuredReportFile('out.json', 1, {
+      'a.js': { mutants: [{ status: 'Survived', mutatorName: 'x', location: { start: { line: 5 } } }] }
+    })
+
+    const written = JSON.parse(writeFileSync.mock.calls[0][1])
+    expect(written.survivors[0].id).toBe(mutationId('a.js', 5, 'x'))
+    expect(written.survivors[0].id).toMatch(/^[0-9a-f]{8}$/)
   })
 
   it('counts timeout mutants as killed', () => {

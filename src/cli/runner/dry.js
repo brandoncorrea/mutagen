@@ -6,19 +6,21 @@ import { readFileSync } from 'node:fs'
 import { relative } from 'node:path'
 
 import { generateMutations } from '../../core/generate.js'
+import { assignMutationIds } from '../../core/report-data.js'
 
 export function dryRun(sourceFile, mutationConfig, targetLine, out = console.log) {
   const source = readFileSync(sourceFile, 'utf-8')
   const mutations = generateMutations(source, mutationConfig, targetLine)
   const relPath = relative(process.cwd(), sourceFile)
+  assignMutationIds(mutations, relPath)
 
   out(`\nDRY RUN — ${relPath}`)
   out(`   Found ${mutations.length} mutation(s)\n`)
 
   const byLine = mutationsByLine(mutations)
   const mutationLines = Object.entries(byLine)
-  for (const [line, names] of mutationLines)
-    out(`  L${line}: ${names.join(', ')}`)
+  for (const [line, entries] of mutationLines)
+    out(`  L${line}: ${entries.map(e => `${e.name} [${e.id}]`).join(', ')}`)
 
   out(`\n  Total: ${mutations.length} mutations`)
   return mutations.length
@@ -26,10 +28,10 @@ export function dryRun(sourceFile, mutationConfig, targetLine, out = console.log
 
 function mutationsByLine(mutations) {
   const byLine = {}
-  for (const { name, line } of mutations) {
-    const names = byLine[line] || []
-    names.push(name)
-    byLine[line] = names
+  for (const { name, line, id } of mutations) {
+    const entries = byLine[line] || []
+    entries.push({ name, id })
+    byLine[line] = entries
   }
   return byLine
 }

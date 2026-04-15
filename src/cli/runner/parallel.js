@@ -5,10 +5,11 @@
  */
 
 import { readFileSync, writeFileSync } from 'node:fs'
+import { relative } from 'node:path'
 
 import { generateMutations } from '../../core/generate.js'
 import { createPool } from '../../core/pool.js'
-import { toJsonMutants } from '../../core/report-data.js'
+import { toJsonMutants, assignMutationIds } from '../../core/report-data.js'
 import { createWorktree } from '../../core/worktree.js'
 import { printRunReport } from '../report.js'
 import { runPreflightTests, reportMutation, printBanner } from './shared.js'
@@ -60,6 +61,7 @@ async function runAfterPreflight(preflightRunner, options) {
   out(`Tests pass on original source. Beginning mutations.\n`)
 
   const mutations = retestMutations || generateMutations(original, mutationConfig, targetLine)
+  assignMutationIds(mutations, relative(process.cwd(), sourceFile))
   out(`Found ${mutations.length} mutation(s) to run.\n`)
 
   return await executeWithPool(mutations, { sourceFile, createRunner, workerCount, timeout, survivorsOnly, out })

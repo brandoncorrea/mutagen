@@ -14,5 +14,5 @@ export { createVitestRunner } from './runners/vitest.js'
 export { createManualRunner } from './cli/manual.js'
 
 // Report utilities
-export { combineReportData } from './core/report-data.js'
+export { combineReportData, mutationId } from './core/report-data.js'
 export { diffReports } from './cli/diff.js'
