@@ -62,6 +62,11 @@ async function closePool(pool) {
 
 async function ensureRunners(pool, { createRunner, workerCount }) {
   if (pool.runners.length) return
+  // Each vitest instance attaches listeners to process.stdin for lifecycle
+  // management. With N workers this exceeds Node's default limit of 10.
+  // The listeners are intentional and bounded — not a leak.
+  if (process.stdin?.setMaxListeners)
+    process.stdin.setMaxListeners(workerCount + 10)
   const runners = Array.from({ length: workerCount }, createRunner)
   const created = await Promise.all(runners)
   pool.runners.push(...created)
