@@ -106,6 +106,26 @@ describe('createWorktree', () => {
     expect(existsSync(resolved)).toBe(true)
   })
 
+  it('unresolve() maps temp paths back to original project paths', () => {
+    const project = makeTempProject()
+    cleanups.push(() => rmSync(project, { recursive: true, force: true }))
+
+    const wt = tracked(createWorktree(project))
+    const tempPath = join(wt.root, 'src', 'a.js')
+
+    expect(wt.unresolve(tempPath)).toBe(join(project, 'src', 'a.js'))
+  })
+
+  it('unresolve() returns the path unchanged when not under temp root', () => {
+    const project = makeTempProject()
+    cleanups.push(() => rmSync(project, { recursive: true, force: true }))
+
+    const wt = tracked(createWorktree(project))
+    const outsidePath = '/some/other/path.js'
+
+    expect(wt.unresolve(outsidePath)).toBe(outsidePath)
+  })
+
   it('cleanup() removes the temp directory', () => {
     const project = makeTempProject()
     cleanups.push(() => rmSync(project, { recursive: true, force: true }))
