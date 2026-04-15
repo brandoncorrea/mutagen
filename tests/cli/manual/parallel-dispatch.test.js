@@ -93,7 +93,7 @@ describe('--parallel flag wiring through manual.js', () => {
   })
 
   describe('batch mode (--all)', () => {
-    it('dispatches to runParallel for each file when --parallel is passed', async () => {
+    it('creates pool once and reuses across files when --parallel is passed', async () => {
       mockFs({
         [resolve('src/a.js')]: sourceCode,
         [resolve('src/b.js')]: sourceCode
@@ -107,7 +107,7 @@ describe('--parallel flag wiring through manual.js', () => {
       })
       await manual.run(['--all', '--parallel'])
 
-      expect(createPool).toHaveBeenCalledTimes(2)
+      expect(createPool).toHaveBeenCalledTimes(1)
     })
 
     it('passes workerCount from --parallel N in batch mode', async () => {

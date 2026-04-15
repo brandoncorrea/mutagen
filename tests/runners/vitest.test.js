@@ -181,6 +181,64 @@ describe('createVitestRunner', () => {
     })
   })
 
+  describe('switchFile', () => {
+    it('updates the source file for invalidation on subsequent runs', async () => {
+      const mock = createMockVitest()
+      mock.state.getFiles.mockReturnValue([
+        { result: { state: 'pass' }, filepath: 'test/a.test.js' }
+      ])
+      startVitest.mockResolvedValue(mock)
+
+      const runner = await createVitestRunner('src/a.js')
+      await runner.switchFile('src/b.js')
+      await runner.run()
+
+      expect(mock.invalidateFile).toHaveBeenCalledWith('src/b.js')
+    })
+
+    it('recomputes related specs for the new source file', async () => {
+      const specs = [
+        { moduleId: 'test/a.test.js' },
+        { moduleId: 'test/b.test.js' }
+      ]
+      const mock = createMockVitest()
+      mock.globTestSpecifications.mockResolvedValue(specs)
+      mock.projects = [{
+        _vite: {
+          moduleGraph: {
+            getModuleById: vi.fn((id) => {
+              if (id === 'src/a.js')
+                return { importers: new Set([{ id: 'test/a.test.js' }]) }
+              if (id === 'src/b.js')
+                return { importers: new Set([{ id: 'test/b.test.js' }]) }
+              return null
+            })
+          }
+        }
+      }]
+      mock.state.getFiles.mockReturnValue([
+        { result: { state: 'pass' }, filepath: 'test/b.test.js' }
+      ])
+      startVitest.mockResolvedValue(mock)
+
+      const runner = await createVitestRunner('src/a.js')
+      await runner.switchFile('src/b.js')
+      await runner.run()
+
+      expect(mock.runTestSpecifications).toHaveBeenLastCalledWith([
+        { moduleId: 'test/b.test.js' }
+      ])
+    })
+
+    it('is not available on cold runners', async () => {
+      const mock = createMockVitest()
+      startVitest.mockResolvedValue(mock)
+
+      const runner = await createVitestRunner('src/a.js', { warm: false })
+      expect(runner.switchFile).toBeUndefined()
+    })
+  })
+
   describe('options', () => {
     it('passes config and root through to vitest', async () => {
       const mock = createMockVitest()

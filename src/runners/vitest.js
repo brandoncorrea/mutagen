@@ -30,14 +30,19 @@ export async function createVitestRunner(sourceFile, options = {}) {
 
   // Build related-test specs by walking the vite module graph.
   // Only test files that transitively import the source file need to run.
-  const relatedSpecs = await findRelatedSpecs(vitest, sourceFile)
+  let currentSourceFile = sourceFile
+  let relatedSpecs = await findRelatedSpecs(vitest, sourceFile)
 
   return {
     preflight: { passed: preflightPassed },
+    async switchFile(newSourceFile) {
+      currentSourceFile = newSourceFile
+      relatedSpecs = await findRelatedSpecs(vitest, newSourceFile)
+    },
     async run() {
-      if (sourceFile) vitest.invalidateFile(sourceFile)
+      if (currentSourceFile) vitest.invalidateFile(currentSourceFile)
       const specs = relatedSpecs || await vitest.globTestSpecifications()
-      const { direct, indirect } = splitSpecs(specs, sourceFile)
+      const { direct, indirect } = splitSpecs(specs, currentSourceFile)
 
       const tier1Specs = direct.length ? direct : specs
       await vitest.runTestSpecifications(tier1Specs)

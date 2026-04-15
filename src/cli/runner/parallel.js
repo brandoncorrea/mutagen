@@ -16,6 +16,11 @@ import { runPreflightTests, reportMutation, printBanner } from './shared.js'
 
 const DEFAULT_WORKER_COUNT = 2
 
+export function createBatchPool({ workerCount = DEFAULT_WORKER_COUNT, sourceFile, createRunner }) {
+  const factory = async () => await createRunnerWithOptions({ sourceFile, createRunner })
+  return createPool({ workerCount, createRunner: factory })
+}
+
 export async function runParallel(options) {
   const {
     sourceFile,
@@ -26,6 +31,7 @@ export async function runParallel(options) {
     survivorsOnly,
     retestMutations,
     workerCount = DEFAULT_WORKER_COUNT,
+    pool: externalPool,
     out = console.log
   } = options
   const original = readFileSync(sourceFile, 'utf-8')
@@ -42,6 +48,7 @@ export async function runParallel(options) {
     survivorsOnly,
     retestMutations,
     workerCount,
+    pool: externalPool,
     original,
     out
   }
@@ -64,10 +71,22 @@ async function runAfterPreflight(preflightRunner, options) {
   assignMutationIds(mutations, relative(process.cwd(), sourceFile))
   out(`Found ${mutations.length} mutation(s) to run.\n`)
 
-  return await executeWithPool(mutations, { sourceFile, createRunner, workerCount, timeout, survivorsOnly, out })
+  return await executeWithPool(mutations, { sourceFile, createRunner, workerCount, pool: options.pool, timeout, survivorsOnly, out })
 }
 
 async function executeWithPool(mutations, options) {
+  const { pool: externalPool } = options
+  if (externalPool)
+    return await runWithExternalPool(externalPool, mutations, options)
+  return await runWithNewPool(mutations, options)
+}
+
+async function runWithExternalPool(pool, mutations, options) {
+  await pool.switchFile(options.sourceFile)
+  return await runPool(pool, mutations, options)
+}
+
+async function runWithNewPool(mutations, options) {
   const { workerCount } = options
   const createRunner = async () => await createRunnerWithOptions(options)
   const pool = createPool({ workerCount, createRunner })
@@ -82,8 +101,9 @@ async function executeWithPool(mutations, options) {
 async function createRunnerWithOptions(options) {
   const { sourceFile, createRunner } = options
   const wt = createWorktree(process.cwd())
-  const tempSource = wt.resolve(sourceFile)
-  const runner = await createRunner(tempSource, { root: wt.root })
+  let currentSourceFile = sourceFile
+  let tempSource = wt.resolve(sourceFile)
+  let runner = await createRunner(tempSource, { root: wt.root })
   return {
     applyMutation(source) { writeFileSync(tempSource, source) },
     async run() {
@@ -92,6 +112,17 @@ async function createRunnerWithOptions(options) {
         ...result,
         killedBy: wt.mapPaths(result.killedBy),
         coveredBy: wt.mapPaths(result.coveredBy)
+      }
+    },
+    async switchFile(newSourceFile) {
+      writeFileSync(tempSource, readFileSync(currentSourceFile, 'utf-8'))
+      currentSourceFile = newSourceFile
+      tempSource = wt.resolve(newSourceFile)
+      if (runner.switchFile) {
+        await runner.switchFile(tempSource)
+      } else {
+        await runner.close()
+        runner = await createRunner(tempSource, { root: wt.root })
       }
     },
     async close() {

@@ -199,4 +199,47 @@ describe('createPool', () => {
       expect(runner.close).toHaveBeenCalledTimes(1)
     })
   })
+
+  describe('switchFile', () => {
+    it('calls switchFile on all runners', async () => {
+      const runners = []
+      const createRunner = vi.fn().mockImplementation(async () => {
+        const r = fakeRunner({ passed: false, killedBy: ['t.js'] })
+        r.switchFile = vi.fn()
+        runners.push(r)
+        return r
+      })
+      const pool = createPool({ workerCount: 2, createRunner })
+
+      await pool.run([fakeMutation()])
+      await pool.switchFile('/src/b.js')
+      await pool.close()
+
+      expect(runners).toHaveLength(2)
+      for (const r of runners)
+        expect(r.switchFile).toHaveBeenCalledWith('/src/b.js')
+    })
+
+    it('allows running mutations after switchFile', async () => {
+      const runner = fakeRunner({ passed: false, killedBy: ['t.js'] })
+      runner.switchFile = vi.fn()
+      const createRunner = vi.fn().mockResolvedValue(runner)
+      const pool = createPool({ workerCount: 1, createRunner })
+
+      await pool.run([fakeMutation({ name: 'first' })])
+      await pool.switchFile('/src/b.js')
+      const results = await pool.run([fakeMutation({ name: 'second' })])
+      await pool.close()
+
+      expect(runner.switchFile).toHaveBeenCalledWith('/src/b.js')
+      expect(results.killed).toHaveLength(1)
+      expect(results.killed[0].name).toBe('second')
+    })
+
+    it('is a no-op before runners are created', async () => {
+      const pool = createPool({ workerCount: 1, createRunner: vi.fn() })
+      await pool.switchFile('/src/b.js')
+      await pool.close()
+    })
+  })
 })

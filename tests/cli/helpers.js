@@ -52,6 +52,7 @@ export const killedMutation = {
 export function setupPool(createPool, results = { killed: [], survived: [], timedOut: [] }) {
   const poolRun = vi.fn().mockResolvedValue(results)
   const poolClose = vi.fn().mockResolvedValue()
-  createPool.mockReturnValue({ run: poolRun, close: poolClose })
-  return { poolRun, poolClose }
+  const poolSwitchFile = vi.fn().mockResolvedValue()
+  createPool.mockReturnValue({ run: poolRun, close: poolClose, switchFile: poolSwitchFile })
+  return { poolRun, poolClose, poolSwitchFile }
 }

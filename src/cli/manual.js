@@ -20,7 +20,7 @@ import { gitChangedFiles } from '../core/git-changed.js'
 import { HEADER_SEPARATOR, createReport, writeReportFile, writeStructuredReportFile } from '../core/report-data.js'
 import { diffReports } from './diff.js'
 import { parseArgs } from './args.js'
-import { runSingle, runParallel, dryRun } from './runner/index.js'
+import { runSingle, runParallel, createBatchPool, dryRun } from './runner/index.js'
 import { runIncremental } from './incremental.js'
 import { runRetest } from './retest.js'
 import { formatQuietSummary } from './report.js'
@@ -274,19 +274,28 @@ async function accumulateResults(filesToRun, { mutationConfig, createRunner, tim
   let failures = 0
   const fileResults = {}
 
-  for (const source of filesToRun) {
-    const opts = { sourceFile: resolve(source), mutationConfig, createRunner, timeout, survivorsOnly, out }
-    const { error, survived, killed, timedOut, jsonData } = parallel
-      ? await runParallel({ ...opts, workerCount: parallelWorkerCount({ parallel }) })
-      : await runSingle(opts)
-    if (error) {
-      failures++
-    } else {
-      totalSurvived += survived
-      totalKilled += killed
-      totalTimedOut += timedOut || 0
-      fileResults[jsonData.path] = { mutants: jsonData.mutants }
+  const workerCount = parallelWorkerCount({ parallel })
+  const pool = parallel
+    ? createBatchPool({ workerCount, sourceFile: resolve(filesToRun[0]), createRunner })
+    : null
+
+  try {
+    for (const source of filesToRun) {
+      const opts = { sourceFile: resolve(source), mutationConfig, createRunner, timeout, survivorsOnly, out }
+      const { error, survived, killed, timedOut, jsonData } = parallel
+        ? await runParallel({ ...opts, workerCount, pool })
+        : await runSingle(opts)
+      if (error) {
+        failures++
+      } else {
+        totalSurvived += survived
+        totalKilled += killed
+        totalTimedOut += timedOut || 0
+        fileResults[jsonData.path] = { mutants: jsonData.mutants }
+      }
     }
+  } finally {
+    if (pool) await pool.close()
   }
 
   return { totalSurvived, totalKilled, totalTimedOut, failures, fileResults }

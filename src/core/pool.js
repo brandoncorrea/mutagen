@@ -33,6 +33,9 @@ export function createPool(poolOptions) {
     async run(mutations, options) {
       return await runPool(pool, mutations, poolOptions, options)
     },
+    async switchFile(sourceFile) {
+      await Promise.all(pool.runners.map(r => r.switchFile(sourceFile)))
+    },
     async close() {
       await closePool(pool)
     }

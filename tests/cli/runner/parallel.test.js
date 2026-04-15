@@ -354,6 +354,51 @@ describe('runParallel', () => {
     expect(result.jsonData.mutants).toHaveLength(0)
   })
 
+  it('reuses external pool when provided instead of creating a new one', async () => {
+    mockFs({ [resolve('src/a.js')]: sourceCode })
+    const preflightRunner = fakePoolRunner([{ passed: true }])
+    const poolRun = vi.fn().mockResolvedValue({
+      killed: [{ line: 1, name: '=== → !==', original: 'a === b', mutated: 'a !== b', source: 'if (a !== b) {}', killedBy: ['t.js'] }],
+      survived: [],
+      timedOut: []
+    })
+    const poolClose = vi.fn().mockResolvedValue()
+    const externalPool = { run: poolRun, close: poolClose, switchFile: vi.fn() }
+
+    const result = await runParallel({
+      sourceFile: resolve('src/a.js'),
+      mutationConfig,
+      createRunner: vi.fn().mockResolvedValue(preflightRunner),
+      workerCount: 4,
+      pool: externalPool,
+      out: noop
+    })
+
+    expect(createPool).not.toHaveBeenCalled()
+    expect(externalPool.switchFile).toHaveBeenCalledWith(resolve('src/a.js'))
+    expect(poolRun).toHaveBeenCalled()
+    expect(poolClose).not.toHaveBeenCalled()
+    expect(result.killed).toBe(1)
+  })
+
+  it('does not close external pool on completion', async () => {
+    mockFs({ [resolve('src/a.js')]: sourceCode })
+    const preflightRunner = fakePoolRunner([{ passed: true }])
+    const poolRun = vi.fn().mockResolvedValue({ killed: [], survived: [], timedOut: [] })
+    const poolClose = vi.fn().mockResolvedValue()
+    const externalPool = { run: poolRun, close: poolClose, switchFile: vi.fn() }
+
+    await runParallel({
+      sourceFile: resolve('src/a.js'),
+      mutationConfig,
+      createRunner: vi.fn().mockResolvedValue(preflightRunner),
+      pool: externalPool,
+      out: noop
+    })
+
+    expect(poolClose).not.toHaveBeenCalled()
+  })
+
   it('pool createRunner creates worktrees per worker', async () => {
     mockFs({ [resolve('src/a.js')]: sourceCode })
     const preflightRunner = fakePoolRunner([{ passed: true }])
@@ -387,5 +432,86 @@ describe('runParallel', () => {
     expect(worker.applyMutation).toBeTypeOf('function')
     expect(worker.run).toBeTypeOf('function')
     expect(worker.close).toBeTypeOf('function')
+  })
+
+  it('pool worker has switchFile method', async () => {
+    mockFs({
+      [resolve('src/a.js')]: sourceCode,
+      [resolve('src/b.js')]: 'if (x === y) {}'
+    })
+    const preflightRunner = fakePoolRunner([{ passed: true }])
+
+    let poolCreateRunner
+    createPool.mockImplementation(({ createRunner }) => {
+      poolCreateRunner = createRunner
+      return {
+        run: vi.fn().mockResolvedValue({ killed: [], survived: [], timedOut: [] }),
+        close: vi.fn().mockResolvedValue()
+      }
+    })
+
+    const innerRunner = {
+      run: vi.fn().mockResolvedValue({ passed: true, killedBy: [], coveredBy: [] }),
+      close: vi.fn().mockResolvedValue(),
+      switchFile: vi.fn()
+    }
+    const userCreateRunner = vi.fn().mockResolvedValue(innerRunner)
+
+    await runParallel({
+      sourceFile: resolve('src/a.js'),
+      mutationConfig,
+      createRunner: userCreateRunner,
+      workerCount: 2,
+      out: noop
+    })
+
+    const worker = await poolCreateRunner()
+    expect(worker.switchFile).toBeTypeOf('function')
+
+    await worker.switchFile(resolve('src/b.js'))
+    expect(innerRunner.switchFile).toHaveBeenCalled()
+  })
+
+  it('pool worker switchFile falls back to close+recreate when runner lacks switchFile', async () => {
+    mockFs({
+      [resolve('src/a.js')]: sourceCode,
+      [resolve('src/b.js')]: 'if (x === y) {}'
+    })
+    const preflightRunner = fakePoolRunner([{ passed: true }])
+
+    let poolCreateRunner
+    createPool.mockImplementation(({ createRunner }) => {
+      poolCreateRunner = createRunner
+      return {
+        run: vi.fn().mockResolvedValue({ killed: [], survived: [], timedOut: [] }),
+        close: vi.fn().mockResolvedValue()
+      }
+    })
+
+    const firstRunner = {
+      run: vi.fn().mockResolvedValue({ passed: true, killedBy: [], coveredBy: [] }),
+      close: vi.fn().mockResolvedValue()
+    }
+    const secondRunner = {
+      run: vi.fn().mockResolvedValue({ passed: true, killedBy: [], coveredBy: [] }),
+      close: vi.fn().mockResolvedValue()
+    }
+    const userCreateRunner = vi.fn()
+      .mockResolvedValueOnce(firstRunner)
+      .mockResolvedValueOnce(secondRunner)
+
+    await runParallel({
+      sourceFile: resolve('src/a.js'),
+      mutationConfig,
+      createRunner: userCreateRunner,
+      workerCount: 2,
+      out: noop
+    })
+
+    const worker = await poolCreateRunner()
+    await worker.switchFile(resolve('src/b.js'))
+
+    expect(firstRunner.close).toHaveBeenCalled()
+    expect(userCreateRunner).toHaveBeenCalledTimes(3) // preflight + first worker + recreated worker
   })
 })
