@@ -22,6 +22,14 @@ describe('getTokenContextAt', () => {
     expect(getTokenContextAt(line, idx)).toBe('string')
   })
 
+  it('returns string for template head and code for interpolated expression', () => {
+    const line = 'const s = `hello ${name} world`'
+    const headIdx = line.indexOf('`hello')
+    expect(getTokenContextAt(line, headIdx)).toBe('string')
+    const nameIdx = line.indexOf('name')
+    expect(getTokenContextAt(line, nameIdx)).toBe('code')
+  })
+
   it('returns comment for a position inside a single-line comment', () => {
     expect(getTokenContextAt('// comment', 3)).toBe('comment')
   })

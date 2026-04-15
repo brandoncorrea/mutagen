@@ -6,6 +6,13 @@
 
 import jsTokens from 'js-tokens'
 
+if (typeof jsTokens !== 'function') {
+  throw new Error(
+    'js-tokens v10+ required (expected generator function, got '
+    + typeof jsTokens + '). Run `npm install` to update.'
+  )
+}
+
 export function isArrowOperator(line, position) {
   return position
     && line[position - 1] === '='
