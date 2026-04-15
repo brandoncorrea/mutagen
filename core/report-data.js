@@ -93,8 +93,9 @@ export function toJsonMutants(sourceFile, results, { survivorsOnly } = {}) {
  * @param {string} outputPath - path to write the JSON report
  * @param {number} fileCount - number of source files (for summary line)
  * @param {Object} fileResults - { [path]: { mutants: [...] } }
+ * @param {Object} [deltas] - incremental deltas (fixes, regressions, rerunFiles, cachedFiles)
  */
-export function writeStructuredReportFile(outputPath, fileCount, fileResults) {
+export function writeStructuredReportFile(outputPath, fileCount, fileResults, deltas) {
   let totalKilled = 0
   let totalSurvived = 0
   let totalTimedOut = 0
@@ -138,7 +139,8 @@ export function writeStructuredReportFile(outputPath, fileCount, fileResults) {
     survived: totalSurvived,
     timedOut: totalTimedOut,
     files,
-    survivors
+    survivors,
+    ...(deltas && { deltas })
   }
 
   const absPath = resolve(outputPath)

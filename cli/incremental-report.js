@@ -5,7 +5,7 @@
 
 import { writeFileSync } from 'node:fs'
 
-import { HEADER_SEPARATOR, isKilled, createReport, writeReportFile } from '../core/report-data.js'
+import { HEADER_SEPARATOR, isKilled, isAlive, mutantKey, createReport, writeReportFile } from '../core/report-data.js'
 
 export function printIncrementalSummary(out, batchResult, sources, previous, classification) {
   const { totalSurvived, totalKilled, failures } = batchResult
@@ -86,6 +86,47 @@ export function printAllCachedSummary(out, sources, previous, classification) {
   }
 }
 
+export function computeDeltas(previousReport, newFileResults, classification) {
+  if (!previousReport) return undefined
+
+  const { changedSources, unchangedSources } = classification
+  const fixes = []
+  const regressions = []
+
+  const previousIndex = buildMutantIndex(previousReport)
+
+  for (const [filePath, fileData] of Object.entries(newFileResults)) {
+    for (const mutant of fileData.mutants) {
+      const key = mutantKey(filePath, mutant)
+      const prevStatus = previousIndex.get(key)
+      const entry = {
+        file: filePath,
+        line: mutant.location?.start?.line || 0,
+        name: mutant.mutatorName,
+        description: mutant.description || ''
+      }
+
+      if (prevStatus && isAlive(prevStatus) && isKilled(mutant))
+        fixes.push(entry)
+      else if (isAlive(mutant) && (!prevStatus || isKilled(prevStatus)))
+        regressions.push(entry)
+    }
+  }
+
+  const rerunFiles = Object.keys(newFileResults)
+  const cachedFiles = [...unchangedSources]
+
+  return { fixes, regressions, rerunFiles, cachedFiles }
+}
+
+function buildMutantIndex(report) {
+  const index = new Map()
+  for (const [filePath, fileData] of Object.entries(report.files))
+    for (const mutant of fileData.mutants)
+      index.set(mutantKey(filePath, mutant), mutant)
+  return index
+}
+
 export function writeMergedReport(out, { config, previous, classification, fileResults }) {
   const { reportDir, reportPath } = config
   const { unchangedSources, currentHashes, currentTestHashes } = classification
@@ -96,6 +137,10 @@ export function writeMergedReport(out, { config, previous, classification, fileR
       if (previous.previousReport.files[relPath])
         mergedFiles[relPath] = previous.previousReport.files[relPath]
 
-  const report = createReport(mergedFiles, { sourceHashes: currentHashes, testHashes: currentTestHashes })
+  const extra = { sourceHashes: currentHashes, testHashes: currentTestHashes }
+  const deltas = computeDeltas(previous.previousReport, fileResults, classification)
+  if (deltas) extra.deltas = deltas
+
+  const report = createReport(mergedFiles, extra)
   writeReportFile(reportDir, reportPath, report, out)
 }

@@ -8,7 +8,7 @@ import { createHash } from 'node:crypto'
 import { resolve, relative } from 'node:path'
 
 import { tryLoadJson, writeStructuredReportFile } from '../core/report-data.js'
-import { printIncrementalHeader, updateCachedReportHashes, printAllCachedSummary, writeMergedReport, printIncrementalSummary } from './incremental-report.js'
+import { printIncrementalHeader, updateCachedReportHashes, printAllCachedSummary, writeMergedReport, printIncrementalSummary, computeDeltas } from './incremental-report.js'
 
 const HASH_PREFIX_LENGTH = 16
 
@@ -141,5 +141,6 @@ function writeStructuredIncrementalReport(outputPath, fileCount, previous, class
       if (previous.previousReport.files[relPath])
         mergedFiles[relPath] = previous.previousReport.files[relPath]
 
-  writeStructuredReportFile(outputPath, fileCount, mergedFiles)
+  const deltas = computeDeltas(previous.previousReport, freshFileResults || {}, classification)
+  writeStructuredReportFile(outputPath, fileCount, mergedFiles, deltas)
 }
