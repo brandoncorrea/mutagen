@@ -75,6 +75,15 @@ describe('createManualRunner', () => {
       expect(code).toBe(1)
     })
 
+    it('returns 0 for --help', async () => {
+      const manual = createManualRunner({
+        patterns, sources: [], createRunner: vi.fn()
+      })
+      const code = await manual.run(['--help'])
+
+      expect(code).toBe(0)
+    })
+
     it('returns 1 for missing arguments', async () => {
       const manual = createManualRunner({
         patterns, sources: [], createRunner: vi.fn()

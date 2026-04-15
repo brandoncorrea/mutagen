@@ -15,7 +15,7 @@ const retestMessage = 'Usage: <script> --retest <report.json> [--json [path]] [-
 
 export function parseArgs(argv = process.argv.slice(2)) {
   if (argv.includes('--help') || argv.includes('-h'))
-    return { error: usageMessage }
+    return { help: usageMessage }
   return argv.includes('--incremental') ? incrementalOptions(argv)
     : argv.includes('--all') ? allOptions(argv)
     : argv.includes('--diff') ? diffOptions(argv)

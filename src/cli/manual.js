@@ -96,6 +96,10 @@ export function createManualRunner(config) {
 
 async function run(ctx, argv) {
   const parsed = parseArgs(argv)
+  if (parsed.help) {
+    ctx.out(parsed.help)
+    return 0
+  }
   if (parsed.error) {
     ctx.out(parsed.error)
     return 1

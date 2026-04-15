@@ -10,17 +10,18 @@ describe('parseArgs', () => {
   describe('--help flag', () => {
     it('returns usage message for --help', () => {
       const result = parseArgs(['--help'])
-      expect(result.error).toContain('Usage:')
+      expect(result.help).toContain('Usage:')
+      expect(result).not.toHaveProperty('error')
     })
 
     it('returns usage message for -h', () => {
       const result = parseArgs(['-h'])
-      expect(result.error).toContain('Usage:')
+      expect(result.help).toContain('Usage:')
     })
 
     it('returns usage even when combined with other flags', () => {
       const result = parseArgs(['--all', '--help'])
-      expect(result.error).toContain('Usage:')
+      expect(result.help).toContain('Usage:')
     })
   })
 
