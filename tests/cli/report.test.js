@@ -121,6 +121,30 @@ describe('printRunReport', () => {
     expect(output).toContain('x - y')
   })
 
+  it('prints coveredBy test files for surviving mutations', () => {
+    const lines = []
+    const out = msg => lines.push(msg)
+    const mutations = [
+      { line: 1, name: 'a' },
+      { line: 2, name: 'b' }
+    ]
+    const results = {
+      killed: [{ line: 1, name: 'a' }],
+      survived: [{
+        line: 2,
+        name: 'b',
+        original: 'x + y',
+        mutated: 'x - y',
+        coveredBy: ['tests/math.test.js']
+      }]
+    }
+
+    printRunReport(mutations, results, out)
+
+    const output = lines.join('\n')
+    expect(output).toContain('tests/math.test.js')
+  })
+
   it('reports 100% for zero mutations', () => {
     const lines = []
     const out = msg => lines.push(msg)

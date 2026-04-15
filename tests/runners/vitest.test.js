@@ -33,7 +33,7 @@ describe('createVitestRunner', () => {
       const runner = await createVitestRunner('src/a.js', { warm: false })
       const result = await runner.run()
 
-      expect(result).toEqual({ passed: true, killedBy: [] })
+      expect(result).toEqual({ passed: true, killedBy: [], coveredBy: ['a.test.js'] })
     })
 
     it('returns failed with file paths that killed the mutant', async () => {
@@ -47,7 +47,7 @@ describe('createVitestRunner', () => {
       const runner = await createVitestRunner('src/a.js', { warm: false })
       const result = await runner.run()
 
-      expect(result).toEqual({ passed: false, killedBy: ['test/x.test.js'] })
+      expect(result).toEqual({ passed: false, killedBy: ['test/x.test.js'], coveredBy: ['test/x.test.js', 'test/y.test.js'] })
     })
 
     it('creates a fresh vitest per run and closes it after', async () => {
@@ -136,7 +136,7 @@ describe('createVitestRunner', () => {
       const runner = await createVitestRunner('src/a.js')
       const result = await runner.run()
 
-      expect(result).toEqual({ passed: false, killedBy: ['test/b.test.js'] })
+      expect(result).toEqual({ passed: false, killedBy: ['test/b.test.js'], coveredBy: ['test/b.test.js'] })
     })
 
     it('falls back to cold when warm rerun produces failures', async () => {

@@ -129,7 +129,8 @@ function compileResults(vitest) {
   const results = vitest.state.getFiles()
   const passed = results.every(isPassing)
   const killedBy = passed ? [] : failedTestFiles(results)
-  return { passed, killedBy }
+  const coveredBy = allTestFiles(results)
+  return { passed, killedBy, coveredBy }
 }
 
 function failedTestFiles(results) {
@@ -144,4 +145,8 @@ function isPassing(file) {
 
 function isFailing(file) {
   return file.result?.state === 'fail'
+}
+
+function allTestFiles(results) {
+  return results.map(f => f.filepath)
 }

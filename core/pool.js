@@ -83,10 +83,10 @@ async function runOne(runner, mutation, outcomes, options = {}) {
   const { timeout, onResult } = options
   try {
     runner.applyMutation(mutation.source)
-    const { passed, killedBy } = await withTimeout(runner.run, timeout)
+    const { passed, killedBy, coveredBy } = await withTimeout(runner.run, timeout)
 
     if (passed) {
-      outcomes.survived.push(mutation)
+      outcomes.survived.push({ ...mutation, coveredBy })
       onResult?.({ mutation, status: 'SURVIVED' })
     } else {
       outcomes.killed.push({ ...mutation, killedBy })
