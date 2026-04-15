@@ -17,7 +17,7 @@ vi.mock('../../../src/core/worktree.js')
 import { createManualRunner as _createManualRunner } from '../../../src/cli/manual.js'
 import { createWorktree } from '../../../src/core/worktree.js'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
-import { patterns, sourceCode, hashOf, fakeRunner, mockFs as _mockFs, noop } from '../helpers.js'
+import { testMutators, sourceCode, hashOf, fakeRunner, mockFs as _mockFs, noop } from '../helpers.js'
 
 function mockFs(files) { _mockFs(readFileSync, files) }
 function createManualRunner(config) {
@@ -69,7 +69,7 @@ describe('createManualRunner', () => {
 
       const createRunner = vi.fn()
       const manual = createManualRunner({
-        patterns, sources: ['src/a.js'], createRunner
+        mutators: testMutators, sources: ['src/a.js'], createRunner
       })
       const result = await manual.runIncremental(false, null)
 
@@ -96,7 +96,7 @@ describe('createManualRunner', () => {
         { passed: false, killedBy: ['t.test.js'] }
       ])
       const manual = createManualRunner({
-        patterns, sources: ['src/a.js'],
+        mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
       const result = await manual.runIncremental(false, null)
@@ -115,7 +115,7 @@ describe('createManualRunner', () => {
         { passed: true } // survived
       ])
       const manual = createManualRunner({
-        patterns, sources: ['src/a.js'],
+        mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
       const result = await manual.runIncremental(true, null)
@@ -144,7 +144,7 @@ describe('createManualRunner', () => {
       })
 
       const manual = createManualRunner({
-        patterns, sources: ['src/a.js'], createRunner: vi.fn()
+        mutators: testMutators, sources: ['src/a.js'], createRunner: vi.fn()
       })
       await manual.runIncremental(true, null)
 
@@ -172,7 +172,7 @@ describe('createManualRunner', () => {
       })
 
       const manual = createManualRunner({
-        patterns, sources: ['src/a.js'], createRunner: vi.fn()
+        mutators: testMutators, sources: ['src/a.js'], createRunner: vi.fn()
       })
       await manual.runIncremental(false, null)
 
@@ -201,7 +201,7 @@ describe('createManualRunner', () => {
         { passed: false }
       ])
       const manual = createManualRunner({
-        patterns,
+        mutators: testMutators,
         sources: ['src/a.js'], // src/removed.js no longer in sources
         createRunner: vi.fn().mockResolvedValue(runner)
       })
@@ -241,7 +241,7 @@ describe('createManualRunner', () => {
         { passed: false, killedBy: ['t.test.js'] }
       ])
       const manual = createManualRunner({
-        patterns,
+        mutators: testMutators,
         sources: ['src/a.js', 'src/b.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
@@ -291,7 +291,7 @@ describe('createManualRunner', () => {
         { passed: false }
       ])
       const manual = createManualRunner({
-        patterns,
+        mutators: testMutators,
         sources: ['src/a.js', 'src/b.js', 'src/c.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
@@ -327,7 +327,7 @@ describe('createManualRunner', () => {
 
       const createRunner = vi.fn()
       const manual = createManualRunner({
-        patterns, sources: ['src/a.js'], createRunner
+        mutators: testMutators, sources: ['src/a.js'], createRunner
       })
       const result = await manual.runIncremental(false, null)
 
@@ -358,7 +358,7 @@ describe('createManualRunner', () => {
 
       const createRunner = vi.fn()
       const manual = createManualRunner({
-        patterns, sources: ['src/a.js'], createRunner
+        mutators: testMutators, sources: ['src/a.js'], createRunner
       })
       const result = await manual.runIncremental(false, null)
 
@@ -394,7 +394,7 @@ describe('createManualRunner', () => {
       ])
       const lines = []
       const manual = _createManualRunner({
-        patterns,
+        mutators: testMutators,
         sources: ['src/a.js', 'src/b.js'],
         createRunner: vi.fn().mockResolvedValue(runner),
         out: msg => lines.push(msg)
@@ -421,7 +421,7 @@ describe('createManualRunner', () => {
       ])
       const lines = []
       const manual = _createManualRunner({
-        patterns,
+        mutators: testMutators,
         sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner),
         out: msg => lines.push(msg)
@@ -442,7 +442,7 @@ describe('createManualRunner', () => {
       ])
 
       const manual = createManualRunner({
-        patterns, sources: ['src/a.js'],
+        mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
       await manual.runIncremental('reports/custom.json', null)
@@ -503,7 +503,7 @@ describe('createManualRunner', () => {
       ])
 
       const manual = createManualRunner({
-        patterns,
+        mutators: testMutators,
         sources: ['src/a.js', 'src/b.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
@@ -552,7 +552,7 @@ describe('createManualRunner', () => {
       ])
       // Use './' prefix sources to test path normalization
       const manual = _createManualRunner({
-        patterns,
+        mutators: testMutators,
         sources: ['./src/a.js', './src/b.js'],
         createRunner: vi.fn().mockResolvedValue(runner),
         out: noop
@@ -591,7 +591,7 @@ describe('createManualRunner', () => {
 
 
       const manual = createManualRunner({
-        patterns, sources: ['src/a.js', 'src/b.js'],
+        mutators: testMutators, sources: ['src/a.js', 'src/b.js'],
         createRunner: vi.fn()
       })
       await manual.runIncremental('reports/custom.json', null)
@@ -627,7 +627,7 @@ describe('createManualRunner', () => {
 
 
       const manual = createManualRunner({
-        patterns, sources: ['src/a.js'],
+        mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn()
       })
       await manual.runIncremental('reports/custom.json', null)

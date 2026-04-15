@@ -30,11 +30,29 @@ import { createWorktree } from '../../../src/core/worktree.js'
 import { readFileSync } from 'node:fs'
 import { noop, mockFs as _mockFs } from '../helpers.js'
 
-const patterns = [
-  { pattern: / === /g, replacement: ' !== ', name: '=== → !==' },
-  { pattern: / \+ /g, replacement: ' - ', name: '+ → -' }
+const mutators = [
+  {
+    name: '=== → !==',
+    types: ['BinaryExpression'],
+    test: node => node.operator === '===',
+    mutate: (node, source) => {
+      const idx = source.indexOf('===', node.left.end)
+      if (idx === -1) return null
+      return { start: idx, end: idx + 3, replacement: '!==' }
+    }
+  },
+  {
+    name: '+ → -',
+    types: ['BinaryExpression'],
+    test: node => node.operator === '+',
+    mutate: (node, source) => {
+      const idx = source.indexOf('+', node.left.end)
+      if (idx === -1) return null
+      return { start: idx, end: idx + 1, replacement: '-' }
+    }
+  }
 ]
-const mutationConfig = prepareMutationConfig({ patterns })
+const mutationConfig = prepareMutationConfig({ mutators })
 
 // Source with multiple mutations to exercise distribution
 const multiSource = [

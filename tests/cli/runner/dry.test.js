@@ -13,11 +13,11 @@ vi.mock('node:fs', async (importOriginal) => {
 })
 
 import { dryRun } from '../../../src/cli/runner/index.js'
-import { preparePatterns } from '../../../src/core/engine.js'
+import { prepareMutationConfig } from '../../../src/core/generate.js'
 import { readFileSync } from 'node:fs'
-import { patterns, sourceCode, mockFs as _mockFs, noop } from '../helpers.js'
+import { testMutators, sourceCode, mockFs as _mockFs } from '../helpers.js'
 
-const prepared = preparePatterns(patterns)
+const mutationConfig = prepareMutationConfig({ mutators: testMutators })
 
 function mockFs(files) { _mockFs(readFileSync, files) }
 
@@ -29,7 +29,7 @@ describe('dryRun', () => {
   it('outputs mutation names for each line', () => {
     mockFs({ [resolve('src/a.js')]: sourceCode })
     const lines = []
-    dryRun(resolve('src/a.js'), prepared, null, msg => lines.push(msg))
+    dryRun(resolve('src/a.js'), mutationConfig, null, msg => lines.push(msg))
 
     const mutationLines = lines.filter(l => /^\s+L\d+:/.test(l))
     expect(mutationLines.length).toBeGreaterThan(0)

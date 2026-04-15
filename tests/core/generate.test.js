@@ -19,13 +19,13 @@ const boolMutator = {
   mutate: node => ({ start: node.start, end: node.end, replacement: 'false' })
 }
 
-describe('generateMutations (unified)', () => {
-  it('returns empty array when config has no mutators or patterns', () => {
+describe('generateMutations', () => {
+  it('returns empty array when config has no mutators', () => {
     const result = generateMutations('const x = 1', {})
     expect(result).toEqual([])
   })
 
-  it('generates mutations from AST mutators only', () => {
+  it('generates mutations from AST mutators', () => {
     const config = { mutators: [equalityMutator] }
     const mutations = generateMutations('if (a === b) {}', config)
     expect(mutations).toHaveLength(1)
@@ -33,53 +33,12 @@ describe('generateMutations (unified)', () => {
     expect(mutations[0].mutated).toBe('if (a !== b) {}')
   })
 
-  it('generates mutations from regex patterns only', () => {
-    const config = prepareMutationConfig({
-      patterns: [{ pattern: / === /g, replacement: ' !== ', name: '=== → !==' }]
-    })
-    const mutations = generateMutations('if (a === b) {}', config)
-    expect(mutations).toHaveLength(1)
-    expect(mutations[0].name).toBe('=== → !==')
-  })
-
-  it('combines AST mutators and regex patterns', () => {
-    const config = prepareMutationConfig({
-      mutators: [boolMutator],
-      patterns: [{ pattern: / === /g, replacement: ' !== ', name: '=== → !==' }]
-    })
-    const source = 'if (a === true) {}'
-    const mutations = generateMutations(source, config)
-    expect(mutations.length).toBeGreaterThanOrEqual(2)
-    const names = mutations.map(m => m.name)
-    expect(names).toContain('true → false')
-    expect(names).toContain('=== → !==')
-  })
-
-  it('deduplicates mutations that produce identical line + mutated code', () => {
-    // Both AST and regex engines produce === → !== on the same line
-    const config = prepareMutationConfig({
-      mutators: [equalityMutator],
-      patterns: [{ pattern: / === /g, replacement: ' !== ', name: '=== → !==' }]
-    })
-    const source = 'if (a === b) {}'
-    const mutations = generateMutations(source, config)
-    // Should be exactly 1 — the duplicate from regex engine is dropped
-    expect(mutations).toHaveLength(1)
-    expect(mutations[0].name).toBe('=== → !==')
-  })
-
-  it('respects targetLine for both engines', () => {
-    const config = {
-      mutators: [equalityMutator],
-      ...prepareMutationConfig({
-        patterns: [{ pattern: /\btrue\b/g, replacement: 'false', name: 'true → false' }]
-      })
-    }
+  it('respects targetLine', () => {
+    const config = { mutators: [equalityMutator] }
     const source = 'if (a === b) {}\nconst x = true'
-    const mutations = generateMutations(source, config, 2)
-    for (const m of mutations) {
-      expect(m.line).toBe(2)
-    }
+    const mutations = generateMutations(source, config, 1)
+    expect(mutations).toHaveLength(1)
+    expect(mutations[0].line).toBe(1)
   })
 
   it('returns all mutations in standard shape', () => {
@@ -94,10 +53,9 @@ describe('generateMutations (unified)', () => {
 })
 
 describe('prepareMutationConfig', () => {
-  it('returns empty mutators and prepared when given no options', () => {
+  it('returns empty mutators when given no options', () => {
     const config = prepareMutationConfig({})
     expect(config.mutators).toEqual([])
-    expect(config.prepared).toEqual([])
   })
 
   it('passes through mutators as-is', () => {
@@ -105,28 +63,9 @@ describe('prepareMutationConfig', () => {
     expect(config.mutators).toEqual([equalityMutator])
   })
 
-  it('prepares regex patterns into globalPattern and singlePattern', () => {
-    const config = prepareMutationConfig({
-      patterns: [{ pattern: / === /g, replacement: ' !== ', name: '=== → !==' }]
-    })
-    expect(config.prepared).toHaveLength(1)
-    expect(config.prepared[0]).toHaveProperty('globalPattern')
-    expect(config.prepared[0]).toHaveProperty('singlePattern')
-  })
-
-  it('handles config with both mutators and patterns', () => {
-    const config = prepareMutationConfig({
-      mutators: [equalityMutator],
-      patterns: [{ pattern: /\btrue\b/g, replacement: 'false', name: 'true → false' }]
-    })
-    expect(config.mutators).toHaveLength(1)
-    expect(config.prepared).toHaveLength(1)
-  })
-
   it('handles undefined input gracefully', () => {
     const config = prepareMutationConfig()
     expect(config.mutators).toEqual([])
-    expect(config.prepared).toEqual([])
   })
 
   it('passes through skipNodes', () => {

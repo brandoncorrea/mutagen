@@ -20,9 +20,9 @@ import { prepareMutationConfig } from '../../../src/core/generate.js'
 import { createPool } from '../../../src/core/pool.js'
 import { createWorktree } from '../../../src/core/worktree.js'
 import { readFileSync } from 'node:fs'
-import { patterns, sourceCode, noop, fakePoolRunner, mockFs as _mockFs } from '../helpers.js'
+import { testMutators, sourceCode, noop, fakePoolRunner, mockFs as _mockFs } from '../helpers.js'
 
-const mutationConfig = prepareMutationConfig({ patterns })
+const mutationConfig = prepareMutationConfig({ mutators: testMutators })
 
 function mockFs(files) { _mockFs(readFileSync, files) }
 

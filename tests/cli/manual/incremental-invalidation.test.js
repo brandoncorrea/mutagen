@@ -17,7 +17,7 @@ vi.mock('../../../src/core/worktree.js')
 import { createManualRunner as _createManualRunner } from '../../../src/cli/manual.js'
 import { createWorktree } from '../../../src/core/worktree.js'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
-import { patterns, sourceCode, hashOf, fakeRunner, mockFs as _mockFs, noop } from '../helpers.js'
+import { testMutators, sourceCode, hashOf, fakeRunner, mockFs as _mockFs, noop } from '../helpers.js'
 
 function mockFs(files) { _mockFs(readFileSync, files) }
 function createManualRunner(config) {
@@ -73,7 +73,7 @@ describe('createManualRunner', () => {
         { passed: false, killedBy: ['test/a.test.js'] }
       ])
       const manual = createManualRunner({
-        patterns,
+        mutators: testMutators,
         sources: ['src/a.js'],
         testSources: ['test/a.test.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
@@ -110,7 +110,7 @@ describe('createManualRunner', () => {
         { passed: false, killedBy: ['test/a.test.js'] }
       ])
       const manual = createManualRunner({
-        patterns,
+        mutators: testMutators,
         sources: ['src/a.js'],
         testSources: ['test/a.test.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
@@ -146,7 +146,7 @@ describe('createManualRunner', () => {
 
       const createRunner = vi.fn()
       const manual = createManualRunner({
-        patterns,
+        mutators: testMutators,
         sources: ['src/a.js'],
         testSources: ['test/a.test.js'],
         createRunner
@@ -192,7 +192,7 @@ describe('createManualRunner', () => {
         { passed: false, killedBy: ['test/a.test.js'] }
       ])
       const manual = createManualRunner({
-        patterns,
+        mutators: testMutators,
         sources: ['src/a.js'],
         testSources: ['test/a.test.js', 'test/b.test.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
@@ -230,7 +230,7 @@ describe('createManualRunner', () => {
 
       const createRunner = vi.fn()
       const manual = createManualRunner({
-        patterns,
+        mutators: testMutators,
         sources: ['src/a.js'],
         testSources: ['test/a.test.js'],
         createRunner
@@ -267,7 +267,7 @@ describe('createManualRunner', () => {
       ])
       const lines = []
       const manual = _createManualRunner({
-        patterns,
+        mutators: testMutators,
         sources: ['src/a.js'],
         testSources: ['test/a.test.js'],
         createRunner: vi.fn().mockResolvedValue(runner),

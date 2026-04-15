@@ -18,7 +18,7 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { createWorktree } from '../../src/core/worktree.js'
 import { loadRetestTargets, filterMutationsToSurvivors } from '../../src/cli/retest.js'
 import { prepareMutationConfig } from '../../src/core/generate.js'
-import { patterns, sourceCode, noop } from './helpers.js'
+import { testMutators, sourceCode, noop } from './helpers.js'
 
 function mockFs(files) {
   readFileSync.mockImplementation((path, enc) => {

@@ -1,9 +1,16 @@
 import { vi } from 'vitest'
 import { createHash } from 'node:crypto'
 
-export const patterns = [
-  { pattern: / === /g, replacement: ' !== ', name: '=== → !==' }
-]
+export const testMutators = [{
+  name: '=== → !==',
+  types: ['BinaryExpression'],
+  test: node => node.operator === '===',
+  mutate: (node, source) => {
+    const idx = source.indexOf('===', node.left.end)
+    if (idx === -1) return null
+    return { start: idx, end: idx + 3, replacement: '!==' }
+  }
+}]
 
 export const sourceCode = 'if (a === b) {}'
 export const HASH_PREFIX_LENGTH = 16

@@ -1,5 +1,14 @@
 export default {
-  patterns: [{ pattern: / === /g, replacement: ' !== ', name: '=== → !==' }],
+  mutators: [{
+    name: '=== → !==',
+    types: ['BinaryExpression'],
+    test: node => node.operator === '===',
+    mutate: (node, source) => {
+      const idx = source.indexOf('===', node.left.end)
+      if (idx === -1) return null
+      return { start: idx, end: idx + 3, replacement: '!==' }
+    }
+  }],
   sources: ['src/a.js'],
   createRunner: async () => {
     let first = true

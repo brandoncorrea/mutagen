@@ -19,9 +19,9 @@ import { reportMutation } from '../../../src/cli/runner/shared.js'
 import { prepareMutationConfig } from '../../../src/core/generate.js'
 import { createWorktree } from '../../../src/core/worktree.js'
 import { readFileSync, writeFileSync } from 'node:fs'
-import { patterns, sourceCode, mockFs as _mockFs, noop } from '../helpers.js'
+import { testMutators, sourceCode, mockFs as _mockFs, noop } from '../helpers.js'
 
-const mutationConfig = prepareMutationConfig({ patterns })
+const mutationConfig = prepareMutationConfig({ mutators: testMutators })
 
 function mockFs(files) { _mockFs(readFileSync, files) }
 

@@ -18,6 +18,7 @@ vi.mock('../../src/core/worktree.js')
 import { run, isMain } from '../../src/bin/mutagen.js'
 import { createWorktree } from '../../src/core/worktree.js'
 import { readFileSync, existsSync, readdirSync } from 'node:fs'
+import { testMutators } from '../cli/helpers.js'
 
 const noop = () => {}
 const silent = { out: noop, err: noop }
@@ -142,7 +143,7 @@ describe('bin/mutagen CLI', () => {
     const code = await run(['src/a.js'], {
       ...silent,
       config: {
-        patterns: [{ pattern: / === /g, replacement: ' !== ', name: '=== → !==' }],
+        mutators: testMutators,
         sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       }
@@ -168,7 +169,7 @@ describe('bin/mutagen CLI', () => {
     const code = await run(['--all'], {
       ...silent,
       config: {
-        patterns: [{ pattern: / === /g, replacement: ' !== ', name: '=== → !==' }],
+        mutators: testMutators,
         sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       }
@@ -195,7 +196,7 @@ describe('bin/mutagen CLI', () => {
     const code = await run(['--all'], {
       ...silent,
       config: {
-        patterns: [{ pattern: / === /g, replacement: ' !== ', name: '=== → !==' }],
+        mutators: testMutators,
         include: ['src/**/*.js'],
         exclude: ['src/vendor/**'],
         createRunner: vi.fn().mockResolvedValue(runner)
@@ -223,7 +224,7 @@ describe('bin/mutagen CLI', () => {
     const code = await run(['src/a.js', '--min-score', '50'], {
       ...silent,
       config: {
-        patterns: [{ pattern: / === /g, replacement: ' !== ', name: '=== → !==' }],
+        mutators: testMutators,
         sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       }
@@ -251,7 +252,7 @@ describe('bin/mutagen CLI', () => {
     const code = await run(['src/a.js', '--min-score', '50'], {
       ...silent,
       config: {
-        patterns: [{ pattern: / === /g, replacement: ' !== ', name: '=== → !==' }],
+        mutators: testMutators,
         sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       }
@@ -278,7 +279,7 @@ describe('bin/mutagen CLI', () => {
     const code = await run(['src/a.js', '--min-score', '0'], {
       ...silent,
       config: {
-        patterns: [{ pattern: / === /g, replacement: ' !== ', name: '=== → !==' }],
+        mutators: testMutators,
         sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       }
@@ -304,7 +305,7 @@ describe('bin/mutagen CLI', () => {
     const code = await run(['src/a.js'], {
       ...silent,
       config: {
-        patterns: [{ pattern: / === /g, replacement: ' !== ', name: '=== → !==' }],
+        mutators: testMutators,
         sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       }

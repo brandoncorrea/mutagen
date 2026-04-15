@@ -19,7 +19,7 @@ import { createManualRunner as _createManualRunner } from '../../../src/cli/manu
 import { createPool } from '../../../src/core/pool.js'
 import { createWorktree } from '../../../src/core/worktree.js'
 import { readFileSync, existsSync } from 'node:fs'
-import { patterns, sourceCode, fakeRunner, killedMutation, setupPool as _setupPool, mockFs as _mockFs, noop } from '../helpers.js'
+import { testMutators, sourceCode, fakeRunner, killedMutation, setupPool as _setupPool, mockFs as _mockFs, noop } from '../helpers.js'
 
 function mockFs(files) { _mockFs(readFileSync, files) }
 function createManualRunner(config) {
@@ -51,7 +51,7 @@ describe('--parallel flag wiring through manual.js', () => {
       const runner = fakeRunner([{ passed: true }])
 
       const manual = createManualRunner({
-        patterns, sources: ['src/a.js'],
+        mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
       await manual.run(['src/a.js', '--parallel'])
@@ -65,7 +65,7 @@ describe('--parallel flag wiring through manual.js', () => {
       const runner = fakeRunner([{ passed: true }])
 
       const manual = createManualRunner({
-        patterns, sources: ['src/a.js'],
+        mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
       await manual.run(['src/a.js', '--parallel', '4'])
@@ -83,7 +83,7 @@ describe('--parallel flag wiring through manual.js', () => {
       ])
 
       const manual = createManualRunner({
-        patterns, sources: ['src/a.js'],
+        mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
       await manual.run(['src/a.js'])
@@ -102,7 +102,7 @@ describe('--parallel flag wiring through manual.js', () => {
       const runner = fakeRunner([{ passed: true }])
 
       const manual = createManualRunner({
-        patterns, sources: ['src/a.js', 'src/b.js'],
+        mutators: testMutators, sources: ['src/a.js', 'src/b.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
       await manual.run(['--all', '--parallel'])
@@ -116,7 +116,7 @@ describe('--parallel flag wiring through manual.js', () => {
       const runner = fakeRunner([{ passed: true }])
 
       const manual = createManualRunner({
-        patterns, sources: ['src/a.js'],
+        mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
       await manual.run(['--all', '--parallel', '8'])
@@ -134,7 +134,7 @@ describe('--parallel flag wiring through manual.js', () => {
       ])
 
       const manual = createManualRunner({
-        patterns, sources: ['src/a.js'],
+        mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
       await manual.run(['--all'])
@@ -151,7 +151,7 @@ describe('--parallel flag wiring through manual.js', () => {
       const runner = fakeRunner([{ passed: true }])
 
       const manual = createManualRunner({
-        patterns, sources: ['src/a.js'],
+        mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
       await manual.run(['--incremental', '--parallel'])
@@ -168,7 +168,7 @@ describe('--parallel flag wiring through manual.js', () => {
       ])
 
       const manual = createManualRunner({
-        patterns, sources: ['src/a.js'],
+        mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
       await manual.run(['--incremental'])

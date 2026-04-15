@@ -18,7 +18,7 @@ vi.mock('../../../src/core/worktree.js')
 import { createManualRunner as _createManualRunner } from '../../../src/cli/manual.js'
 import { createWorktree } from '../../../src/core/worktree.js'
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs'
-import { patterns, sourceCode, fakeRunner, mockFs as _mockFs, noop } from '../helpers.js'
+import { testMutators, sourceCode, fakeRunner, mockFs as _mockFs, noop } from '../helpers.js'
 
 function mockFs(files) { _mockFs(readFileSync, files) }
 function createManualRunner(config) {
@@ -53,7 +53,7 @@ describe('createManualRunner with include/exclude globs', () => {
     ])
 
     const manual = createManualRunner({
-      patterns,
+      mutators: testMutators,
       include: ['src/**/*.js'],
       createRunner: vi.fn().mockResolvedValue(runner)
     })
@@ -63,7 +63,7 @@ describe('createManualRunner with include/exclude globs', () => {
     expect(result.failures).toBe(0)
   })
 
-  it('applies exclude patterns to filter out files', async () => {
+  it('applies exclude testMutators to filter out files', async () => {
     readdirSync.mockReturnValue(['src/a.js', 'src/vendor/b.js'])
     mockFs({ [resolve('src/a.js')]: sourceCode })
     const runner = fakeRunner([
@@ -71,7 +71,7 @@ describe('createManualRunner with include/exclude globs', () => {
     ])
 
     const manual = createManualRunner({
-      patterns,
+      mutators: testMutators,
       include: ['**/*.js'],
       exclude: ['src/vendor/**'],
       createRunner: vi.fn().mockResolvedValue(runner)
@@ -90,7 +90,7 @@ describe('createManualRunner with include/exclude globs', () => {
     ])
 
     const manual = createManualRunner({
-      patterns,
+      mutators: testMutators,
       sources: ['src/a.js'],
       include: ['src/**/*.js'],
       createRunner: vi.fn().mockResolvedValue(runner)
@@ -105,7 +105,7 @@ describe('createManualRunner with include/exclude globs', () => {
     readdirSync.mockReturnValue([])
 
     createManualRunner({
-      patterns,
+      mutators: testMutators,
       include: ['**/*.js'],
       cwd: '/my/project',
       createRunner: vi.fn()

@@ -20,7 +20,7 @@ import { createManualRunner as _createManualRunner } from '../../../src/cli/manu
 import { createWorktree } from '../../../src/core/worktree.js'
 import { gitChangedFiles } from '../../../src/core/git-changed.js'
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs'
-import { patterns, sourceCode, fakeRunner, mockFs as _mockFs, noop } from '../helpers.js'
+import { testMutators, sourceCode, fakeRunner, mockFs as _mockFs, noop } from '../helpers.js'
 
 function mockFs(files) { _mockFs(readFileSync, files) }
 function createManualRunner(config) {
@@ -52,7 +52,7 @@ describe('--changed flag filters sources to git-changed files', () => {
     ])
 
     const manual = createManualRunner({
-      patterns,
+      mutators: testMutators,
       include: ['src/**/*.js'],
       createRunner: vi.fn().mockResolvedValue(runner)
     })
@@ -71,7 +71,7 @@ describe('--changed flag filters sources to git-changed files', () => {
     ])
 
     const manual = createManualRunner({
-      patterns,
+      mutators: testMutators,
       include: ['src/**/*.js'],
       createRunner: vi.fn().mockResolvedValue(runner)
     })
@@ -86,7 +86,7 @@ describe('--changed flag filters sources to git-changed files', () => {
     gitChangedFiles.mockReturnValue(['lib/unrelated.js'])
 
     const manual = createManualRunner({
-      patterns,
+      mutators: testMutators,
       include: ['src/**/*.js'],
       createRunner: vi.fn()
     })
@@ -103,7 +103,7 @@ describe('--changed flag filters sources to git-changed files', () => {
     ])
 
     const manual = createManualRunner({
-      patterns,
+      mutators: testMutators,
       include: ['src/**/*.js'],
       createRunner: vi.fn().mockResolvedValue(runner)
     })

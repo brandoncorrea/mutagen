@@ -110,7 +110,6 @@ The `mutagen.config.js` default export is passed directly to `createManualRunner
 ```js
 export default {
   mutators: [...],            // AST mutators (primary — see Mutator format)
-  patterns: [...],            // Regex patterns (secondary — see Pattern format)
   include: ['src/**/*.js'],   // Glob patterns for source files
   exclude: ['**/*.test.js'],  // Glob patterns to exclude (optional)
   sources: ['src/foo.js'],    // Explicit source files (takes precedence over include/exclude)
@@ -124,7 +123,7 @@ export default {
 }
 ```
 
-Use `mutators` for AST-based mutations (recommended) and `patterns` for regex-based mutations. Both can be used together — AST mutations run first, then regex.
+Use `mutators` for AST-based mutations. The built-in `mutators.javascript` set covers all common JavaScript operators and constructs.
 
 `skipNodes` accepts AST node pattern objects. Any node matching a pattern is excluded from mutation along with all its children. Example: skip all `console.log` calls:
 
@@ -220,23 +219,6 @@ AST mutators target specific node types in the parsed syntax tree:
 The built-in `mutators.javascript` set covers equality, logical, arithmetic, boolean, conditional, method, string, array, object, bitwise, update, unary, async, optional chaining, nullish coalescing, spread, void, throw, and property access operators.
 
 AST mutations are precise — they understand syntax structure, so they never accidentally mutate inside strings, comments, or JSX attributes.
-
-## Pattern format (regex)
-
-Regex patterns are available as a secondary mutation mode:
-
-```js
-{
-  pattern: / === /g,        // Regex to match
-  replacement: ' !== ',     // What to replace with
-  name: '=== → !==',       // Human-readable name
-  guard: /regex/,           // Skip if rest-of-line matches (optional)
-  nearGuard: /regex/,       // Skip if nearby chars match (optional)
-  inStrings: false          // Allow mutation inside string literals (optional)
-}
-```
-
-The built-in `patterns.javascript` and `patterns.typescript` sets are available for projects that prefer regex-based mutations.
 
 ## Parallel execution
 

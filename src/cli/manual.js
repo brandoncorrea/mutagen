@@ -29,8 +29,7 @@ import { formatQuietSummary } from './report.js'
  * Create a manual mutation runner with project-specific config.
  *
  * @param {Object} config
- * @param {Array} [config.mutators] - AST visitor mutators ({ type, mutate })
- * @param {Array} [config.patterns] - regex patterns (secondary mode for quick patterns)
+ * @param {Array} config.mutators - AST visitor mutators ({ name, types, test, mutate })
  * @param {Array<string>} [config.sources] - explicit source files (takes precedence over include/exclude)
  * @param {Array<string>} [config.include] - glob patterns for source files
  * @param {Array<string>} [config.exclude] - glob patterns to exclude
@@ -43,7 +42,6 @@ import { formatQuietSummary } from './report.js'
 export function createManualRunner(config) {
   const {
     mutators,
-    patterns,
     sources: explicitSources,
     include,
     exclude,
@@ -60,7 +58,7 @@ export function createManualRunner(config) {
     : include ? resolveGlobs({ include, exclude, cwd })
     : []
 
-  const mutationConfig = prepareMutationConfig({ mutators, patterns, skipNodes: config.skipNodes })
+  const mutationConfig = prepareMutationConfig({ mutators, skipNodes: config.skipNodes })
   const reportPath = `${reportDir}/${reportFile}`
 
   const ctx = {

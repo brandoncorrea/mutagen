@@ -17,7 +17,7 @@ vi.mock('../../../src/core/worktree.js')
 import { createManualRunner as _createManualRunner } from '../../../src/cli/manual.js'
 import { createWorktree } from '../../../src/core/worktree.js'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
-import { patterns, sourceCode, fakeRunner, mockFs as _mockFs, noop, hashOf } from '../helpers.js'
+import { testMutators, sourceCode, fakeRunner, mockFs as _mockFs, noop, hashOf } from '../helpers.js'
 
 function mockFs(files) { _mockFs(readFileSync, files) }
 function createManualRunner(config) {
@@ -51,7 +51,7 @@ describe('createManualRunner', () => {
       ])
 
       const manual = createManualRunner({
-        patterns, sources: ['src/a.js'],
+        mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
       const code = await manual.run(['src/a.js'])
@@ -67,7 +67,7 @@ describe('createManualRunner', () => {
       ])
 
       const manual = createManualRunner({
-        patterns, sources: ['src/a.js'],
+        mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
       const code = await manual.run(['src/a.js'])
@@ -77,7 +77,7 @@ describe('createManualRunner', () => {
 
     it('returns 0 for --help', async () => {
       const manual = createManualRunner({
-        patterns, sources: [], createRunner: vi.fn()
+        mutators: testMutators, sources: [], createRunner: vi.fn()
       })
       const code = await manual.run(['--help'])
 
@@ -86,7 +86,7 @@ describe('createManualRunner', () => {
 
     it('returns 1 for missing arguments', async () => {
       const manual = createManualRunner({
-        patterns, sources: [], createRunner: vi.fn()
+        mutators: testMutators, sources: [], createRunner: vi.fn()
       })
       const code = await manual.run([])
 
@@ -95,7 +95,7 @@ describe('createManualRunner', () => {
 
     it('returns 1 for --diff without file args', async () => {
       const manual = createManualRunner({
-        patterns, sources: [], createRunner: vi.fn()
+        mutators: testMutators, sources: [], createRunner: vi.fn()
       })
       const code = await manual.run(['--diff'])
 
@@ -108,7 +108,7 @@ describe('createManualRunner', () => {
       const createRunner = vi.fn()
 
       const manual = _createManualRunner({
-        patterns, sources: ['src/a.js'], createRunner,
+        mutators: testMutators, sources: ['src/a.js'], createRunner,
         out: msg => lines.push(msg)
       })
       const code = await manual.run(['src/a.js', '--dry-run'])
@@ -126,7 +126,7 @@ describe('createManualRunner', () => {
       const lines = []
 
       const manual = _createManualRunner({
-        patterns, sources: ['src/a.js'], createRunner: vi.fn(),
+        mutators: testMutators, sources: ['src/a.js'], createRunner: vi.fn(),
         out: msg => lines.push(msg)
       })
       const code = await manual.run(['src/a.js', '--dry-run', '--line', '1'])
@@ -144,7 +144,7 @@ describe('createManualRunner', () => {
       const createRunner = vi.fn()
 
       const manual = _createManualRunner({
-        patterns, sources: ['src/a.js', 'src/b.js'], createRunner,
+        mutators: testMutators, sources: ['src/a.js', 'src/b.js'], createRunner,
         out: msg => lines.push(msg)
       })
       const code = await manual.run(['--all', '--dry-run'])
@@ -162,7 +162,7 @@ describe('createManualRunner', () => {
       ])
 
       const manual = createManualRunner({
-        patterns, sources: ['src/a.js'],
+        mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
       const code = await manual.run(['--all'])
@@ -179,7 +179,7 @@ describe('createManualRunner', () => {
       ])
 
       const manual = createManualRunner({
-        patterns, sources: ['src/a.js'],
+        mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
       const code = await manual.run(['--incremental'])
@@ -195,7 +195,7 @@ describe('createManualRunner', () => {
       ])
 
       const manual = createManualRunner({
-        patterns, sources: ['src/a.js'],
+        mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
       const code = await manual.run(['src/a.js', '--line', '99', '--timeout', '5000'])
@@ -220,7 +220,7 @@ describe('createManualRunner', () => {
       })
 
       const manual = createManualRunner({
-        patterns, sources: [], createRunner: vi.fn()
+        mutators: testMutators, sources: [], createRunner: vi.fn()
       })
       const code = await manual.run(['--diff', 'before.json', 'after.json'])
 
@@ -254,7 +254,7 @@ describe('createManualRunner', () => {
       })
 
       const manual = createManualRunner({
-        patterns, sources: [], createRunner: vi.fn()
+        mutators: testMutators, sources: [], createRunner: vi.fn()
       })
       const code = await manual.run(['--diff', 'before.json', 'after.json'])
 
@@ -265,7 +265,7 @@ describe('createManualRunner', () => {
       readFileSync.mockImplementation(() => { throw new Error('ENOENT') })
 
       const manual = createManualRunner({
-        patterns, sources: [], createRunner: vi.fn()
+        mutators: testMutators, sources: [], createRunner: vi.fn()
       })
       const code = await manual.run(['--diff', 'missing.json', 'also-missing.json'])
 
@@ -282,7 +282,7 @@ describe('createManualRunner', () => {
       ])
 
       const manual = createManualRunner({
-        patterns, sources: ['src/a.js'],
+        mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
       const code = await manual.run(['src/a.js'])
@@ -300,7 +300,7 @@ describe('createManualRunner', () => {
       ])
 
       const manual = createManualRunner({
-        patterns, sources: ['src/a.js'],
+        mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
       const code = await manual.run(['--all'])
@@ -319,7 +319,7 @@ describe('createManualRunner', () => {
       ])
 
       const manual = createManualRunner({
-        patterns, sources: ['src/a.js'],
+        mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
       const code = await manual.run(['--incremental'])
@@ -354,7 +354,7 @@ describe('createManualRunner', () => {
       })
 
       const manual = createManualRunner({
-        patterns, sources: [], createRunner: vi.fn()
+        mutators: testMutators, sources: [], createRunner: vi.fn()
       })
       const code = await manual.run(['--diff', 'before.json', 'after.json'])
 
@@ -373,7 +373,7 @@ describe('createManualRunner', () => {
       ])
 
       const manual = createManualRunner({
-        patterns, sources: ['src/a.js', 'src/b.js'],
+        mutators: testMutators, sources: ['src/a.js', 'src/b.js'],
         createRunner: vi.fn()
           .mockResolvedValueOnce(failRunner)
           .mockResolvedValueOnce(surviveRunner)
@@ -396,7 +396,7 @@ describe('createManualRunner', () => {
       ])
 
       const manual = createManualRunner({
-        patterns, sources: ['src/a.js', 'src/b.js'],
+        mutators: testMutators, sources: ['src/a.js', 'src/b.js'],
         createRunner: vi.fn()
           .mockResolvedValueOnce(failRunner)
           .mockResolvedValueOnce(surviveRunner)
@@ -411,7 +411,7 @@ describe('createManualRunner', () => {
       const runner = fakeRunner([{ passed: false }]) // preflight fails
 
       const manual = createManualRunner({
-        patterns, sources: ['src/a.js'],
+        mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
       const code = await manual.run(['src/a.js'])
@@ -427,7 +427,7 @@ describe('createManualRunner', () => {
       ])
 
       const manual = createManualRunner({
-        patterns, sources: ['src/a.js'],
+        mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
 
@@ -454,7 +454,7 @@ describe('createManualRunner', () => {
       const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
 
       const manual = _createManualRunner({
-        patterns, sources: ['src/a.js'],
+        mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner),
         out: msg => lines.push(msg)
       })
@@ -481,7 +481,7 @@ describe('createManualRunner', () => {
       const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
 
       const manual = _createManualRunner({
-        patterns, sources: ['src/a.js'],
+        mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner),
         out: msg => lines.push(msg)
       })
@@ -506,7 +506,7 @@ describe('createManualRunner', () => {
       const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
 
       const manual = _createManualRunner({
-        patterns, sources: ['src/a.js'],
+        mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner),
         out: noop
       })
@@ -522,7 +522,7 @@ describe('createManualRunner', () => {
       const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
 
       const manual = _createManualRunner({
-        patterns, sources: ['src/a.js'],
+        mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn(),
         out: msg => lines.push(msg)
       })
@@ -546,7 +546,7 @@ describe('createManualRunner', () => {
       const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
 
       const manual = _createManualRunner({
-        patterns, sources: ['src/a.js', 'src/b.js'],
+        mutators: testMutators, sources: ['src/a.js', 'src/b.js'],
         createRunner: vi.fn(),
         out: msg => lines.push(msg)
       })
@@ -570,7 +570,7 @@ describe('createManualRunner', () => {
 
       const lines = []
       const manual = _createManualRunner({
-        patterns, sources: ['src/a.js'],
+        mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner),
         out: msg => lines.push(msg)
       })
@@ -589,7 +589,7 @@ describe('createManualRunner', () => {
 
       const lines = []
       const manual = _createManualRunner({
-        patterns, sources: ['src/a.js'],
+        mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner),
         out: msg => lines.push(msg)
       })
@@ -608,7 +608,7 @@ describe('createManualRunner', () => {
 
       const lines = []
       const manual = _createManualRunner({
-        patterns, sources: ['src/a.js'],
+        mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner),
         timeout: 3000,
         out: msg => lines.push(msg)
@@ -624,7 +624,7 @@ describe('createManualRunner', () => {
       const runner = fakeRunner([{ passed: true }])
 
       const manual = createManualRunner({
-        patterns, sources: ['src/a.js'],
+        mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
       const code = await manual.run(['src/a.js', '--min-score', '100'])

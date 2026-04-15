@@ -1,7 +1,7 @@
 {
   "name": "@bwawan/mutagen",
   "version": "0.1.0",
-  "description": "Lightweight AST and regex mutation testing for JavaScript",
+  "description": "Lightweight AST-based mutation testing for JavaScript",
   "license": "MIT",
   "author": "Brandon Correa",
   "repository": {
@@ -31,13 +31,11 @@
   "exports": {
     ".": "./src/index.js",
     "./mutators": "./src/core/ast-mutators.js",
-    "./patterns": "./src/core/patterns.js",
     "./runners/vitest": "./src/runners/vitest.js",
     "./stryker": "./src/stryker.js"
   },
   "dependencies": {
     "@babel/parser": "^7.29.2",
-    "js-tokens": "^10.0.0",
     "picomatch": "^4.0.4"
   },
   "scripts": {
