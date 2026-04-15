@@ -37,6 +37,7 @@ function fakeWorktree() {
 beforeEach(() => {
   vi.clearAllMocks()
   vi.spyOn(console, 'error').mockImplementation(() => {})
+  vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
   existsSync.mockReturnValue(false)
   createWorktree.mockReturnValue(fakeWorktree())
 })
@@ -242,17 +243,15 @@ describe('createManualRunner', () => {
         { passed: false, killedBy: ['t.test.js'] }
       ])
 
-      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
       const manual = createManualRunner({
         patterns, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
       await manual.runBatch('reports/out.json', null)
 
-      const stderrOutput = stderrSpy.mock.calls.map(c => c[0]).join('')
+      const stderrOutput = process.stderr.write.mock.calls.map(c => c[0]).join('')
       expect(stderrOutput).toContain('Score:')
       expect(stderrOutput).toContain('reports/out.json')
-      stderrSpy.mockRestore()
     })
 
     it('does not write to default report path when jsonOutput is a custom path', async () => {

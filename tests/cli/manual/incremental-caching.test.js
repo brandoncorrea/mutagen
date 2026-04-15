@@ -37,6 +37,7 @@ function fakeWorktree() {
 beforeEach(() => {
   vi.clearAllMocks()
   vi.spyOn(console, 'error').mockImplementation(() => {})
+  vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
   existsSync.mockReturnValue(false)
   createWorktree.mockReturnValue(fakeWorktree())
 })
@@ -439,7 +440,7 @@ describe('createManualRunner', () => {
         { passed: true },
         { passed: true } // survived
       ])
-      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+
       const manual = createManualRunner({
         patterns, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
@@ -465,9 +466,8 @@ describe('createManualRunner', () => {
       )
       expect(defaultCalls).toHaveLength(0)
 
-      const stderrOutput = stderrSpy.mock.calls.map(c => c[0]).join('')
+      const stderrOutput = process.stderr.write.mock.calls.map(c => c[0]).join('')
       expect(stderrOutput).toContain('Score:')
-      stderrSpy.mockRestore()
     })
 
     it('writes structured report with cached + fresh results when jsonOutput is a path', async () => {
@@ -501,7 +501,7 @@ describe('createManualRunner', () => {
         { passed: true },
         { passed: false, killedBy: ['t.test.js'] }
       ])
-      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+
       const manual = createManualRunner({
         patterns,
         sources: ['src/a.js', 'src/b.js'],
@@ -521,7 +521,6 @@ describe('createManualRunner', () => {
       expect(report.total).toBe(3)
       expect(report.survivors).toHaveLength(1)
       expect(report.survivors[0].file).toBe('src/a.js')
-      stderrSpy.mockRestore()
     })
 
     it('prunes stale carried-forward files using normalized source paths', async () => {
@@ -590,7 +589,7 @@ describe('createManualRunner', () => {
         })
       })
 
-      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+
       const manual = createManualRunner({
         patterns, sources: ['src/a.js', 'src/b.js'],
         createRunner: vi.fn()
@@ -605,7 +604,6 @@ describe('createManualRunner', () => {
       // Only src/a.js should be in files (src/b.js not in previous report)
       expect(report.files['src/a.js']).toBeDefined()
       expect(report.files['src/b.js']).toBeUndefined()
-      stderrSpy.mockRestore()
     })
 
     it('writes structured report to json path when no sources changed', async () => {
@@ -627,7 +625,7 @@ describe('createManualRunner', () => {
         })
       })
 
-      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+
       const manual = createManualRunner({
         patterns, sources: ['src/a.js'],
         createRunner: vi.fn()
@@ -638,7 +636,6 @@ describe('createManualRunner', () => {
         ([p]) => p === resolve('reports/custom.json')
       )
       expect(customCalls).toHaveLength(1)
-      stderrSpy.mockRestore()
     })
   })
 })
