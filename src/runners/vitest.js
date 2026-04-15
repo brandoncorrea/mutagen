@@ -51,6 +51,7 @@ function createVitestOptions({ config, root }) {
   return {
     reporters: [{ onFinished() {} }],
     bail: 1,
+    stdin: false,
     ...(config && { config }),
     ...(root && { root })
   }
