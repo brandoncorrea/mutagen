@@ -13,15 +13,29 @@ vi.mock('node:fs', async (importOriginal) => {
   }
 })
 
+vi.mock('../../src/core/worktree.js')
+
 import { run, isMain } from '../../src/bin/mutagen.js'
+import { createWorktree } from '../../src/core/worktree.js'
 import { readFileSync, existsSync, readdirSync } from 'node:fs'
 
 const noop = () => {}
 const silent = { out: noop, err: noop }
 
+function fakeWorktree() {
+  const tempRoot = '/tmp/mutagen-test'
+  return {
+    root: tempRoot,
+    resolve: vi.fn((path) => path.replace(resolve('.'), tempRoot)),
+    mapPaths: vi.fn(paths => paths),
+    cleanup: vi.fn()
+  }
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
   existsSync.mockReturnValue(false)
+  createWorktree.mockReturnValue(fakeWorktree())
 })
 
 describe('bin/mutagen CLI', () => {
