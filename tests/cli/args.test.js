@@ -469,6 +469,13 @@ describe('parseArgs', () => {
     })
   })
 
+  describe('--min-score at index 0', () => {
+    it('parses --min-score when it appears first in argv', () => {
+      const result = parseArgs(['--min-score', '80', '--all'])
+      expect(result.minScore).toBe(80)
+    })
+  })
+
   describe('--timeout at index 0', () => {
     it('parses --timeout when it appears first in argv', () => {
       const result = parseArgs(['--timeout', '5000', '--incremental'])
