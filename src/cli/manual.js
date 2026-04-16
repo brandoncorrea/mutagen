@@ -234,7 +234,7 @@ function parallelWorkerCount({ parallel }) {
     return parallel
 }
 
-function scoreExitCode({ killed, survived, timedOut }, minScore) {
+export function scoreExitCode({ killed, survived, timedOut }, minScore) {
   const effectiveKilled = killed + timedOut
   const total = effectiveKilled + survived
   const score = total ? (effectiveKilled / total) * 100 : 100
