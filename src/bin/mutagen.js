@@ -20,7 +20,7 @@ const require = createRequire(import.meta.url)
 const { version } = require('../../package.json')
 
 export async function run(args, { config, configPath, out = console.log, err = console.error } = {}) {
-  if (args.includes('--version') || args.includes('-v')) {
+  if (versionRequested(args)) {
     out(version)
     return 0
   }
@@ -38,6 +38,10 @@ export async function run(args, { config, configPath, out = console.log, err = c
   }
 
   return createManualRunner({ out, ...config }).run(args)
+}
+
+function versionRequested(args) {
+  return args.includes('--version') || args.includes('-v')
 }
 
 export function isMain(argv) {
