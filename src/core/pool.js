@@ -119,7 +119,13 @@ async function closePool(pool) {
   if (pool.closed) return
   pool.closed = true
   untrackPool(pool)
-  await Promise.all(pool.runners.map(r => r.close()))
+  const CLOSE_TIMEOUT = 5000
+  await Promise.all(pool.runners.map(r =>
+    Promise.race([
+      r.close(),
+      new Promise(resolve => setTimeout(resolve, CLOSE_TIMEOUT))
+    ])
+  ))
 }
 
 async function ensureRunners(pool, { createRunner, workerCount }) {

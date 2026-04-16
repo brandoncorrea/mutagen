@@ -198,6 +198,21 @@ describe('createPool', () => {
 
       expect(runner.close).toHaveBeenCalledTimes(1)
     })
+
+    it('completes even when runner.close() hangs', { timeout: 10000 }, async () => {
+      const runner = fakeRunner()
+      runner.close.mockReturnValue(new Promise(() => {})) // never resolves
+      const createRunner = vi.fn().mockResolvedValue(runner)
+      const pool = createPool({ workerCount: 1, createRunner })
+
+      await pool.run([fakeMutation()])
+
+      const start = Date.now()
+      await pool.close()
+      const elapsed = Date.now() - start
+
+      expect(elapsed).toBeLessThan(10000)
+    })
   })
 
   describe('process cleanup', () => {
