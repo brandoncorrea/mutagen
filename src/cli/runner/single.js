@@ -1,6 +1,6 @@
 /**
  * Sequential single-file mutation execution.
- * Creates a temp project copy (worktree) and writes mutations there.
+ * Creates a temp project copy and writes mutations there.
  * Original source files are never modified (crash-safe).
  */
 
@@ -10,7 +10,7 @@ import { relative } from 'node:path'
 import { generateMutations } from '../../core/generate.js'
 import { withTimeout } from '../../core/timeout.js'
 import { toJsonMutants, assignMutationIds } from '../../core/report-data.js'
-import { createWorktree } from '../../core/worktree.js'
+import { createWorktree } from '../../core/temp-copy.js'
 import { printRunReport } from '../report.js'
 import { runPreflightTests, reportMutation, printBanner } from './shared.js'
 

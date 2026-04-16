@@ -12,10 +12,10 @@ vi.mock('../../../src/cli/runner/index.js', () => ({
   dryRun: vi.fn()
 }))
 
-vi.mock('../../../src/core/worktree.js')
+vi.mock('../../../src/core/temp-copy.js')
 
 import { createManualRunner } from '../../../src/cli/manual.js'
-import { createWorktree } from '../../../src/core/worktree.js'
+import { createWorktree } from '../../../src/core/temp-copy.js'
 import { runSingle } from '../../../src/cli/runner/index.js'
 
 const noop = () => {}

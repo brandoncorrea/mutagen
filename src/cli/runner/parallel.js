@@ -10,7 +10,7 @@ import { relative } from 'node:path'
 import { generateMutations } from '../../core/generate.js'
 import { createPool } from '../../core/pool.js'
 import { toJsonMutants, assignMutationIds } from '../../core/report-data.js'
-import { createWorktree } from '../../core/worktree.js'
+import { createWorktree } from '../../core/temp-copy.js'
 import { printRunReport } from '../report.js'
 import { runPreflightTests, reportMutation, printBanner } from './shared.js'
 

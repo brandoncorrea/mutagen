@@ -20,13 +20,13 @@ vi.mock('node:fs', async (importOriginal) => {
   }
 })
 
-vi.mock('../../../src/core/worktree.js')
+vi.mock('../../../src/core/temp-copy.js')
 
 // NOTE: pool.js is NOT mocked — we use the real pool for determinism verification
 
 import { runSingle, runParallel } from '../../../src/cli/runner/index.js'
 import { prepareMutationConfig } from '../../../src/core/generate.js'
-import { createWorktree } from '../../../src/core/worktree.js'
+import { createWorktree } from '../../../src/core/temp-copy.js'
 import { readFileSync } from 'node:fs'
 import { noop, mockFs as _mockFs } from '../helpers.js'
 

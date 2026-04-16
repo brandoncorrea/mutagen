@@ -1,5 +1,5 @@
 /**
- * Tests for core/worktree.js — temp project copy for mutation isolation.
+ * Tests for core/temp-copy.js — temp project copy for mutation isolation.
  */
 
 import { describe, it, expect, afterEach } from 'vitest'
@@ -8,7 +8,7 @@ import { join } from 'node:path'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 
-import { createWorktree } from '../../src/core/worktree.js'
+import { createWorktree } from '../../src/core/temp-copy.js'
 
 function makeTempProject() {
   const root = mkdtempSync(join(tmpdir(), 'mutagen-test-project-'))
