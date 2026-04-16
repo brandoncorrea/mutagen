@@ -27,9 +27,9 @@ import {
 } from './mutators/methods.js'
 
 import {
-  booleanLiterals, conditionalExpressions, stringLiterals, blockStatements,
-  asyncMutations, fallbackRemovals, numericBoundary, throwRemoval,
-  spreadRemoval, propertyAccessMutations
+  booleanLiterals, conditionalExpressions, conditionalNegation, stringLiterals,
+  blockStatements, asyncMutations, fallbackRemovals, numericBoundary,
+  throwRemoval, spreadRemoval, propertyAccessMutations
 } from './mutators/values.js'
 
 export const javascript = [
@@ -38,6 +38,7 @@ export const javascript = [
   ...arithmeticOperators,
   ...booleanLiterals,
   ...conditionalExpressions,
+  ...conditionalNegation,
   ...methodExpressions,
   ...stringLiterals,
   ...blockStatements,
