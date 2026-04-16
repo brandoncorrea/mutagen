@@ -443,6 +443,28 @@ describe('createManualRunner', () => {
       exitSpy.mockRestore()
     })
 
+    it('non-quiet run does not write formatQuietSummary to stderr', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: false }
+      ])
+
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+
+      const manual = _createManualRunner({
+        mutators: testMutators, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner),
+        out: noop
+      })
+      const code = await manual.run(['src/a.js'])
+
+      const stderrOutput = stderrSpy.mock.calls.map(c => c[0]).join('')
+      expect(stderrOutput).not.toMatch(/Score:.*\|.*survivors/)
+
+      stderrSpy.mockRestore()
+    })
+
     it('--quiet suppresses normal output and writes summary to stderr', async () => {
       mockFs({ [resolve('src/a.js')]: sourceCode })
       const runner = fakeRunner([
