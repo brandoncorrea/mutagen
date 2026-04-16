@@ -5,11 +5,12 @@
 
 import { resolve } from 'node:path'
 
-import { createReport, writeReportFile, writeStructuredReportFile, HEADER_SEPARATOR } from '../../core/report-data.js'
+import { createReport, writeReportFile, writeStructuredReportFile, tryLoadJson, HEADER_SEPARATOR } from '../../core/report-data.js'
 import { runSingle } from './single.js'
 import { runParallel, createBatchPool } from './parallel.js'
 import { printScoreLine } from '../report.js'
 import { isString } from './shared.js'
+import { autoDiffSummary } from '../auto-diff.js'
 
 /**
  * @returns {{ totalSurvived: number, totalKilled: number, totalTimedOut: number, failures: number, fileResults: Object }}
@@ -25,10 +26,14 @@ export async function runBatch(runContext, jsonOutput, timeout, sourcesToRun) {
   const result = await accumulateResults(filesToRun, { mutationConfig, createRunner, timeout, parallel: runContext.parallel, survivorsOnly, out })
 
   if (isString(jsonOutput)) {
+    const previous = tryLoadJson(resolve(jsonOutput))
     const stats = writeStructuredReportFile(jsonOutput, result.fileResults)
     printScoreLine(stats, filesToRun.length, jsonOutput)
+    printAutoDiff(previous, result.fileResults)
   } else if (jsonOutput) {
+    const previous = tryLoadJson(resolve(reportPath))
     writeReportFile(reportDir, reportPath, createReport(result.fileResults), out)
+    printAutoDiff(previous, result.fileResults)
   }
 
   printBatchSummary(out, filesToRun.length, result)
@@ -85,3 +90,7 @@ function printBatchSummary(out, fileCount, { totalKilled, totalSurvived, totalTi
   out(`${HEADER_SEPARATOR}\n`)
 }
 
+function printAutoDiff(previous, fileResults) {
+  const summary = autoDiffSummary(previous, fileResults)
+  if (summary) process.stderr.write(`  Δ ${summary}\n`)
+}

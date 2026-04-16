@@ -16,6 +16,7 @@ vi.mock('../../../src/core/temp-copy.js')
 
 import { createManualRunner as _createManualRunner } from '../../../src/cli/manual.js'
 import { createTempCopy } from '../../../src/core/temp-copy.js'
+import { mutationId } from '../../../src/core/mutation-id.js'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { testMutators, sourceCode, fakeRunner, mockFs as _mockFs, noop } from '../helpers.js'
 
@@ -271,6 +272,83 @@ describe('createManualRunner', () => {
         ([p]) => p.includes('manual-report.json')
       )
       expect(defaultReportCalls).toHaveLength(0)
+    })
+
+    it('prints auto-diff to stderr when previous report exists at output path', async () => {
+      const id = mutationId('src/a.js', 1, '=== → !==')
+      const previousReport = JSON.stringify({
+        score: 0, total: 1, killed: 0, survived: 1, timedOut: 0,
+        files: { 'src/a.js': { score: 0, killed: 0, total: 1 } },
+        survivors: [{ id, file: 'src/a.js', line: 1, name: '=== → !==' }]
+      })
+      mockFs({
+        [resolve('src/a.js')]: sourceCode,
+        [resolve('reports/out.json')]: previousReport
+      })
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: false, killedBy: ['t.test.js'] }
+      ])
+
+      const manual = createManualRunner({
+        mutators: testMutators, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner)
+      })
+      await manual.runBatch('reports/out.json', null)
+
+      const stderrOutput = process.stderr.write.mock.calls.map(c => c[0]).join('')
+      expect(stderrOutput).toContain('Δ')
+      expect(stderrOutput).toContain('newly killed')
+    })
+
+    it('does not print auto-diff when no previous report exists', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: false, killedBy: ['t.test.js'] }
+      ])
+
+      const manual = createManualRunner({
+        mutators: testMutators, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner)
+      })
+      await manual.runBatch('reports/out.json', null)
+
+      const stderrOutput = process.stderr.write.mock.calls.map(c => c[0]).join('')
+      expect(stderrOutput).not.toContain('Δ')
+    })
+
+    it('prints auto-diff for legacy report format (--json without path)', async () => {
+      const id = mutationId('src/a.js', 1, '=== → !==')
+      const previousReport = JSON.stringify({
+        schemaVersion: '1',
+        thresholds: { high: 80, low: 60 },
+        files: {
+          'src/a.js': {
+            mutants: [{
+              id, mutatorName: '=== → !==',
+              status: 'Survived', location: { start: { line: 1 } }
+            }]
+          }
+        }
+      })
+      mockFs({
+        [resolve('src/a.js')]: sourceCode,
+        [resolve('reports/mutation/manual-report.json')]: previousReport
+      })
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: false, killedBy: ['t.test.js'] }
+      ])
+
+      const manual = createManualRunner({
+        mutators: testMutators, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner)
+      })
+      await manual.runBatch(true, null)
+
+      const stderrOutput = process.stderr.write.mock.calls.map(c => c[0]).join('')
+      expect(stderrOutput).toContain('newly killed')
     })
 
     it('prints correct file count in batch summary', async () => {
