@@ -104,34 +104,39 @@ async function runWithNewPool(mutations, options) {
 
 async function createRunnerWithOptions(options) {
   const { sourceFile, createRunner } = options
-  const wt = createWorktree(process.cwd())
-  let currentSourceFile = sourceFile
-  let tempSource = wt.resolve(sourceFile)
-  let runner = await createRunner(tempSource, { root: wt.root })
+  const worktree = createWorktree(process.cwd())
+  const initialTemp = worktree.resolve(sourceFile)
+
+  const state = {
+    sourceFile,
+    tempSource: initialTemp,
+    runner: await createRunner(initialTemp, { root: worktree.root })
+  }
+
   return {
-    applyMutation(source) { writeFileSync(tempSource, source) },
+    applyMutation(source) { writeFileSync(state.tempSource, source) },
     async run() {
-      const result = await runner.run()
+      const result = await state.runner.run()
       return {
         ...result,
-        killedBy: wt.mapPaths(result.killedBy),
-        coveredBy: wt.mapPaths(result.coveredBy)
+        killedBy: worktree.mapPaths(result.killedBy),
+        coveredBy: worktree.mapPaths(result.coveredBy)
       }
     },
     async switchFile(newSourceFile) {
-      writeFileSync(tempSource, readFileSync(currentSourceFile, 'utf-8'))
-      currentSourceFile = newSourceFile
-      tempSource = wt.resolve(newSourceFile)
-      if (runner.switchFile) {
-        await runner.switchFile(tempSource)
+      writeFileSync(state.tempSource, readFileSync(state.sourceFile, 'utf-8'))
+      state.sourceFile = newSourceFile
+      state.tempSource = worktree.resolve(newSourceFile)
+      if (state.runner.switchFile) {
+        await state.runner.switchFile(state.tempSource)
       } else {
-        await runner.close()
-        runner = await createRunner(tempSource, { root: wt.root })
+        await state.runner.close()
+        state.runner = await createRunner(state.tempSource, { root: worktree.root })
       }
     },
     async close() {
-      await runner.close()
-      wt.cleanup()
+      await state.runner.close()
+      worktree.cleanup()
     }
   }
 }
