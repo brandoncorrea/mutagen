@@ -233,6 +233,33 @@ export const spreadRemoval = [
       end: node.elements[1].start,
       replacement: ''
     })
+  },
+  {
+    name: '{...obj} → obj (remove copy)',
+    types: ['ObjectExpression'],
+    test: node =>
+      node.properties.length === 1
+      && node.properties[0]?.type === 'SpreadElement',
+    mutate: (node, source) => ({
+      start: node.start,
+      end: node.end,
+      replacement: source.slice(
+        node.properties[0].argument.start,
+        node.properties[0].argument.end
+      )
+    })
+  },
+  {
+    name: '{...obj, key: val} → {key: val} (remove spread)',
+    types: ['ObjectExpression'],
+    test: node =>
+      node.properties.length >= 2
+      && node.properties[0]?.type === 'SpreadElement',
+    mutate: (node, _source) => ({
+      start: node.start + 1,
+      end: node.properties[1].start,
+      replacement: ''
+    })
   }
 ]
 

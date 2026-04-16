@@ -33,7 +33,7 @@ describe('ast-mutators', () => {
         'ConditionalExpression', 'ReturnStatement', 'ThrowStatement',
         'AwaitExpression', 'SpreadElement', 'ArrayExpression',
         'Literal', 'BooleanLiteral', 'NumericLiteral', 'StringLiteral',
-        'ChainExpression'
+        'ChainExpression', 'ObjectExpression'
       ])
       for (const m of javascript) {
         for (const t of m.types) {
@@ -1028,6 +1028,64 @@ describe('ast-mutators', () => {
       expect(m.test(node)).toBe(true)
       const patch = m.mutate(node, '[...arr, y]')
       expect(patch).toEqual({ start: 1, end: 9, replacement: '' })
+    })
+  })
+
+  describe('object spread removal', () => {
+    it('{...obj} → obj removes object copy', () => {
+      const m = find('{...obj} → obj (remove copy)')
+      const node = {
+        type: 'ObjectExpression',
+        properties: [{
+          type: 'SpreadElement',
+          argument: { type: 'Identifier', name: 'obj', start: 4, end: 7 },
+          start: 1, end: 7
+        }],
+        start: 0, end: 8
+      }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, '{...obj}')
+      expect(patch).toEqual({ start: 0, end: 8, replacement: 'obj' })
+    })
+
+    it('{...obj} → obj does not match with non-spread properties', () => {
+      const m = find('{...obj} → obj (remove copy)')
+      const node = {
+        type: 'ObjectExpression',
+        properties: [
+          { type: 'SpreadElement', argument: { start: 4, end: 7 }, start: 1, end: 7 },
+          { type: 'Property', start: 9, end: 15 }
+        ],
+        start: 0, end: 16
+      }
+      expect(m.test(node)).toBe(false)
+    })
+
+    it('{...obj, key: val} → {key: val} removes leading spread', () => {
+      const m = find('{...obj, key: val} → {key: val} (remove spread)')
+      const node = {
+        type: 'ObjectExpression',
+        properties: [
+          { type: 'SpreadElement', argument: { start: 4, end: 7 }, start: 1, end: 7 },
+          { type: 'Property', start: 9, end: 17 }
+        ],
+        start: 0, end: 18
+      }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, '{...obj, key: val}')
+      expect(patch).toEqual({ start: 1, end: 9, replacement: '' })
+    })
+
+    it('{...obj, key: val} → {key: val} does not match without spread', () => {
+      const m = find('{...obj, key: val} → {key: val} (remove spread)')
+      const node = {
+        type: 'ObjectExpression',
+        properties: [
+          { type: 'Property', start: 1, end: 9 }
+        ],
+        start: 0, end: 10
+      }
+      expect(m.test(node)).toBe(false)
     })
   })
 })
