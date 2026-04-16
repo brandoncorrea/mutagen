@@ -9,6 +9,7 @@ import { createReport, writeReportFile, writeStructuredReportFile, HEADER_SEPARA
 import { runSingle } from './single.js'
 import { runParallel, createBatchPool } from './parallel.js'
 import { printScoreLine } from '../report.js'
+import { isString } from './shared.js'
 
 /**
  * @returns {{ totalSurvived: number, totalKilled: number, totalTimedOut: number, failures: number, fileResults: Object }}
@@ -24,7 +25,7 @@ export async function runBatch(runContext, jsonOutput, timeout, sourcesToRun) {
   const result = await accumulateResults(filesToRun, { mutationConfig, createRunner, timeout, parallel: runContext.parallel, survivorsOnly, out })
 
   if (isString(jsonOutput)) {
-    const stats = writeStructuredReportFile(jsonOutput, filesToRun.length, result.fileResults)
+    const stats = writeStructuredReportFile(jsonOutput, result.fileResults)
     printScoreLine(stats, filesToRun.length, jsonOutput)
   } else if (jsonOutput) {
     writeReportFile(reportDir, reportPath, createReport(result.fileResults), out)
@@ -84,6 +85,3 @@ function printBatchSummary(out, fileCount, { totalKilled, totalSurvived, totalTi
   out(`${HEADER_SEPARATOR}\n`)
 }
 
-function isString(value) {
-  return typeof value === 'string'
-}

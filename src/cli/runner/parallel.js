@@ -11,7 +11,7 @@ import { generateMutations } from '../../core/generate.js'
 import { createPool } from '../../core/pool.js'
 import { assignMutationIds } from '../../core/mutation-id.js'
 import { toJsonMutants } from '../../core/report-data.js'
-import { createWorktree } from '../../core/temp-copy.js'
+import { createTempCopy } from '../../core/temp-copy.js'
 import { printRunReport } from '../report.js'
 import { runPreflightTests, reportMutation, printBanner } from './shared.js'
 
@@ -107,7 +107,7 @@ async function runWithNewPool(mutations, options) {
 
 async function createRunnerWithOptions(options) {
   const { sourceFile, createRunner } = options
-  const worktree = createWorktree(process.cwd())
+  const worktree = createTempCopy(process.cwd())
   const initialTemp = worktree.resolve(sourceFile)
 
   const state = {

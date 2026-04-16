@@ -17,7 +17,7 @@ vi.mock('../../../src/core/temp-copy.js')
 vi.mock('../../../src/core/git-changed.js')
 
 import { createManualRunner as _createManualRunner } from '../../../src/cli/manual.js'
-import { createWorktree } from '../../../src/core/temp-copy.js'
+import { createTempCopy } from '../../../src/core/temp-copy.js'
 import { gitChangedFiles } from '../../../src/core/git-changed.js'
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs'
 import { testMutators, sourceCode, fakeRunner, mockFs as _mockFs, noop } from '../helpers.js'
@@ -39,7 +39,7 @@ function fakeWorktree() {
 beforeEach(() => {
   vi.clearAllMocks()
   existsSync.mockReturnValue(false)
-  createWorktree.mockReturnValue(fakeWorktree())
+  createTempCopy.mockReturnValue(fakeWorktree())
 })
 
 describe('--changed flag filters sources to git-changed files', () => {

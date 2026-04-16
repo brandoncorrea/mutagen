@@ -18,7 +18,7 @@ vi.mock('../../../src/core/temp-copy.js')
 import { runParallel, createBatchPool } from '../../../src/cli/runner/index.js'
 import { prepareMutationConfig } from '../../../src/core/generate.js'
 import { createPool } from '../../../src/core/pool.js'
-import { createWorktree } from '../../../src/core/temp-copy.js'
+import { createTempCopy } from '../../../src/core/temp-copy.js'
 import { readFileSync } from 'node:fs'
 import { testMutators, sourceCode, noop, fakePoolRunner, mockFs as _mockFs } from '../helpers.js'
 
@@ -40,7 +40,7 @@ function fakeWorktree() {
 beforeEach(() => {
   vi.clearAllMocks()
   worktreeIndex = 0
-  createWorktree.mockImplementation(() => fakeWorktree())
+  createTempCopy.mockImplementation(() => fakeWorktree())
 })
 
 describe('runParallel', () => {
@@ -428,7 +428,7 @@ describe('runParallel', () => {
 
     // Each call to poolCreateRunner should create a worktree
     const worker = await poolCreateRunner()
-    expect(createWorktree).toHaveBeenCalledWith(process.cwd())
+    expect(createTempCopy).toHaveBeenCalledWith(process.cwd())
     expect(worker.applyMutation).toBeTypeOf('function')
     expect(worker.run).toBeTypeOf('function')
     expect(worker.close).toBeTypeOf('function')
@@ -561,6 +561,6 @@ describe('createBatchPool', () => {
     expect(worker).toHaveProperty('run')
     expect(worker).toHaveProperty('close')
     expect(worker).toHaveProperty('applyMutation')
-    expect(createWorktree).toHaveBeenCalled()
+    expect(createTempCopy).toHaveBeenCalled()
   })
 })

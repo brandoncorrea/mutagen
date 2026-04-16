@@ -115,11 +115,12 @@ async function runPool(pool, mutations, poolOptions, runOptions) {
   return outcomes
 }
 
+const CLOSE_TIMEOUT = 5000
+
 async function closePool(pool) {
   if (pool.closed) return
   pool.closed = true
   untrackPool(pool)
-  const CLOSE_TIMEOUT = 5000
   await Promise.all(pool.runners.map(r =>
     Promise.race([
       r.close(),

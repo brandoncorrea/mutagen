@@ -595,7 +595,7 @@ describe('writeStructuredReportFile', () => {
   })
 
   it('counts killed mutants and writes report', () => {
-    writeStructuredReportFile('out.json', 1, {
+    writeStructuredReportFile('out.json', {
       'a.js': { mutants: [{ status: 'Killed', mutatorName: 'x', description: 'a → b' }] }
     })
 
@@ -605,7 +605,7 @@ describe('writeStructuredReportFile', () => {
   })
 
   it('counts survived mutants and includes them in survivors', () => {
-    writeStructuredReportFile('out.json', 1, {
+    writeStructuredReportFile('out.json', {
       'a.js': { mutants: [{ status: 'Survived', mutatorName: 'x', description: 'a → b' }] }
     })
 
@@ -615,7 +615,7 @@ describe('writeStructuredReportFile', () => {
   })
 
   it('includes stable mutation ID in each survivor', () => {
-    writeStructuredReportFile('out.json', 1, {
+    writeStructuredReportFile('out.json', {
       'a.js': { mutants: [{ status: 'Survived', mutatorName: 'x', location: { start: { line: 5 } } }] }
     })
 
@@ -625,7 +625,7 @@ describe('writeStructuredReportFile', () => {
   })
 
   it('counts timeout mutants as killed', () => {
-    writeStructuredReportFile('out.json', 1, {
+    writeStructuredReportFile('out.json', {
       'a.js': { mutants: [{ status: 'Timeout', mutatorName: 'x' }] }
     })
 
@@ -635,7 +635,7 @@ describe('writeStructuredReportFile', () => {
   })
 
   it('handles survived mutants without coveredBy', () => {
-    writeStructuredReportFile('out.json', 1, {
+    writeStructuredReportFile('out.json', {
       'a.js': { mutants: [{ status: 'Survived', mutatorName: 'x' }] }
     })
 
@@ -644,7 +644,7 @@ describe('writeStructuredReportFile', () => {
   })
 
   it('includes coveredBy when present on survived mutants', () => {
-    writeStructuredReportFile('out.json', 1, {
+    writeStructuredReportFile('out.json', {
       'a.js': { mutants: [{ status: 'Survived', mutatorName: 'x', coveredBy: ['t.js'] }] }
     })
 
@@ -653,7 +653,7 @@ describe('writeStructuredReportFile', () => {
   })
 
   it('handles mutants without description', () => {
-    writeStructuredReportFile('out.json', 1, {
+    writeStructuredReportFile('out.json', {
       'a.js': { mutants: [{ status: 'Survived', mutatorName: 'x' }] }
     })
 
@@ -663,7 +663,7 @@ describe('writeStructuredReportFile', () => {
   })
 
   it('handles description without arrow separator', () => {
-    writeStructuredReportFile('out.json', 1, {
+    writeStructuredReportFile('out.json', {
       'a.js': { mutants: [{ status: 'Survived', mutatorName: 'x', description: 'noarrow' }] }
     })
 
@@ -673,7 +673,7 @@ describe('writeStructuredReportFile', () => {
   })
 
   it('defaults score to 100% when no mutants exist', () => {
-    writeStructuredReportFile('out.json', 1, {})
+    writeStructuredReportFile('out.json', {})
 
     const written = JSON.parse(writeFileSync.mock.calls[0][1])
     expect(written.score).toBe(100)
@@ -681,21 +681,21 @@ describe('writeStructuredReportFile', () => {
 
   it('includes deltas when provided', () => {
     const deltas = { fixes: [], regressions: [] }
-    writeStructuredReportFile('out.json', 1, {}, deltas)
+    writeStructuredReportFile('out.json', {}, deltas)
 
     const written = JSON.parse(writeFileSync.mock.calls[0][1])
     expect(written.deltas).toEqual(deltas)
   })
 
   it('omits deltas when not provided', () => {
-    writeStructuredReportFile('out.json', 1, {})
+    writeStructuredReportFile('out.json', {})
 
     const written = JSON.parse(writeFileSync.mock.calls[0][1])
     expect(written).not.toHaveProperty('deltas')
   })
 
   it('handles mutants without location', () => {
-    writeStructuredReportFile('out.json', 1, {
+    writeStructuredReportFile('out.json', {
       'a.js': { mutants: [{ status: 'Survived', mutatorName: 'x' }] }
     })
 
@@ -704,7 +704,7 @@ describe('writeStructuredReportFile', () => {
   })
 
   it('skips mutants with unrecognized status (neither killed nor alive)', () => {
-    writeStructuredReportFile('out.json', 1, {
+    writeStructuredReportFile('out.json', {
       'a.js': { mutants: [{ status: 'CompileError', mutatorName: 'x' }] }
     })
 
@@ -715,7 +715,7 @@ describe('writeStructuredReportFile', () => {
   })
 
   it('defaults file score to 100% when mutants array is empty', () => {
-    writeStructuredReportFile('out.json', 1, {
+    writeStructuredReportFile('out.json', {
       'a.js': { mutants: [] }
     })
 

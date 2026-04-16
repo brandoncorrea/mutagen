@@ -11,7 +11,7 @@ import { generateMutations } from '../../core/generate.js'
 import { withTimeout } from '../../core/timeout.js'
 import { assignMutationIds } from '../../core/mutation-id.js'
 import { toJsonMutants } from '../../core/report-data.js'
-import { createWorktree } from '../../core/temp-copy.js'
+import { createTempCopy } from '../../core/temp-copy.js'
 import { printRunReport } from '../report.js'
 import { runPreflightTests, reportMutation, printBanner } from './shared.js'
 
@@ -21,7 +21,7 @@ import { runPreflightTests, reportMutation, printBanner } from './shared.js'
 export async function runSingle(options) {
   const { sourceFile, mutationConfig, createRunner, targetLine, timeout, survivorsOnly, retestMutations, out = console.log } = options
   const original = readFileSync(sourceFile, 'utf-8')
-  const worktree = createWorktree(process.cwd())
+  const worktree = createTempCopy(process.cwd())
 
   printBanner(out, 'MUTAGEN', sourceFile, targetLine, timeout)
 

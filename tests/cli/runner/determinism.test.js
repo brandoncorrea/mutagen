@@ -26,7 +26,7 @@ vi.mock('../../../src/core/temp-copy.js')
 
 import { runSingle, runParallel } from '../../../src/cli/runner/index.js'
 import { prepareMutationConfig } from '../../../src/core/generate.js'
-import { createWorktree } from '../../../src/core/temp-copy.js'
+import { createTempCopy } from '../../../src/core/temp-copy.js'
 import { readFileSync } from 'node:fs'
 import { noop, mockFs as _mockFs } from '../helpers.js'
 
@@ -110,7 +110,7 @@ function killedRunnerFactory() {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  createWorktree.mockImplementation(() => fakeWorktree())
+  createTempCopy.mockImplementation(() => fakeWorktree())
 })
 
 describe('runSingle vs runParallel result determinism', () => {

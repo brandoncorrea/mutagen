@@ -10,7 +10,7 @@ import { generateMutations } from '../core/generate.js'
 import { HEADER_SEPARATOR, tryLoadJson, writeStructuredReportFile } from '../core/report-data.js'
 import { runSingle, runParallel } from './runner/index.js'
 import { printScoreLine } from './report.js'
-import { isString } from './is-string.js'
+import { isString } from './runner/shared.js'
 
 /**
  * Extract retest targets from a structured report.
@@ -48,9 +48,9 @@ export function filterMutationsToSurvivors(mutations, filePath, survivorKeys) {
  * Run retest mode: load report, regenerate mutations for survivor files,
  * filter to only survivor mutations, and run them.
  */
-export async function runRetest(ctx, parsed) {
-  const { mutationConfig, createRunner, out } = ctx
-  const timeout = parsed.timeout || ctx.configTimeout
+export async function runRetest(runContext, parsed) {
+  const { mutationConfig, createRunner, out } = runContext
+  const timeout = parsed.timeout || runContext.configTimeout
   const reportPath = parsed.retestReport
 
   const report = tryLoadJson(reportPath, out)
@@ -150,11 +150,11 @@ async function retestFiles(files, { mutationConfig, createRunner, timeout, survi
 
 function writeRetestReport(parsed, fileCount, fileResults) {
   if (isString(parsed.jsonOutput)) {
-    const stats = writeStructuredReportFile(parsed.jsonOutput, fileCount, fileResults)
+    const stats = writeStructuredReportFile(parsed.jsonOutput, fileResults)
     printScoreLine(stats, fileCount, parsed.jsonOutput)
   } else if (parsed.jsonOutput) {
     const outputPath = 'reports/mutation/retest-report.json'
-    const stats = writeStructuredReportFile(outputPath, fileCount, fileResults)
+    const stats = writeStructuredReportFile(outputPath, fileResults)
     printScoreLine(stats, fileCount, outputPath)
   }
 }

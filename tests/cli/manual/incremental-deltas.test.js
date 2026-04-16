@@ -16,7 +16,7 @@ vi.mock('node:fs', async (importOriginal) => {
 vi.mock('../../../src/core/temp-copy.js')
 
 import { createManualRunner as _createManualRunner } from '../../../src/cli/manual.js'
-import { createWorktree } from '../../../src/core/temp-copy.js'
+import { createTempCopy } from '../../../src/core/temp-copy.js'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { testMutators, sourceCode, hashOf, fakeRunner, mockFs as _mockFs, noop } from '../helpers.js'
 
@@ -40,7 +40,7 @@ beforeEach(() => {
   vi.spyOn(console, 'error').mockImplementation(() => {})
   vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
   existsSync.mockReturnValue(false)
-  createWorktree.mockReturnValue(fakeWorktree())
+  createTempCopy.mockReturnValue(fakeWorktree())
 })
 
 describe('incremental deltas', () => {

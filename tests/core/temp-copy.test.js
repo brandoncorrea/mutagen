@@ -8,7 +8,7 @@ import { join } from 'node:path'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 
-import { createWorktree } from '../../src/core/temp-copy.js'
+import { createTempCopy } from '../../src/core/temp-copy.js'
 
 function makeTempProject() {
   const root = mkdtempSync(join(tmpdir(), 'mutagen-test-project-'))
@@ -24,7 +24,7 @@ function makeTempProject() {
   return root
 }
 
-describe('createWorktree', () => {
+describe('createTempCopy', () => {
   const cleanups = []
 
   afterEach(() => {
@@ -41,7 +41,7 @@ describe('createWorktree', () => {
     const project = makeTempProject()
     cleanups.push(() => rmSync(project, { recursive: true, force: true }))
 
-    const wt = tracked(createWorktree(project))
+    const wt = tracked(createTempCopy(project))
 
     expect(existsSync(join(wt.root, 'src', 'a.js'))).toBe(true)
     expect(readFileSync(join(wt.root, 'src', 'a.js'), 'utf-8')).toBe('const x = 1')
@@ -51,7 +51,7 @@ describe('createWorktree', () => {
     const project = makeTempProject()
     cleanups.push(() => rmSync(project, { recursive: true, force: true }))
 
-    const wt = tracked(createWorktree(project))
+    const wt = tracked(createTempCopy(project))
 
     expect(existsSync(join(wt.root, 'tests', 'a.test.js'))).toBe(true)
   })
@@ -60,7 +60,7 @@ describe('createWorktree', () => {
     const project = makeTempProject()
     cleanups.push(() => rmSync(project, { recursive: true, force: true }))
 
-    const wt = tracked(createWorktree(project))
+    const wt = tracked(createTempCopy(project))
 
     expect(existsSync(join(wt.root, 'vitest.config.js'))).toBe(true)
   })
@@ -69,7 +69,7 @@ describe('createWorktree', () => {
     const project = makeTempProject()
     cleanups.push(() => rmSync(project, { recursive: true, force: true }))
 
-    const wt = tracked(createWorktree(project))
+    const wt = tracked(createTempCopy(project))
 
     // node_modules should be a symlink, not a copy of the contents
     expect(existsSync(join(wt.root, 'node_modules', 'marker.txt'))).toBe(true)
@@ -80,7 +80,7 @@ describe('createWorktree', () => {
     const project = makeTempProject()
     cleanups.push(() => rmSync(project, { recursive: true, force: true }))
 
-    const wt = tracked(createWorktree(project))
+    const wt = tracked(createTempCopy(project))
 
     const target = realpathSync(join(wt.root, 'node_modules'))
     expect(target).toBe(realpathSync(join(project, 'node_modules')))
@@ -90,7 +90,7 @@ describe('createWorktree', () => {
     const project = makeTempProject()
     cleanups.push(() => rmSync(project, { recursive: true, force: true }))
 
-    const wt = tracked(createWorktree(project))
+    const wt = tracked(createTempCopy(project))
 
     expect(existsSync(join(wt.root, '.git'))).toBe(false)
   })
@@ -99,7 +99,7 @@ describe('createWorktree', () => {
     const project = makeTempProject()
     cleanups.push(() => rmSync(project, { recursive: true, force: true }))
 
-    const wt = tracked(createWorktree(project))
+    const wt = tracked(createTempCopy(project))
     const resolved = wt.resolve(join(project, 'src', 'a.js'))
 
     expect(resolved).toBe(join(wt.root, 'src', 'a.js'))
@@ -110,7 +110,7 @@ describe('createWorktree', () => {
     const project = makeTempProject()
     cleanups.push(() => rmSync(project, { recursive: true, force: true }))
 
-    const wt = tracked(createWorktree(project))
+    const wt = tracked(createTempCopy(project))
     const tempPath = join(wt.root, 'src', 'a.js')
 
     expect(wt.unresolve(tempPath)).toBe('src/a.js')
@@ -120,7 +120,7 @@ describe('createWorktree', () => {
     const project = makeTempProject()
     cleanups.push(() => rmSync(project, { recursive: true, force: true }))
 
-    const wt = tracked(createWorktree(project))
+    const wt = tracked(createTempCopy(project))
     const tempPaths = [
       join(wt.root, 'src', 'a.js'),
       join(wt.root, 'src', 'b.js')
@@ -136,7 +136,7 @@ describe('createWorktree', () => {
     const project = makeTempProject()
     cleanups.push(() => rmSync(project, { recursive: true, force: true }))
 
-    const wt = tracked(createWorktree(project))
+    const wt = tracked(createTempCopy(project))
 
     expect(wt.mapPaths(undefined)).toBeUndefined()
   })
@@ -145,7 +145,7 @@ describe('createWorktree', () => {
     const project = makeTempProject()
     cleanups.push(() => rmSync(project, { recursive: true, force: true }))
 
-    const wt = createWorktree(project)
+    const wt = createTempCopy(project)
     const root = wt.root
 
     expect(existsSync(root)).toBe(true)
@@ -158,7 +158,7 @@ describe('createWorktree', () => {
     cleanups.push(() => rmSync(project, { recursive: true, force: true }))
     writeFileSync(join(project, 'index.js'), 'hello')
 
-    const wt = tracked(createWorktree(project))
+    const wt = tracked(createTempCopy(project))
 
     expect(existsSync(join(wt.root, 'index.js'))).toBe(true)
     expect(existsSync(join(wt.root, 'node_modules'))).toBe(false)

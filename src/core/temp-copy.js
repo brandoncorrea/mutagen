@@ -11,7 +11,7 @@ import { cpSync, symlinkSync, rmSync, existsSync, mkdtempSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { tmpdir } from 'node:os'
 
-export function createWorktree(projectRoot) {
+export function createTempCopy(projectRoot) {
   const root = makeRoot(projectRoot)
   function unresolve(tempPath) {
     return relative(root, tempPath)

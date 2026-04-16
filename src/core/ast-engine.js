@@ -126,26 +126,26 @@ function isInSkipRange(node, ranges) {
 export function matchesPattern(node, pattern) {
   if (!isObject(node) || !isObject(pattern)) return false
   for (const key of Object.keys(pattern)) {
-    const patternVal = pattern[key]
-    const nodeVal = node[key]
-    if (!nodeVal) return false
-
-    if (typeof patternVal === 'string') {
-      if (typeof nodeVal === 'string') {
-        if (nodeVal !== patternVal)
-          return false
-      } else if (isObject(nodeVal) && nodeVal.type) {
-        if (nodeVal.name !== patternVal)
-          return false
-      } else {
-        return false
-      }
-    } else if (isObject(patternVal)) {
-      if (!matchesPattern(nodeVal, patternVal))
-        return false
-    } else if (nodeVal !== patternVal) {
+    if (!matchesValue(node[key], pattern[key]))
       return false
-    }
   }
   return true
+}
+
+function matchesValue(nodeVal, patternVal) {
+  if (!nodeVal) return false
+
+  if (typeof patternVal === 'string')
+    return matchesStringPattern(nodeVal, patternVal)
+  if (isObject(patternVal))
+    return matchesPattern(nodeVal, patternVal)
+  return nodeVal === patternVal
+}
+
+function matchesStringPattern(nodeVal, patternVal) {
+  if (typeof nodeVal === 'string')
+    return nodeVal === patternVal
+  if (isObject(nodeVal) && nodeVal.type)
+    return nodeVal.name === patternVal
+  return false
 }

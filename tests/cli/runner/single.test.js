@@ -17,7 +17,7 @@ vi.mock('../../../src/core/temp-copy.js')
 import { runSingle } from '../../../src/cli/runner/index.js'
 import { reportMutation } from '../../../src/cli/runner/shared.js'
 import { prepareMutationConfig } from '../../../src/core/generate.js'
-import { createWorktree } from '../../../src/core/temp-copy.js'
+import { createTempCopy } from '../../../src/core/temp-copy.js'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { testMutators, sourceCode, mockFs as _mockFs, noop } from '../helpers.js'
 
@@ -38,7 +38,7 @@ function fakeWorktree() {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  createWorktree.mockReturnValue(fakeWorktree())
+  createTempCopy.mockReturnValue(fakeWorktree())
 })
 
 describe('worktree-based mutation isolation', () => {
@@ -58,7 +58,7 @@ describe('worktree-based mutation isolation', () => {
       out: noop
     })
 
-    expect(createWorktree).toHaveBeenCalledWith(process.cwd())
+    expect(createTempCopy).toHaveBeenCalledWith(process.cwd())
   })
 
   it('writes mutations to temp file, not original source', async () => {
@@ -117,7 +117,7 @@ describe('worktree-based mutation isolation', () => {
       close: vi.fn().mockResolvedValue(undefined)
     }
     const wt = fakeWorktree()
-    createWorktree.mockReturnValue(wt)
+    createTempCopy.mockReturnValue(wt)
 
     await runSingle({
       sourceFile: resolve('src/a.js'),
@@ -138,7 +138,7 @@ describe('worktree-based mutation isolation', () => {
       close: vi.fn().mockResolvedValue(undefined)
     }
     const wt = fakeWorktree()
-    createWorktree.mockReturnValue(wt)
+    createTempCopy.mockReturnValue(wt)
 
     await runSingle({
       sourceFile: resolve('src/a.js'),

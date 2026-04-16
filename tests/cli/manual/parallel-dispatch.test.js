@@ -17,7 +17,7 @@ vi.mock('../../../src/core/temp-copy.js')
 
 import { createManualRunner as _createManualRunner } from '../../../src/cli/manual.js'
 import { createPool } from '../../../src/core/pool.js'
-import { createWorktree } from '../../../src/core/temp-copy.js'
+import { createTempCopy } from '../../../src/core/temp-copy.js'
 import { readFileSync, existsSync } from 'node:fs'
 import { testMutators, sourceCode, fakeRunner, killedMutation, setupPool as _setupPool, mockFs as _mockFs, noop } from '../helpers.js'
 
@@ -40,7 +40,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.spyOn(console, 'error').mockImplementation(() => {})
   existsSync.mockReturnValue(false)
-  createWorktree.mockReturnValue(fakeWorktree())
+  createTempCopy.mockReturnValue(fakeWorktree())
 })
 
 describe('--parallel flag wiring through manual.js', () => {

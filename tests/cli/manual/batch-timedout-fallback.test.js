@@ -14,7 +14,7 @@ vi.mock('../../../src/cli/runner/single.js', () => ({
 vi.mock('../../../src/core/temp-copy.js')
 
 import { createManualRunner } from '../../../src/cli/manual.js'
-import { createWorktree } from '../../../src/core/temp-copy.js'
+import { createTempCopy } from '../../../src/core/temp-copy.js'
 import { runSingle } from '../../../src/cli/runner/single.js'
 
 const noop = () => {}
@@ -31,7 +31,7 @@ function fakeWorktree() {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  createWorktree.mockReturnValue(fakeWorktree())
+  createTempCopy.mockReturnValue(fakeWorktree())
 })
 
 describe('createManualRunner', () => {

@@ -16,7 +16,7 @@ vi.mock('node:fs', async (importOriginal) => {
 vi.mock('../../src/core/temp-copy.js')
 
 import { run, isMain } from '../../src/bin/mutagen.js'
-import { createWorktree } from '../../src/core/temp-copy.js'
+import { createTempCopy } from '../../src/core/temp-copy.js'
 import { readFileSync, existsSync, readdirSync } from 'node:fs'
 import { testMutators } from '../cli/helpers.js'
 
@@ -36,7 +36,7 @@ function fakeWorktree() {
 beforeEach(() => {
   vi.clearAllMocks()
   existsSync.mockReturnValue(false)
-  createWorktree.mockReturnValue(fakeWorktree())
+  createTempCopy.mockReturnValue(fakeWorktree())
 })
 
 describe('--version flag', () => {

@@ -15,7 +15,7 @@ vi.mock('node:fs', async (importOriginal) => {
 vi.mock('../../src/core/temp-copy.js')
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
-import { createWorktree } from '../../src/core/temp-copy.js'
+import { createTempCopy } from '../../src/core/temp-copy.js'
 import { loadRetestTargets, filterMutationsToSurvivors } from '../../src/cli/retest.js'
 import { prepareMutationConfig } from '../../src/core/generate.js'
 import { testMutators, sourceCode, noop } from './helpers.js'
