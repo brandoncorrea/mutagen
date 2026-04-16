@@ -267,6 +267,15 @@ describe('diffReports', () => {
     expect(output()).toContain('Warning')
   })
 
+  it('prints +0.0% when overall score delta is exactly zero', () => {
+    runDiff(
+      { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } },
+      { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } }
+    )
+
+    expect(output()).toContain('(+0.0%)')
+  })
+
   it('prints negative score delta when score decreases', () => {
     runDiff(
       { 'a.js': { mutants: [
