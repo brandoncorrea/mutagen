@@ -236,6 +236,34 @@ describe('ast-engine generateMutations', () => {
     expect(mutations[0].name).toBe('push → pop')
   })
 
+  it('supports AssignmentPattern default parameter removal', () => {
+    const defaultParamMutator = {
+      name: 'param = value → param (remove default)',
+      types: ['AssignmentPattern'],
+      test: () => true,
+      mutate: node => ({ start: node.left.end, end: node.end, replacement: '' })
+    }
+    const source = 'function foo(x = 42) {}'
+    const mutations = generateMutations(source, [defaultParamMutator])
+    expect(mutations).toHaveLength(1)
+    expect(mutations[0].mutated).toBe('function foo(x) {}')
+    expect(mutations[0].name).toBe('param = value → param (remove default)')
+  })
+
+  it('handles arrow function default parameters', () => {
+    const defaultParamMutator = {
+      name: 'param = value → param (remove default)',
+      types: ['AssignmentPattern'],
+      test: () => true,
+      mutate: node => ({ start: node.left.end, end: node.end, replacement: '' })
+    }
+    const source = 'const fn = (a = 1, b = 2) => a + b'
+    const mutations = generateMutations(source, [defaultParamMutator])
+    expect(mutations).toHaveLength(2)
+    expect(mutations[0].mutated).toBe('const fn = (a, b = 2) => a + b')
+    expect(mutations[1].mutated).toBe('const fn = (a = 1, b) => a + b')
+  })
+
   it('handles TypeScript source code', () => {
     const source = 'const x: boolean = true === false'
     const mutations = generateMutations(source, [equalityMutator])

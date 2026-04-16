@@ -34,7 +34,8 @@ describe('ast-mutators', () => {
         'AwaitExpression', 'SpreadElement', 'ArrayExpression',
         'Literal', 'BooleanLiteral', 'NumericLiteral', 'StringLiteral',
         'ChainExpression', 'ObjectExpression',
-        'IfStatement', 'WhileStatement'
+        'IfStatement', 'WhileStatement',
+        'AssignmentPattern'
       ])
       for (const m of javascript) {
         for (const t of m.types) {
@@ -414,6 +415,36 @@ describe('ast-mutators', () => {
       expect(m.test(node)).toBe(true)
       const patch = m.mutate(node, '-x')
       expect(patch).toEqual({ start: 0, end: 1, replacement: '' })
+    })
+  })
+
+  // ── Default parameter removal ──
+
+  describe('default parameter removal', () => {
+    it('param = value → param removes default value', () => {
+      const m = find('param = value → param (remove default)')
+      const node = {
+        type: 'AssignmentPattern',
+        left: { type: 'Identifier', name: 'x', start: 13, end: 14 },
+        right: { type: 'NumericLiteral', value: 42, start: 17, end: 19 },
+        start: 13, end: 19
+      }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node)
+      expect(patch).toEqual({ start: 14, end: 19, replacement: '' })
+    })
+
+    it('matches destructured defaults', () => {
+      const m = find('param = value → param (remove default)')
+      const node = {
+        type: 'AssignmentPattern',
+        left: { type: 'ObjectPattern', start: 13, end: 20 },
+        right: { type: 'ObjectExpression', start: 23, end: 25 },
+        start: 13, end: 25
+      }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node)
+      expect(patch).toEqual({ start: 20, end: 25, replacement: '' })
     })
   })
 
