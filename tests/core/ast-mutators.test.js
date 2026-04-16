@@ -567,6 +567,28 @@ describe('ast-mutators', () => {
       node.callee.end = 9
       expect(m.mutate(node, 'arr.slice  ')).toBeNull()
     })
+
+    it('binaryOpSwap returns null when operator found but extends past right.start', () => {
+      const m = find('=== → !==')
+      // '==='' starts at idx 2 and is 3 chars → ends at 5, but right.start is 4
+      const node = binExpr('===', 0, 2, 4, 5)
+      expect(m.mutate(node, 'a ===b')).toBeNull()
+    })
+
+    it('binaryOpSwap matches when operator ends exactly at right.start', () => {
+      const m = find('=== → !==')
+      // '===' starts at idx 2, length 3 → ends at 5, right.start is 5: exact boundary
+      const node = binExpr('===', 0, 2, 5, 6)
+      const patch = m.mutate(node, 'a === b')
+      expect(patch).toEqual({ start: 2, end: 5, replacement: '!==' })
+    })
+
+    it('slice mutator patch has correct start and end positions', () => {
+      const m = find('slice() → slice(1,')
+      const node = callWithMethod('slice', 4, 9, 0, 11)
+      const patch = m.mutate(node, 'arr.slice()')
+      expect(patch).toEqual({ start: 10, end: 10, replacement: '1,' })
+    })
   })
 
   // ── Off-by-one boundary comparison mutators ──
