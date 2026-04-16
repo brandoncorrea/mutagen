@@ -32,6 +32,8 @@ import {
   throwRemoval, spreadRemoval, propertyAccessMutations
 } from './mutators/values.js'
 
+import { regexMutations } from './mutators/regex.js'
+
 export const javascript = [
   ...equalityOperators,
   ...logicalOperators,
@@ -61,5 +63,6 @@ export const javascript = [
   ...typeConversions,
   ...spreadRemoval,
   ...voidRemoval,
-  ...propertyAccessMutations
+  ...propertyAccessMutations,
+  ...regexMutations
 ]

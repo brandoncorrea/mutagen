@@ -33,7 +33,7 @@ describe('ast-mutators', () => {
         'ConditionalExpression', 'ReturnStatement', 'ThrowStatement',
         'AwaitExpression', 'SpreadElement', 'ArrayExpression',
         'Literal', 'BooleanLiteral', 'NumericLiteral', 'StringLiteral',
-        'ChainExpression', 'ObjectExpression',
+        'RegExpLiteral', 'ChainExpression', 'ObjectExpression',
         'IfStatement', 'WhileStatement'
       ])
       for (const m of javascript) {
