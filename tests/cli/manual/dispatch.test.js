@@ -833,4 +833,17 @@ describe('createManualRunner', () => {
       expect(code).toBe(0)
     })
   })
+
+  describe('out default', () => {
+    it('defaults to console.log when out is not provided', async () => {
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+      const manual = _createManualRunner({
+        mutators: testMutators, sources: [],
+        createRunner: vi.fn()
+      })
+      await manual.run(['--help'])
+      expect(logSpy).toHaveBeenCalled()
+      logSpy.mockRestore()
+    })
+  })
 })

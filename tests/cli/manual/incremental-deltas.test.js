@@ -95,6 +95,9 @@ describe('incremental deltas', () => {
         line: 1,
         name: '=== → !=='
       })
+
+      const stderrOutput = process.stderr.write.mock.calls.map(c => c[0]).join('')
+      expect(stderrOutput).toContain('1 files')
     })
 
     it('includes regressions when new survivors appear', async () => {
@@ -189,6 +192,34 @@ describe('incremental deltas', () => {
       expect(report.deltas).toBeDefined()
       expect(report.deltas.rerunFiles).toContain('src/b.js')
       expect(report.deltas.cachedFiles).toContain('src/a.js')
+    })
+
+    it('prints correct file count in score line when all sources are cached', async () => {
+      const srcA = resolve('src/a.js')
+      const codeA = 'const a = 1'
+
+      existsSync.mockReturnValue(true)
+      mockFs({
+        [srcA]: codeA,
+        ['reports/mutation/manual-report.json']: JSON.stringify({
+          files: {
+            'src/a.js': {
+              mutants: [{ mutatorName: 'x', replacement: 'y', status: 'Killed', killedBy: ['t.test.js'] }]
+            }
+          },
+          sourceHashes: { 'src/a.js': hashOf(codeA) },
+          testHashes: {}
+        })
+      })
+
+      const manual = createManualRunner({
+        mutators: testMutators, sources: ['src/a.js'],
+        createRunner: vi.fn()
+      })
+      await manual.runIncremental('reports/out.json', null)
+
+      const stderrOutput = process.stderr.write.mock.calls.map(c => c[0]).join('')
+      expect(stderrOutput).toContain('1 files')
     })
 
     it('has no deltas on first run (no previous report)', async () => {
