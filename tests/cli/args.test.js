@@ -298,6 +298,13 @@ describe('parseArgs', () => {
       expect(result.sourceFile).toContain('source.js')
       expect(result.sourceFile).not.toContain('output.json')
     })
+
+    it('does not consume --json path as source file when --json precedes source', () => {
+      const result = parseArgs(['--json', 'report.json', 'source.js'])
+      expect(result.sourceFile).toContain('source.js')
+      expect(result.sourceFile).not.toContain('report.json')
+      expect(result.jsonOutput).toBe('report.json')
+    })
   })
 
   describe('--quiet flag', () => {
