@@ -11,7 +11,11 @@ export const equalityOperators = [
   binaryOpSwap('>= → <', '>=', '<'),
   binaryOpSwap('<= → >', '<=', '>'),
   binaryOpSwap('> → <', '>', '<'),
-  binaryOpSwap('< → >', '<', '>')
+  binaryOpSwap('< → >', '<', '>'),
+  binaryOpSwap('> → >=', '>', '>='),
+  binaryOpSwap('< → <=', '<', '<='),
+  binaryOpSwap('>= → >', '>=', '>'),
+  binaryOpSwap('<= → <', '<=', '<')
 ]
 
 export const logicalOperators = [

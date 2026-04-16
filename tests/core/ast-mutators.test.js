@@ -493,6 +493,58 @@ describe('ast-mutators', () => {
     })
   })
 
+  // ── Off-by-one boundary comparison mutators ──
+
+  describe('off-by-one boundary comparisons', () => {
+    it('> → >= shifts boundary to include', () => {
+      const m = find('> → >=')
+      expect(m.test(binExpr('>', 4, 5, 8, 9))).toBe(true)
+      const patch = m.mutate(binExpr('>', 4, 5, 8, 9), 'if (a > b) {}')
+      expect(patch.replacement).toBe('>=')
+    })
+
+    it('> → >= does not match <', () => {
+      const m = find('> → >=')
+      expect(m.test(binExpr('<', 4, 5, 8, 9))).toBe(false)
+    })
+
+    it('< → <= shifts boundary to include', () => {
+      const m = find('< → <=')
+      expect(m.test(binExpr('<', 4, 5, 8, 9))).toBe(true)
+      const patch = m.mutate(binExpr('<', 4, 5, 8, 9), 'if (a < b) {}')
+      expect(patch.replacement).toBe('<=')
+    })
+
+    it('< → <= does not match >', () => {
+      const m = find('< → <=')
+      expect(m.test(binExpr('>', 4, 5, 8, 9))).toBe(false)
+    })
+
+    it('>= → > shifts boundary to exclude', () => {
+      const m = find('>= → >')
+      expect(m.test(binExpr('>=', 4, 5, 9, 10))).toBe(true)
+      const patch = m.mutate(binExpr('>=', 4, 5, 9, 10), 'if (a >= b) {}')
+      expect(patch.replacement).toBe('>')
+    })
+
+    it('>= → > does not match <=', () => {
+      const m = find('>= → >')
+      expect(m.test(binExpr('<=', 4, 5, 9, 10))).toBe(false)
+    })
+
+    it('<= → < shifts boundary to exclude', () => {
+      const m = find('<= → <')
+      expect(m.test(binExpr('<=', 4, 5, 9, 10))).toBe(true)
+      const patch = m.mutate(binExpr('<=', 4, 5, 9, 10), 'if (a <= b) {}')
+      expect(patch.replacement).toBe('<')
+    })
+
+    it('<= → < does not match >=', () => {
+      const m = find('<= → <')
+      expect(m.test(binExpr('>=', 4, 5, 9, 10))).toBe(false)
+    })
+  })
+
   // ── Remaining equality operators ──
 
   describe('remaining equality operators', () => {
