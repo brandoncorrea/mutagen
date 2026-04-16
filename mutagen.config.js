@@ -8,6 +8,6 @@ export default {
     config: 'vitest.config.js',
     ...opts
   }),
-  timeout: 30000,
+  timeout: 5000,
   reportDir: 'reports/mutation'
 }
