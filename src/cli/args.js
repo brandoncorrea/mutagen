@@ -24,6 +24,7 @@ Options:
   --timeout N        Per-mutation timeout in milliseconds
   --parallel [N]     Run mutations in parallel (default: CPU count, max 32)
   --quiet            Suppress per-mutation output; print summary to stderr
+  --progress         Show compact per-file dot notation progress on stderr
   --survivors-only   Only display surviving mutations in output
   --min-score N      Exit 1 if mutation score is below N percent
   --changed          Only test files changed in git (--all and --incremental)
@@ -58,6 +59,7 @@ function incrementalOptions(argv) {
     parallel,
     jsonOutput: parseJsonOutput(argv),
     quiet: hasFlag(argv, '--quiet'),
+    progress: hasFlag(argv, '--progress'),
     survivorsOnly: hasFlag(argv, '--survivors-only'),
     changed: hasFlag(argv, '--changed'),
     minScore
@@ -78,6 +80,7 @@ function allOptions(argv) {
     jsonOutput: parseJsonOutput(argv),
     dryRunMode: hasFlag(argv, '--dry-run'),
     quiet: hasFlag(argv, '--quiet'),
+    progress: hasFlag(argv, '--progress'),
     survivorsOnly: hasFlag(argv, '--survivors-only'),
     changed: hasFlag(argv, '--changed'),
     minScore
@@ -111,7 +114,8 @@ function retestOptions(argv) {
     timeout,
     parallel,
     jsonOutput: parseJsonOutput(argv),
-    quiet: hasFlag(argv, '--quiet')
+    quiet: hasFlag(argv, '--quiet'),
+    progress: hasFlag(argv, '--progress')
   }
 }
 
@@ -129,6 +133,7 @@ function sourceFileOptions(argv) {
     jsonOutput: parseJsonOutput(argv),
     dryRunMode: hasFlag(argv, '--dry-run'),
     quiet: hasFlag(argv, '--quiet'),
+    progress: hasFlag(argv, '--progress'),
     survivorsOnly: hasFlag(argv, '--survivors-only'),
     timeout,
     parallel,

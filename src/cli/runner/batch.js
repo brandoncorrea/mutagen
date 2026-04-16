@@ -3,12 +3,13 @@
  * Orchestrates sequential or parallel runs with pooled workers.
  */
 
-import { resolve } from 'node:path'
+import { resolve, relative } from 'node:path'
 
 import { createReport, writeReportFile, writeStructuredReportFile, tryLoadJson, HEADER_SEPARATOR } from '../../core/report-data.js'
 import { runSingle } from './single.js'
 import { runParallel, createBatchPool } from './parallel.js'
 import { printScoreLine } from '../report.js'
+import { createProgressReporter } from '../progress.js'
 import { isString } from './shared.js'
 import { autoDiffSummary } from '../auto-diff.js'
 
@@ -16,14 +17,14 @@ import { autoDiffSummary } from '../auto-diff.js'
  * @returns {{ totalSurvived: number, totalKilled: number, totalTimedOut: number, failures: number, fileResults: Object }}
  */
 export async function runBatch(runContext, jsonOutput, timeout, sourcesToRun) {
-  const { mutationConfig, createRunner, reportDir, reportPath, sources, survivorsOnly, out } = runContext
+  const { mutationConfig, createRunner, reportDir, reportPath, sources, survivorsOnly, progress, out } = runContext
   const filesToRun = sourcesToRun || sources
 
   out(`\n${HEADER_SEPARATOR}`)
   out(`MUTAGEN — BATCH MODE`)
   out(`   Sources: ${filesToRun.length} file(s)\n`)
 
-  const result = await accumulateResults(filesToRun, { mutationConfig, createRunner, timeout, parallel: runContext.parallel, survivorsOnly, out })
+  const result = await accumulateResults(filesToRun, { mutationConfig, createRunner, timeout, parallel: runContext.parallel, survivorsOnly, progress, out })
 
   if (isString(jsonOutput)) {
     const previous = tryLoadJson(resolve(jsonOutput))
@@ -41,12 +42,15 @@ export async function runBatch(runContext, jsonOutput, timeout, sourcesToRun) {
   return result
 }
 
-async function accumulateResults(filesToRun, { mutationConfig, createRunner, timeout, parallel, survivorsOnly, out }) {
+async function accumulateResults(filesToRun, { mutationConfig, createRunner, timeout, parallel, survivorsOnly, progress, out }) {
   let totalSurvived = 0
   let totalKilled = 0
   let totalTimedOut = 0
   let failures = 0
   const fileResults = {}
+
+  const displayPaths = filesToRun.map(f => relative(process.cwd(), resolve(f)))
+  const reporter = progress ? createProgressReporter(displayPaths) : null
 
   const workerCount = parallelWorkerCount(parallel)
   const pool = parallel
@@ -54,11 +58,15 @@ async function accumulateResults(filesToRun, { mutationConfig, createRunner, tim
     : null
 
   try {
-    for (const source of filesToRun) {
-      const runOptions = { sourceFile: resolve(source), mutationConfig, createRunner, timeout, survivorsOnly, out }
+    for (let i = 0; i < filesToRun.length; i++) {
+      const source = filesToRun[i]
+      if (reporter) reporter.startFile(displayPaths[i])
+      const onProgress = reporter ? status => reporter.dot(status) : undefined
+      const runOptions = { sourceFile: resolve(source), mutationConfig, createRunner, timeout, survivorsOnly, out, onProgress }
       const { error, survived, killed, timedOut, jsonData } = parallel
         ? await runParallel({ ...runOptions, workerCount, pool })
         : await runSingle(runOptions)
+      if (reporter) reporter.endFile()
       if (error) {
         failures++
       } else {

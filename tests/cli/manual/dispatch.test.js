@@ -554,6 +554,123 @@ describe('createManualRunner', () => {
       stderrSpy.mockRestore()
     })
 
+    it('--progress streams dots to stderr in single-file mode', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: false, killedBy: ['t.test.js'] }
+      ])
+
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+
+      const manual = _createManualRunner({
+        mutators: testMutators, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner),
+        out: noop
+      })
+      await manual.run(['src/a.js', '--progress'])
+
+      const stderrOutput = stderrSpy.mock.calls.map(c => c[0]).join('')
+      expect(stderrOutput).toContain('.')
+      expect(stderrOutput).toMatch(/\d+ files \| \d+ mutations \| \d+ killed \| \d+ survived \| [\d.]+%/)
+
+      stderrSpy.mockRestore()
+    })
+
+    it('--progress shows ! for survived mutations', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: true } // survived
+      ])
+
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+
+      const manual = _createManualRunner({
+        mutators: testMutators, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner),
+        out: noop
+      })
+      await manual.run(['src/a.js', '--progress'])
+
+      const stderrOutput = stderrSpy.mock.calls.map(c => c[0]).join('')
+      expect(stderrOutput).toContain('!')
+
+      stderrSpy.mockRestore()
+    })
+
+    it('--progress suppresses per-mutation verbose output', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: false }
+      ])
+
+      const lines = []
+      const manual = _createManualRunner({
+        mutators: testMutators, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner),
+        out: msg => lines.push(msg)
+      })
+
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+      await manual.run(['src/a.js', '--progress'])
+
+      expect(lines).toEqual([])
+      stderrSpy.mockRestore()
+    })
+
+    it('--progress in batch mode shows dots per file', async () => {
+      mockFs({
+        [resolve('src/a.js')]: sourceCode,
+        [resolve('src/b.js')]: 'if (x === y) {}'
+      })
+      const runner = fakeRunner([
+        { passed: true }, { passed: false },
+        { passed: true }, { passed: false }
+      ])
+
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+
+      const manual = _createManualRunner({
+        mutators: testMutators, sources: ['src/a.js', 'src/b.js'],
+        createRunner: vi.fn().mockResolvedValue(runner),
+        out: noop
+      })
+      await manual.run(['--all', '--progress'])
+
+      const stderrOutput = stderrSpy.mock.calls.map(c => c[0]).join('')
+      expect(stderrOutput).toContain('src/a.js')
+      expect(stderrOutput).toContain('src/b.js')
+      expect(stderrOutput).toContain('.')
+      expect(stderrOutput).toMatch(/2 files \|/)
+
+      stderrSpy.mockRestore()
+    })
+
+    it('--progress does not show quiet summary when --quiet is not set', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: false }
+      ])
+
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+
+      const manual = _createManualRunner({
+        mutators: testMutators, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner),
+        out: noop
+      })
+      await manual.run(['src/a.js', '--progress'])
+
+      const stderrOutput = stderrSpy.mock.calls.map(c => c[0]).join('')
+      expect(stderrOutput).not.toMatch(/^Score:/)
+      expect(stderrOutput).toMatch(/\d+ mutations/)
+
+      stderrSpy.mockRestore()
+    })
+
     it('--quiet in batch mode writes summary to stderr', async () => {
       mockFs({ [resolve('src/a.js')]: sourceCode })
       const runner = fakeRunner([

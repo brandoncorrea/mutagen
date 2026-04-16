@@ -13,6 +13,7 @@ import { assignMutationIds } from '../../core/mutation-id.js'
 import { toJsonMutants } from '../../core/report-data.js'
 import { createTempCopy } from '../../core/temp-copy.js'
 import { printRunReport } from '../report.js'
+import { createOrderedBuffer } from '../progress.js'
 import { runPreflightTests, reportMutation, printBanner } from './shared.js'
 
 const DEFAULT_WORKER_COUNT = 2
@@ -78,7 +79,7 @@ async function runAfterPreflight(preflightRunner, options) {
   assignMutationIds(mutations, relative(process.cwd(), sourceFile))
   out(`Found ${mutations.length} mutation(s) to run.\n`)
 
-  return await executeWithPool(mutations, { sourceFile, createRunner, workerCount, pool: options.pool, timeout, survivorsOnly, out })
+  return await executeWithPool(mutations, { sourceFile, createRunner, workerCount, pool: options.pool, timeout, survivorsOnly, out, onProgress: options.onProgress })
 }
 
 async function executeWithPool(mutations, options) {
@@ -144,17 +145,24 @@ async function createRunnerWithOptions(options) {
   }
 }
 
-async function runPool(pool, mutations, { sourceFile, timeout, survivorsOnly, out }) {
+async function runPool(pool, mutations, { sourceFile, timeout, survivorsOnly, out, onProgress }) {
   let completed = 0
   const total = mutations.length
+  const orderedEmit = onProgress
+    ? createOrderedBuffer(onProgress)
+    : null
+  const indexed = orderedEmit
+    ? mutations.map((m, i) => ({ ...m, _progressIndex: i }))
+    : mutations
 
   function onResult({ mutation, status }) {
     completed++
+    orderedEmit?.(mutation._progressIndex, status)
     if (!survivorsOnly || status === 'SURVIVED')
       reportMutation(out, total, { number: completed, ...mutation }, status)
   }
 
-  const outcomes = await pool.run(mutations, { timeout, onResult })
+  const outcomes = await pool.run(indexed, { timeout, onResult })
 
   printRunReport(mutations, outcomes, out)
 

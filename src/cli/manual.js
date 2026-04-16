@@ -12,7 +12,7 @@
  *   node mutate.js --diff <before.json> <after.json>
  */
 
-import { resolve } from 'node:path'
+import { resolve, relative } from 'node:path'
 
 import { prepareMutationConfig } from '../core/generate.js'
 import { resolveGlobs } from '../core/resolve-globs.js'
@@ -23,6 +23,7 @@ import { runSingle, runParallel, runBatch, dryRun } from './runner/index.js'
 import { runIncremental } from './incremental.js'
 import { runRetest } from './retest.js'
 import { formatQuietSummary } from './report.js'
+import { formatProgressSummary, createProgressReporter } from './progress.js'
 
 /**
  * Create a manual mutation runner with project-specific config.
@@ -121,7 +122,9 @@ async function run(runContext, argv) {
 
   const { stats, exitCode } = await getRunResults(parsed, effectiveContext, timeout)
 
-  if (parsed.quiet && stats)
+  if (parsed.progress && stats)
+    process.stderr.write(formatProgressSummary(stats) + '\n')
+  else if (parsed.quiet && stats)
     process.stderr.write(formatQuietSummary(stats) + '\n')
   if (parsed.minScore != null && stats)
     return scoreExitCode(stats, parsed.minScore)
@@ -130,8 +133,10 @@ async function run(runContext, argv) {
 }
 
 function applyRunFlags(runContext, parsed) {
-  let context = parsed.quiet ? { ...runContext, out: () => {} } : runContext
+  let context = (parsed.quiet || parsed.progress) ? { ...runContext, out: () => {} } : runContext
 
+  if (parsed.progress)
+    context = { ...context, progress: true }
   if (parsed.changed)
     context = { ...context, sources: filterChanged(context.sources) }
   if (parsed.parallel)
@@ -194,7 +199,7 @@ async function runIncrementalMode(runContext, jsonOutput, timeout) {
 }
 
 async function runBatchMode(runContext, jsonOutput, timeout) {
-  const result = await runBatch(runContext, jsonOutput, timeout)
+  const result = await runBatch(runContext, jsonOutput, timeout, undefined)
   const { totalSurvived, totalKilled, totalTimedOut, failures, fileResults } = result
   const exitCode = (totalSurvived + failures) ? 1 : 0
   return {
@@ -209,6 +214,9 @@ async function runBatchMode(runContext, jsonOutput, timeout) {
 }
 
 async function runSingleMode(runContext, parsed, timeout) {
+  const progress = runContext.progress
+    ? createSingleFileProgress(relative(process.cwd(), parsed.sourceFile))
+    : null
   const runOptions = {
     sourceFile: parsed.sourceFile,
     mutationConfig: runContext.mutationConfig,
@@ -216,9 +224,11 @@ async function runSingleMode(runContext, parsed, timeout) {
     targetLine: parsed.targetLine,
     timeout,
     survivorsOnly: runContext.survivorsOnly,
-    out: runContext.out
+    out: runContext.out,
+    onProgress: progress?.dot
   }
   const { error, survived, killed, timedOut } = await getSingleRunResult(runContext, runOptions)
+  if (progress) progress.endFile()
   return {
     exitCode: error || survived ? 1 : 0,
     stats: {
@@ -228,6 +238,12 @@ async function runSingleMode(runContext, parsed, timeout) {
       fileCount: 1
     }
   }
+}
+
+function createSingleFileProgress(displayPath) {
+  const reporter = createProgressReporter([displayPath])
+  reporter.startFile(displayPath)
+  return reporter
 }
 
 async function getSingleRunResult(runContext, runOptions) {

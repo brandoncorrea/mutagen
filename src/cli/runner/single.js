@@ -28,7 +28,7 @@ export async function runSingle(options) {
   const tempSourceFile = worktree.resolve(sourceFile)
   const runner = await createRunner(tempSourceFile, { root: worktree.root })
 
-  const runOptions = { out, runner, timeout, sourceFile, tempSourceFile, targetLine, original, mutationConfig, survivorsOnly, retestMutations, worktree }
+  const runOptions = { out, runner, timeout, sourceFile, tempSourceFile, targetLine, original, mutationConfig, survivorsOnly, retestMutations, worktree, onProgress: options.onProgress }
 
   try {
     return await runMutations(runOptions)
@@ -67,7 +67,7 @@ async function runMutations(runOptions) {
 }
 
 async function runMutation(runOptions, total, outcomes, mutation) {
-  const { out, runner, timeout, tempSourceFile, survivorsOnly, worktree } = runOptions
+  const { out, runner, timeout, tempSourceFile, survivorsOnly, worktree, onProgress } = runOptions
   try {
     writeFileSync(tempSourceFile, mutation.source)
 
@@ -75,17 +75,21 @@ async function runMutation(runOptions, total, outcomes, mutation) {
 
     if (result.passed) {
       outcomes.survived.push({ ...mutation, coveredBy: worktree.mapPaths(result.coveredBy) })
+      onProgress?.('SURVIVED')
       reportMutation(out, total, mutation, 'SURVIVED')
     } else {
       outcomes.killed.push({ ...mutation, killedBy: worktree.mapPaths(result.killedBy) })
+      onProgress?.('killed')
       if (!survivorsOnly) reportMutation(out, total, mutation, 'killed')
     }
   } catch (err) {
     if (err.message?.includes('timed out')) {
       outcomes.timedOut.push(mutation)
+      onProgress?.('TIMEOUT (killed)')
       if (!survivorsOnly) reportMutation(out, total, mutation, 'TIMEOUT (killed)')
     } else {
       outcomes.killed.push(mutation)
+      onProgress?.('killed (error)')
       if (!survivorsOnly) reportMutation(out, total, mutation, 'killed (error)')
     }
   }

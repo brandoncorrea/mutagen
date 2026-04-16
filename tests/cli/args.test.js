@@ -469,6 +469,45 @@ describe('parseArgs', () => {
     })
   })
 
+  describe('--progress flag', () => {
+    it('parses --progress in --all mode', () => {
+      const result = parseArgs(['--all', '--progress'])
+      expect(result.progress).toBe(true)
+    })
+
+    it('parses --progress in --incremental mode', () => {
+      const result = parseArgs(['--incremental', '--progress'])
+      expect(result.progress).toBe(true)
+    })
+
+    it('parses --progress in source file mode', () => {
+      const result = parseArgs(['source.js', '--progress'])
+      expect(result.progress).toBe(true)
+    })
+
+    it('parses --progress in --retest mode', () => {
+      const result = parseArgs(['--retest', 'report.json', '--progress'])
+      expect(result.progress).toBe(true)
+    })
+
+    it('defaults progress to false when absent', () => {
+      const result = parseArgs(['--all'])
+      expect(result.progress).toBeFalsy()
+    })
+
+    it('composes with --quiet and --json', () => {
+      const result = parseArgs(['--all', '--progress', '--quiet', '--json'])
+      expect(result.progress).toBe(true)
+      expect(result.quiet).toBe(true)
+      expect(result.jsonOutput).toBe(true)
+    })
+
+    it('appears in help text', () => {
+      const result = parseArgs(['--help'])
+      expect(result.help).toContain('--progress')
+    })
+  })
+
   describe('--min-score at index 0', () => {
     it('parses --min-score when it appears first in argv', () => {
       const result = parseArgs(['--min-score', '80', '--all'])
