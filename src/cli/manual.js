@@ -46,7 +46,9 @@ export function createManualRunner(config) {
     include,
     exclude,
     cwd,
-    testSources = [],
+    testSources: explicitTestSources = [],
+    testInclude,
+    testExclude,
     createRunner,
     reportDir = 'reports/mutation',
     reportFile = 'manual-report.json',
@@ -56,6 +58,10 @@ export function createManualRunner(config) {
 
   const sources = explicitSources?.length ? explicitSources
     : include ? resolveGlobs({ include, exclude, cwd })
+    : []
+
+  const testSources = explicitTestSources.length ? explicitTestSources
+    : testInclude ? resolveGlobs({ include: testInclude, exclude: testExclude, cwd })
     : []
 
   const mutationConfig = prepareMutationConfig({ mutators, skipNodes })

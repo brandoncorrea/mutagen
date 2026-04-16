@@ -114,7 +114,9 @@ export default {
   exclude: ['**/*.test.js'],  // Glob patterns to exclude (optional)
   sources: ['src/foo.js'],    // Explicit source files (takes precedence over include/exclude)
   cwd: process.cwd(),         // Base directory for glob resolution (default: cwd)
-  testSources: [],             // Test files to track for incremental invalidation
+  testSources: [],             // Explicit test files for incremental invalidation
+  testInclude: ['tests/**/*.test.js'],  // Glob patterns to discover test files
+  testExclude: [],             // Glob patterns to exclude from test discovery
   createRunner: async (sourceFile) => runner,  // Test runner factory
   reportDir: 'reports/mutation',               // Directory for JSON reports
   reportFile: 'manual-report.json',            // Report filename
