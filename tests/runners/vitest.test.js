@@ -7,6 +7,10 @@ vi.mock('vitest/node', () => ({
 import { createVitestRunner } from '../../src/runners/vitest.js'
 import { startVitest } from 'vitest/node'
 
+function createMockModuleGraph() {
+  return { invalidateAll: vi.fn(), getModuleById: vi.fn().mockReturnValue(null) }
+}
+
 function createMockVitest() {
   return {
     waitForTestRunEnd: vi.fn().mockResolvedValue(undefined),
@@ -15,7 +19,13 @@ function createMockVitest() {
     globTestSpecifications: vi.fn().mockResolvedValue([]),
     runTestSpecifications: vi.fn().mockResolvedValue(undefined),
     state: { getFiles: vi.fn().mockReturnValue([]) },
-    projects: []
+    projects: [{
+      _vite: {
+        moduleGraph: createMockModuleGraph(),
+        environments: { ssr: { moduleGraph: createMockModuleGraph() } }
+      }
+    }],
+    _fsCache: { clearCache: vi.fn() }
   }
 }
 
@@ -203,17 +213,20 @@ describe('createVitestRunner', () => {
       ]
       const mock = createMockVitest()
       mock.globTestSpecifications.mockResolvedValue(specs)
+      const graphMock = {
+        ...createMockModuleGraph(),
+        getModuleById: vi.fn((id) => {
+          if (id === 'src/a.js')
+            return { importers: new Set([{ id: 'test/a.test.js' }]) }
+          if (id === 'src/b.js')
+            return { importers: new Set([{ id: 'test/b.test.js' }]) }
+          return null
+        })
+      }
       mock.projects = [{
         _vite: {
-          moduleGraph: {
-            getModuleById: vi.fn((id) => {
-              if (id === 'src/a.js')
-                return { importers: new Set([{ id: 'test/a.test.js' }]) }
-              if (id === 'src/b.js')
-                return { importers: new Set([{ id: 'test/b.test.js' }]) }
-              return null
-            })
-          }
+          moduleGraph: graphMock,
+          environments: { ssr: { moduleGraph: createMockModuleGraph() } }
         }
       }]
       mock.state.getFiles.mockReturnValue([
@@ -236,6 +249,40 @@ describe('createVitestRunner', () => {
 
       const runner = await createVitestRunner('src/a.js', { warm: false })
       expect(runner.switchFile).toBeUndefined()
+    })
+
+    it('flushes module graph and fs cache on file switch to prevent OOM', async () => {
+      const mock = createMockVitest()
+      mock.state.getFiles.mockReturnValue([
+        { result: { state: 'pass' }, filepath: 'test/a.test.js' }
+      ])
+      startVitest.mockResolvedValue(mock)
+
+      const runner = await createVitestRunner('src/a.js')
+      await runner.switchFile('src/b.js')
+
+      const vite = mock.projects[0]._vite
+      expect(vite.moduleGraph.invalidateAll).toHaveBeenCalled()
+      expect(vite.environments.ssr.moduleGraph.invalidateAll).toHaveBeenCalled()
+      expect(mock._fsCache.clearCache).toHaveBeenCalled()
+    })
+
+    it('flushes before recomputing related specs', async () => {
+      const mock = createMockVitest()
+      mock.state.getFiles.mockReturnValue([
+        { result: { state: 'pass' }, filepath: 'test/a.test.js' }
+      ])
+      startVitest.mockResolvedValue(mock)
+
+      const callOrder = []
+      mock.projects[0]._vite.moduleGraph.invalidateAll.mockImplementation(() => callOrder.push('flush'))
+      mock.globTestSpecifications.mockImplementation(() => { callOrder.push('glob'); return [] })
+
+      const runner = await createVitestRunner('src/a.js')
+      callOrder.length = 0
+      await runner.switchFile('src/b.js')
+
+      expect(callOrder[0]).toBe('flush')
     })
   })
 

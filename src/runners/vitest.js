@@ -36,6 +36,7 @@ export async function createVitestRunner(sourceFile, options = {}) {
   return {
     preflight: { passed: preflightPassed },
     async switchFile(newSourceFile) {
+      flushModuleState(vitest)
       currentSourceFile = newSourceFile
       relatedSpecs = await findRelatedSpecs(vitest, newSourceFile)
     },
@@ -64,6 +65,17 @@ export async function createVitestRunner(sourceFile, options = {}) {
       await vitest.close()
     }
   }
+}
+
+function flushModuleState(vitest) {
+  for (const project of vitest.projects) {
+    const vite = project._vite
+    if (!vite) continue
+    for (const env of Object.values(vite.environments))
+      env.moduleGraph.invalidateAll()
+    vite.moduleGraph.invalidateAll()
+  }
+  vitest._fsCache?.clearCache()
 }
 
 function createVitestOptions({ config, root }) {
