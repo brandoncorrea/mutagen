@@ -10,6 +10,9 @@ import { runSingle } from './single.js'
 import { runParallel, createBatchPool } from './parallel.js'
 import { printScoreLine } from '../report.js'
 
+/**
+ * @returns {{ totalSurvived: number, totalKilled: number, totalTimedOut: number, failures: number, fileResults: Object }}
+ */
 export async function runBatch(runContext, jsonOutput, timeout, sourcesToRun) {
   const { mutationConfig, createRunner, reportDir, reportPath, sources, survivorsOnly, out } = runContext
   const filesToRun = sourcesToRun || sources

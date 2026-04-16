@@ -15,6 +15,9 @@ import { createWorktree } from '../../core/temp-copy.js'
 import { printRunReport } from '../report.js'
 import { runPreflightTests, reportMutation, printBanner } from './shared.js'
 
+/**
+ * @returns {{ survived: number, killed: number, timedOut: number, jsonData: { path: string, mutants: Array }, error?: boolean }}
+ */
 export async function runSingle(options) {
   const { sourceFile, mutationConfig, createRunner, targetLine, timeout, survivorsOnly, retestMutations, out = console.log } = options
   const original = readFileSync(sourceFile, 'utf-8')
