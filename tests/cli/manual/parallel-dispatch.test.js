@@ -54,9 +54,10 @@ describe('--parallel flag wiring through manual.js', () => {
         mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
-      await manual.run(['src/a.js', '--parallel'])
+      const exitCode = await manual.run(['src/a.js', '--parallel'])
 
       expect(createPool).toHaveBeenCalled()
+      expect(typeof exitCode).toBe('number')
     })
 
     it('passes workerCount from --parallel N', async () => {

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { resolve } from 'node:path'
-import { computeDeltas } from '../../../src/cli/incremental-report.js'
+import { computeDeltas, writeMergedReport } from '../../../src/cli/incremental-report.js'
 
 vi.mock('node:fs', async (importOriginal) => {
   const actual = await importOriginal()
@@ -310,6 +310,37 @@ describe('incremental deltas', () => {
         name: '=== → !=='
       })
     })
+  })
+})
+
+describe('writeMergedReport', () => {
+  it('does not mutate the fileResults object when merging cached files', () => {
+    const fileResults = {
+      'src/changed.js': {
+        mutants: [{ mutatorName: 'x', replacement: 'y', status: 'Killed', killedBy: ['t.test.js'] }]
+      }
+    }
+    const originalKeys = Object.keys(fileResults)
+    const previousReport = {
+      files: {
+        'src/cached.js': {
+          mutants: [{ mutatorName: 'z', replacement: 'w', status: 'Killed', killedBy: ['t.test.js'] }]
+        }
+      }
+    }
+
+    writeMergedReport(() => {}, {
+      config: { reportDir: 'reports/mutation', reportPath: 'reports/mutation/report.json' },
+      previous: { previousReport },
+      classification: {
+        unchangedSources: ['src/cached.js'],
+        currentHashes: {},
+        currentTestHashes: {}
+      },
+      fileResults
+    })
+
+    expect(Object.keys(fileResults)).toEqual(originalKeys)
   })
 })
 
