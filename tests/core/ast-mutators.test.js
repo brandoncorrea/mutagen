@@ -35,7 +35,7 @@ describe('ast-mutators', () => {
         'Literal', 'BooleanLiteral', 'NumericLiteral', 'StringLiteral',
         'RegExpLiteral', 'ChainExpression', 'ObjectExpression',
         'IfStatement', 'WhileStatement',
-        'AssignmentPattern'
+        'AssignmentPattern', 'NewExpression'
       ])
       for (const m of javascript) {
         for (const t of m.types) {
@@ -1133,6 +1133,45 @@ describe('ast-mutators', () => {
       }
       expect(m.test(node)).toBe(true)
       expect(m.mutate(node)).toEqual({ start: 0, end: 10, replacement: 'parseInt' })
+    })
+  })
+
+  // ── New keyword removal ──
+
+  describe('new keyword removal', () => {
+    it('new X() → X() matches NewExpression', () => {
+      const m = find('new X() → X()')
+      const node = {
+        type: 'NewExpression',
+        callee: { type: 'Identifier', name: 'Foo', start: 4, end: 7 },
+        arguments: [],
+        start: 0, end: 9
+      }
+      expect(m.test(node)).toBe(true)
+    })
+
+    it('new X() → X() removes new keyword prefix', () => {
+      const m = find('new X() → X()')
+      const node = {
+        type: 'NewExpression',
+        callee: { type: 'Identifier', name: 'Foo', start: 4, end: 7 },
+        arguments: [],
+        start: 0, end: 9
+      }
+      const patch = m.mutate(node, 'new Foo()')
+      expect(patch).toEqual({ start: 0, end: 4, replacement: '' })
+    })
+
+    it('new X() → X() works with member expression callee', () => {
+      const m = find('new X() → X()')
+      const node = {
+        type: 'NewExpression',
+        callee: { type: 'MemberExpression', start: 4, end: 11 },
+        arguments: [{ start: 12, end: 14 }],
+        start: 0, end: 15
+      }
+      const patch = m.mutate(node, 'new Foo.Bar(42)')
+      expect(patch).toEqual({ start: 0, end: 4, replacement: '' })
     })
   })
 
