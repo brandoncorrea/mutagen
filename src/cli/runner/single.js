@@ -24,18 +24,18 @@ export async function runSingle(options) {
   const tempSourceFile = worktree.resolve(sourceFile)
   const runner = await createRunner(tempSourceFile, { root: worktree.root })
 
-  const opts = { out, runner, timeout, sourceFile, tempSourceFile, targetLine, original, mutationConfig, survivorsOnly, retestMutations, worktree }
+  const runOptions = { out, runner, timeout, sourceFile, tempSourceFile, targetLine, original, mutationConfig, survivorsOnly, retestMutations, worktree }
 
   try {
-    return await runMutations(opts)
+    return await runMutations(runOptions)
   } finally {
     await runner.close()
     worktree.cleanup()
   }
 }
 
-async function runMutations(opts) {
-  const { out, runner, sourceFile, targetLine, original, mutationConfig, survivorsOnly, retestMutations } = opts
+async function runMutations(runOptions) {
+  const { out, runner, sourceFile, targetLine, original, mutationConfig, survivorsOnly, retestMutations } = runOptions
   const preflight = await runPreflightTests(out, runner)
   if (preflight.error) return preflight
   out(`Tests pass on original source. Beginning mutations.\n`)
@@ -47,7 +47,7 @@ async function runMutations(opts) {
   const outcomes = { killed: [], survived: [], timedOut: [] }
 
   for (let i = 0; i < mutations.length; i++)
-    await runMutation(opts, mutations.length, outcomes, {
+    await runMutation(runOptions, mutations.length, outcomes, {
       number: i + 1,
       ...mutations[i]
     })
@@ -62,8 +62,8 @@ async function runMutations(opts) {
   }
 }
 
-async function runMutation(opts, total, outcomes, mutation) {
-  const { out, runner, timeout, tempSourceFile, survivorsOnly, worktree } = opts
+async function runMutation(runOptions, total, outcomes, mutation) {
+  const { out, runner, timeout, tempSourceFile, survivorsOnly, worktree } = runOptions
   try {
     writeFileSync(tempSourceFile, mutation.source)
 
