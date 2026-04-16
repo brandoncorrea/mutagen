@@ -35,7 +35,8 @@ describe('ast-mutators', () => {
         'Literal', 'BooleanLiteral', 'NumericLiteral', 'StringLiteral',
         'RegExpLiteral', 'ChainExpression', 'ObjectExpression',
         'IfStatement', 'WhileStatement',
-        'AssignmentPattern', 'NewExpression'
+        'AssignmentPattern', 'NewExpression',
+        'ArrowFunctionExpression'
       ])
       for (const m of javascript) {
         for (const t of m.types) {
@@ -1219,6 +1220,56 @@ describe('ast-mutators', () => {
       expect(m.test(node)).toBe(true)
       const patch = m.mutate(node, '[...arr, y]')
       expect(patch).toEqual({ start: 1, end: 9, replacement: '' })
+    })
+  })
+
+  // ── Arrow function short-circuit ──
+
+  describe('arrow function short-circuit', () => {
+    it('() => expr → () => undefined matches concise arrow', () => {
+      const m = find('() => expr → () => undefined')
+      const node = {
+        type: 'ArrowFunctionExpression',
+        expression: true,
+        body: { type: 'BinaryExpression', start: 6, end: 11 },
+        start: 0, end: 11
+      }
+      expect(m.test(node)).toBe(true)
+    })
+
+    it('() => expr → () => undefined does not match block body arrow', () => {
+      const m = find('() => expr → () => undefined')
+      const node = {
+        type: 'ArrowFunctionExpression',
+        expression: false,
+        body: { type: 'BlockStatement', start: 6, end: 20 },
+        start: 0, end: 20
+      }
+      expect(m.test(node)).toBe(false)
+    })
+
+    it('() => expr → () => undefined replaces body with undefined', () => {
+      const m = find('() => expr → () => undefined')
+      const node = {
+        type: 'ArrowFunctionExpression',
+        expression: true,
+        body: { type: 'CallExpression', start: 6, end: 18 },
+        start: 0, end: 18
+      }
+      const patch = m.mutate(node, '() => transform(x)')
+      expect(patch).toEqual({ start: 6, end: 18, replacement: 'undefined' })
+    })
+
+    it('() => expr → () => undefined works with parameters', () => {
+      const m = find('() => expr → () => undefined')
+      const node = {
+        type: 'ArrowFunctionExpression',
+        expression: true,
+        body: { type: 'Identifier', start: 9, end: 10 },
+        start: 0, end: 10
+      }
+      const patch = m.mutate(node, '(x, y) => x')
+      expect(patch).toEqual({ start: 9, end: 10, replacement: 'undefined' })
     })
   })
 

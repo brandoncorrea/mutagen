@@ -103,6 +103,15 @@ export const defaultParameterRemoval = [
   }
 ]
 
+export const arrowShortCircuit = [
+  {
+    name: '() => expr → () => undefined',
+    types: ['ArrowFunctionExpression'],
+    test: node => node.expression === true,
+    mutate: node => ({ start: node.body.start, end: node.body.end, replacement: 'undefined' })
+  }
+]
+
 export const newKeywordRemoval = [
   {
     name: 'new X() → X()',

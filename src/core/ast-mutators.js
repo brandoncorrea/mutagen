@@ -28,7 +28,8 @@ import {
 
 import {
   conditionalExpressions, conditionalNegation, blockStatements,
-  asyncMutations, throwRemoval, defaultParameterRemoval, newKeywordRemoval
+  asyncMutations, throwRemoval, defaultParameterRemoval, newKeywordRemoval,
+  arrowShortCircuit
 } from './mutators/statements.js'
 
 import {
@@ -71,5 +72,6 @@ export const javascript = [
   ...propertyAccessMutations,
   ...defaultParameterRemoval,
   ...regexMutations,
-  ...newKeywordRemoval
+  ...newKeywordRemoval,
+  ...arrowShortCircuit
 ]
