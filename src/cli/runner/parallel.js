@@ -40,6 +40,7 @@ export async function runParallel(options) {
     retestMutations,
     workerCount = DEFAULT_WORKER_COUNT,
     pool: externalPool,
+    onProgress,
     out = console.log
   } = options
   const original = readFileSync(sourceFile, 'utf-8')
@@ -57,6 +58,7 @@ export async function runParallel(options) {
     retestMutations,
     workerCount,
     pool: externalPool,
+    onProgress,
     original,
     out
   }

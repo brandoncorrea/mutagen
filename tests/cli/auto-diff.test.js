@@ -263,4 +263,57 @@ describe('autoDiffSummary', () => {
 
     expect(autoDiffSummary(previous, current)).toBeNull()
   })
+
+  it('skips current mutants without id when previous has valid entries', () => {
+    const previous = legacyReport({
+      'a.js': { mutants: [makeMutant('m1', 'Survived')] }
+    })
+    const current = {
+      'a.js': { mutants: [
+        { mutatorName: 'x', status: 'Killed' },    // no id — should be skipped
+        makeMutant('m1', 'Killed')                   // has id — newly killed
+      ] }
+    }
+
+    const result = autoDiffSummary(previous, current)
+    expect(result).toContain('+1 newly killed')
+  })
+
+  it('ignores previously survived mutant with unrecognized current status', () => {
+    const previous = legacyReport({
+      'a.js': { mutants: [
+        makeMutant('m1', 'Survived'),
+        makeMutant('m2', 'Survived')
+      ] }
+    })
+    const current = {
+      'a.js': { mutants: [
+        makeMutant('m1', 'Killed'),
+        makeMutant('m2', 'CompileError')   // neither killed nor alive
+      ] }
+    }
+
+    const result = autoDiffSummary(previous, current)
+    expect(result).toContain('+1 newly killed')
+    expect(result).toContain('0 unchanged survivor')
+  })
+
+  it('skips structured survivors without id', () => {
+    const previous = structuredReport({
+      survivors: [
+        { id: 'm1', file: 'a.js', line: 1, name: 'x' },
+        { file: 'a.js', line: 2, name: 'y' }  // no id — should be skipped
+      ],
+      files: { 'a.js': { score: 0, killed: 0, total: 2 } },
+      score: 0, total: 2, killed: 0, survived: 2
+    })
+    const current = {
+      'a.js': { mutants: [
+        makeMutant('m1', 'Killed')
+      ] }
+    }
+
+    const result = autoDiffSummary(previous, current)
+    expect(result).toContain('+1 newly killed')
+  })
 })

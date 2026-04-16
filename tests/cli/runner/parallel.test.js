@@ -381,6 +381,31 @@ describe('runParallel', () => {
     expect(result.killed).toBe(1)
   })
 
+  it('indexes mutations with _progressIndex when onProgress is provided', async () => {
+    mockFs({ [resolve('src/a.js')]: sourceCode })
+    const preflightRunner = fakePoolRunner([{ passed: true }])
+    const statuses = []
+    const poolRun = vi.fn().mockImplementation((mutations, opts) => {
+      for (const m of mutations) {
+        expect(m).toHaveProperty('_progressIndex')
+        opts.onResult?.({ mutation: m, status: 'killed' })
+      }
+      return { killed: mutations, survived: [], timedOut: [] }
+    })
+    createPool.mockReturnValue({ run: poolRun, close: vi.fn().mockResolvedValue() })
+
+    await runParallel({
+      sourceFile: resolve('src/a.js'),
+      mutationConfig,
+      createRunner: vi.fn().mockResolvedValue(preflightRunner),
+      workerCount: 2,
+      onProgress: (status) => statuses.push(status),
+      out: noop
+    })
+
+    expect(statuses.length).toBeGreaterThan(0)
+  })
+
   it('does not close external pool on completion', async () => {
     mockFs({ [resolve('src/a.js')]: sourceCode })
     const preflightRunner = fakePoolRunner([{ passed: true }])

@@ -165,6 +165,14 @@ describe('regex mutators', () => {
     })
   })
 
+  describe('defensive guard', () => {
+    it('mutate returns null when pattern has no unescaped target char', () => {
+      const m = find('^ → (removed)')
+      const node = regexNode('foo', '', 0, 5)
+      expect(m.mutate(node, '/foo/')).toBeNull()
+    })
+  })
+
   describe('. → x', () => {
     it('matches regex with . wildcard', () => {
       const m = find('. → x')
