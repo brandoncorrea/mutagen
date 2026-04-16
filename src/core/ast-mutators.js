@@ -29,7 +29,8 @@ import {
 import {
   booleanLiterals, conditionalExpressions, conditionalNegation, stringLiterals,
   blockStatements, asyncMutations, fallbackRemovals, numericBoundary,
-  throwRemoval, spreadRemoval, propertyAccessMutations, defaultParameterRemoval
+  throwRemoval, spreadRemoval, propertyAccessMutations, defaultParameterRemoval,
+  newKeywordRemoval
 } from './mutators/values.js'
 
 export const javascript = [
@@ -62,5 +63,6 @@ export const javascript = [
   ...spreadRemoval,
   ...voidRemoval,
   ...propertyAccessMutations,
-  ...defaultParameterRemoval
+  ...defaultParameterRemoval,
+  ...newKeywordRemoval
 ]

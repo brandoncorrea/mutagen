@@ -288,6 +288,19 @@ export const defaultParameterRemoval = [
   }
 ]
 
+export const newKeywordRemoval = [
+  {
+    name: 'new X() → X()',
+    types: ['NewExpression'],
+    test: () => true,
+    mutate: node => ({
+      start: node.start,
+      end: node.callee.start,
+      replacement: ''
+    })
+  }
+]
+
 export const propertyAccessMutations = [
   {
     name: '.length → .length + 1',
