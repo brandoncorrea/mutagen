@@ -263,6 +263,15 @@ export const spreadRemoval = [
   }
 ]
 
+export const defaultParameterRemoval = [
+  {
+    name: 'param = value → param (remove default)',
+    types: ['AssignmentPattern'],
+    test: () => true,
+    mutate: node => ({ start: node.left.end, end: node.end, replacement: '' })
+  }
+]
+
 export const propertyAccessMutations = [
   {
     name: '.length → .length + 1',
