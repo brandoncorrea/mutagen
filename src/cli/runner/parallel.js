@@ -110,13 +110,13 @@ async function runWithNewPool(mutations, options) {
 
 async function createRunnerWithOptions(options) {
   const { sourceFile, createRunner } = options
-  const worktree = createTempCopy(process.cwd())
-  const initialTemp = worktree.resolve(sourceFile)
+  const tempCopy = createTempCopy(process.cwd())
+  const initialTemp = tempCopy.resolve(sourceFile)
 
   const state = {
     sourceFile,
     tempSource: initialTemp,
-    runner: await createRunner(initialTemp, { root: worktree.root })
+    runner: await createRunner(initialTemp, { root: tempCopy.root })
   }
 
   return {
@@ -125,24 +125,24 @@ async function createRunnerWithOptions(options) {
       const result = await state.runner.run()
       return {
         ...result,
-        killedBy: worktree.mapPaths(result.killedBy),
-        coveredBy: worktree.mapPaths(result.coveredBy)
+        killedBy: tempCopy.mapPaths(result.killedBy),
+        coveredBy: tempCopy.mapPaths(result.coveredBy)
       }
     },
     async switchFile(newSourceFile) {
       writeFileSync(state.tempSource, readFileSync(state.sourceFile, 'utf-8'))
       state.sourceFile = newSourceFile
-      state.tempSource = worktree.resolve(newSourceFile)
+      state.tempSource = tempCopy.resolve(newSourceFile)
       if (state.runner.switchFile) {
         await state.runner.switchFile(state.tempSource)
       } else {
         await state.runner.close()
-        state.runner = await createRunner(state.tempSource, { root: worktree.root })
+        state.runner = await createRunner(state.tempSource, { root: tempCopy.root })
       }
     },
     async close() {
       await state.runner.close()
-      worktree.cleanup()
+      tempCopy.cleanup()
     }
   }
 }

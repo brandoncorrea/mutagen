@@ -27,10 +27,13 @@ import {
 } from './mutators/methods.js'
 
 import {
-  booleanLiterals, conditionalExpressions, conditionalNegation, stringLiterals,
-  blockStatements, asyncMutations, fallbackRemovals, numericBoundary,
-  throwRemoval, spreadRemoval, propertyAccessMutations, defaultParameterRemoval,
-  newKeywordRemoval
+  conditionalExpressions, conditionalNegation, blockStatements,
+  asyncMutations, throwRemoval, defaultParameterRemoval, newKeywordRemoval
+} from './mutators/statements.js'
+
+import {
+  booleanLiterals, stringLiterals, fallbackRemovals, numericBoundary,
+  spreadRemoval, propertyAccessMutations
 } from './mutators/values.js'
 
 import { regexMutations } from './mutators/regex.js'

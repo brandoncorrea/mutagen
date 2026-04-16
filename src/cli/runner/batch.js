@@ -8,7 +8,7 @@ import { resolve, relative } from 'node:path'
 import { createReport, writeReportFile, writeStructuredReportFile, tryLoadJson, HEADER_SEPARATOR } from '../../core/report-data.js'
 import { runSingle } from './single.js'
 import { runParallel, createBatchPool } from './parallel.js'
-import { printScoreLine } from '../report.js'
+import { printScoreLine, printAutoDiffLine } from '../report.js'
 import { createProgressReporter } from '../progress.js'
 import { isString } from './shared.js'
 import { autoDiffSummary } from '../auto-diff.js'
@@ -30,11 +30,11 @@ export async function runBatch(runContext, jsonOutput, timeout, sourcesToRun) {
     const previous = tryLoadJson(resolve(jsonOutput))
     const stats = writeStructuredReportFile(jsonOutput, result.fileResults)
     printScoreLine(stats, filesToRun.length, jsonOutput)
-    printAutoDiff(previous, result.fileResults)
+    printAutoDiffLine(autoDiffSummary(previous, result.fileResults))
   } else if (jsonOutput) {
     const previous = tryLoadJson(resolve(reportPath))
     writeReportFile(reportDir, reportPath, createReport(result.fileResults), out)
-    printAutoDiff(previous, result.fileResults)
+    printAutoDiffLine(autoDiffSummary(previous, result.fileResults))
   }
 
   printBatchSummary(out, filesToRun.length, result)
@@ -49,9 +49,7 @@ async function accumulateResults(filesToRun, { mutationConfig, createRunner, tim
   let failures = 0
   const fileResults = {}
 
-  const displayPaths = filesToRun.map(f => relative(process.cwd(), resolve(f)))
-  const reporter = progress ? createProgressReporter(displayPaths) : null
-
+  const reporter = createBatchReporter(filesToRun, progress)
   const workerCount = parallelWorkerCount(parallel)
   const pool = parallel
     ? createBatchPool({ workerCount, sourceFile: resolve(filesToRun[0]), createRunner })
@@ -59,14 +57,12 @@ async function accumulateResults(filesToRun, { mutationConfig, createRunner, tim
 
   try {
     for (let i = 0; i < filesToRun.length; i++) {
-      const source = filesToRun[i]
-      if (reporter) reporter.startFile(displayPaths[i])
-      const onProgress = reporter ? status => reporter.dot(status) : undefined
-      const runOptions = { sourceFile: resolve(source), mutationConfig, createRunner, timeout, survivorsOnly, out, onProgress }
+      reporter.startFile(i)
+      const runOptions = { sourceFile: resolve(filesToRun[i]), mutationConfig, createRunner, timeout, survivorsOnly, out, onProgress: reporter.dot }
       const { error, survived, killed, timedOut, jsonData } = parallel
         ? await runParallel({ ...runOptions, workerCount, pool })
         : await runSingle(runOptions)
-      if (reporter) reporter.endFile()
+      reporter.endFile()
       if (error) {
         failures++
       } else {
@@ -83,6 +79,17 @@ async function accumulateResults(filesToRun, { mutationConfig, createRunner, tim
   return { totalSurvived, totalKilled, totalTimedOut, failures, fileResults }
 }
 
+function createBatchReporter(filesToRun, progress) {
+  if (!progress) return { startFile() {}, dot: undefined, endFile() {} }
+  const displayPaths = filesToRun.map(f => relative(process.cwd(), resolve(f)))
+  const reporter = createProgressReporter(displayPaths)
+  return {
+    startFile(i) { reporter.startFile(displayPaths[i]) },
+    dot: status => reporter.dot(status),
+    endFile() { reporter.endFile() }
+  }
+}
+
 function parallelWorkerCount(parallel) {
   if (typeof parallel === 'number')
     return parallel
@@ -96,9 +103,4 @@ function printBatchSummary(out, fileCount, { totalKilled, totalSurvived, totalTi
   if (totalTimedOut)
     out(`Timed out: ${totalTimedOut} (counted as killed)`)
   out(`${HEADER_SEPARATOR}\n`)
-}
-
-function printAutoDiff(previous, fileResults) {
-  const summary = autoDiffSummary(previous, fileResults)
-  if (summary) process.stderr.write(`  Δ ${summary}\n`)
 }

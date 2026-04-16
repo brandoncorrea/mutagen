@@ -21,20 +21,20 @@ import { runPreflightTests, reportMutation, printBanner } from './shared.js'
 export async function runSingle(options) {
   const { sourceFile, mutationConfig, createRunner, targetLine, timeout, survivorsOnly, retestMutations, out = console.log } = options
   const original = readFileSync(sourceFile, 'utf-8')
-  const worktree = createTempCopy(process.cwd())
+  const tempCopy = createTempCopy(process.cwd())
 
   printBanner(out, 'MUTAGEN', sourceFile, targetLine, timeout)
 
-  const tempSourceFile = worktree.resolve(sourceFile)
-  const runner = await createRunner(tempSourceFile, { root: worktree.root })
+  const tempSourceFile = tempCopy.resolve(sourceFile)
+  const runner = await createRunner(tempSourceFile, { root: tempCopy.root })
 
-  const runOptions = { out, runner, timeout, sourceFile, tempSourceFile, targetLine, original, mutationConfig, survivorsOnly, retestMutations, worktree, onProgress: options.onProgress }
+  const runOptions = { out, runner, timeout, sourceFile, tempSourceFile, targetLine, original, mutationConfig, survivorsOnly, retestMutations, tempCopy, onProgress: options.onProgress }
 
   try {
     return await runMutations(runOptions)
   } finally {
     await runner.close()
-    worktree.cleanup()
+    tempCopy.cleanup()
   }
 }
 
@@ -67,18 +67,18 @@ async function runMutations(runOptions) {
 }
 
 async function runMutation(runOptions, total, outcomes, mutation) {
-  const { out, runner, timeout, tempSourceFile, survivorsOnly, worktree, onProgress } = runOptions
+  const { out, runner, timeout, tempSourceFile, survivorsOnly, tempCopy, onProgress } = runOptions
   try {
     writeFileSync(tempSourceFile, mutation.source)
 
     const result = await withTimeout(runner.run, timeout)
 
     if (result.passed) {
-      outcomes.survived.push({ ...mutation, coveredBy: worktree.mapPaths(result.coveredBy) })
+      outcomes.survived.push({ ...mutation, coveredBy: tempCopy.mapPaths(result.coveredBy) })
       onProgress?.('SURVIVED')
       reportMutation(out, total, mutation, 'SURVIVED')
     } else {
-      outcomes.killed.push({ ...mutation, killedBy: worktree.mapPaths(result.killedBy) })
+      outcomes.killed.push({ ...mutation, killedBy: tempCopy.mapPaths(result.killedBy) })
       onProgress?.('killed')
       if (!survivorsOnly) reportMutation(out, total, mutation, 'killed')
     }

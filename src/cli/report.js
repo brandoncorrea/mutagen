@@ -72,6 +72,10 @@ export function printScoreLine({ score, killed, total, survived }, fileCount, ou
   process.stderr.write(`Score: ${score}% (${killed}/${total}) | ${survived} survivors | ${fileCount} files → ${outputPath}\n`)
 }
 
+export function printAutoDiffLine(summary) {
+  if (summary) process.stderr.write(`  Δ ${summary}\n`)
+}
+
 function writeMutation(out, { id, line, name, original, mutated, coveredBy }) {
   const prefix = id ? `[${id}] ` : ''
   out(`\n  ${prefix}Line ${line}: ${name}`)
