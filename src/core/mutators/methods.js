@@ -131,6 +131,13 @@ export const objectMethodSwaps = [
   staticMethodSwap('Object.entries → Object.keys', 'Object', 'entries', 'keys')
 ]
 
+export const promiseMethodSwaps = [
+  staticMethodSwap('Promise.all → Promise.race', 'Promise', 'all', 'race'),
+  staticMethodSwap('Promise.race → Promise.all', 'Promise', 'race', 'all'),
+  staticMethodSwap('Promise.resolve → Promise.reject', 'Promise', 'resolve', 'reject'),
+  staticMethodSwap('Promise.reject → Promise.resolve', 'Promise', 'reject', 'resolve')
+]
+
 export const stringMethodMutations = [
   methodNameSwap('replace → toString (removed)', 'replace', 'toString')
 ]

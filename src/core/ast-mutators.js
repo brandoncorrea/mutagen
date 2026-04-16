@@ -23,7 +23,7 @@ import {
 
 import {
   methodExpressions, stringMethodSwaps, mathMethodSwaps, arrayMethodSwaps,
-  objectMethodSwaps, stringMethodMutations, typeConversions
+  objectMethodSwaps, stringMethodMutations, typeConversions, promiseMethodSwaps
 } from './mutators/methods.js'
 
 import {
@@ -61,6 +61,7 @@ export const javascript = [
   ...unaryMinusRemoval,
   ...bitwiseOperators,
   ...typeConversions,
+  ...promiseMethodSwaps,
   ...spreadRemoval,
   ...voidRemoval,
   ...propertyAccessMutations,

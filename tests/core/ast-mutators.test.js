@@ -1077,6 +1077,50 @@ describe('ast-mutators', () => {
     })
   })
 
+  // ── Promise method swaps ──
+
+  describe('promise method swaps', () => {
+    it('Promise.all → Promise.race swaps method', () => {
+      const m = find('Promise.all → Promise.race')
+      const node = staticCall('Promise', 'all', 0, 16, 8, 11)
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node).replacement).toBe('race')
+    })
+
+    it('Promise.race → Promise.all swaps method', () => {
+      const m = find('Promise.race → Promise.all')
+      const node = staticCall('Promise', 'race', 0, 17, 8, 12)
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node).replacement).toBe('all')
+    })
+
+    it('Promise.resolve → Promise.reject swaps method', () => {
+      const m = find('Promise.resolve → Promise.reject')
+      const node = staticCall('Promise', 'resolve', 0, 20, 8, 15)
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node).replacement).toBe('reject')
+    })
+
+    it('Promise.reject → Promise.resolve swaps method', () => {
+      const m = find('Promise.reject → Promise.resolve')
+      const node = staticCall('Promise', 'reject', 0, 19, 8, 14)
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node).replacement).toBe('resolve')
+    })
+
+    it('Promise.all does not match Promise.race', () => {
+      const m = find('Promise.all → Promise.race')
+      const node = staticCall('Promise', 'race', 0, 17, 8, 12)
+      expect(m.test(node)).toBe(false)
+    })
+
+    it('Promise.resolve does not match Promise.reject', () => {
+      const m = find('Promise.resolve → Promise.reject')
+      const node = staticCall('Promise', 'reject', 0, 19, 8, 14)
+      expect(m.test(node)).toBe(false)
+    })
+  })
+
   // ── Remaining type conversions ──
 
   describe('remaining type conversions', () => {
