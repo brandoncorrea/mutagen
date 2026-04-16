@@ -264,7 +264,7 @@ describe('createVitestRunner', () => {
       const vite = mock.projects[0]._vite
       expect(vite.moduleGraph.invalidateAll).toHaveBeenCalled()
       expect(vite.environments.ssr.moduleGraph.invalidateAll).toHaveBeenCalled()
-      expect(mock._fsCache.clearCache).toHaveBeenCalled()
+      expect(mock._fsCache.clearCache).toHaveBeenCalledWith(false)
     })
 
     it('skips projects with undefined _vite during flush', async () => {
