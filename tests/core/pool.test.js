@@ -199,7 +199,8 @@ describe('createPool', () => {
       expect(runner.close).toHaveBeenCalledTimes(1)
     })
 
-    it('completes even when runner.close() hangs', { timeout: 10000 }, async () => {
+    it('completes even when runner.close() hangs', async () => {
+      vi.useFakeTimers()
       const runner = fakeRunner()
       runner.close.mockReturnValue(new Promise(() => {})) // never resolves
       const createRunner = vi.fn().mockResolvedValue(runner)
@@ -207,11 +208,11 @@ describe('createPool', () => {
 
       await pool.run([fakeMutation()])
 
-      const start = Date.now()
-      await pool.close()
-      const elapsed = Date.now() - start
+      const closePromise = pool.close()
+      await vi.advanceTimersByTimeAsync(5000)
+      await closePromise
 
-      expect(elapsed).toBeLessThan(10000)
+      vi.useRealTimers()
     })
   })
 
