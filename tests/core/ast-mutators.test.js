@@ -613,6 +613,18 @@ describe('ast-mutators', () => {
       expect(m.test(node)).toBe(false)
     })
 
+    it('matches non-! unary expressions (typeof, -, ~)', () => {
+      const m = find('if (cond) → if (!cond)')
+      const node = {
+        type: 'IfStatement',
+        test: { type: 'UnaryExpression', operator: 'typeof', prefix: true, start: 4, end: 16 },
+        start: 0, end: 30
+      }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'if (typeof x === "string") {}')
+      expect(patch).toEqual({ start: 4, end: 4, replacement: '!' })
+    })
+
     it('matches when test is a call expression', () => {
       const m = find('if (cond) → if (!cond)')
       const node = {
