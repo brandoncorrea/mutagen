@@ -873,6 +873,34 @@ describe('ast-mutators', () => {
       expect(m.test(node)).toBe(true)
       expect(m.mutate(node, 'x -= 1').replacement).toBe('+=')
     })
+
+    it('*= → /= swaps operator', () => {
+      const m = find('*= → /=')
+      const node = assignExpr('*=', 0, 1, 5, 6)
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node, 'x *= 1').replacement).toBe('/=')
+    })
+
+    it('/= → *= swaps operator', () => {
+      const m = find('/= → *=')
+      const node = assignExpr('/=', 0, 1, 5, 6)
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node, 'x /= 1').replacement).toBe('*=')
+    })
+
+    it('%= → += swaps operator', () => {
+      const m = find('%= → +=')
+      const node = assignExpr('%=', 0, 1, 5, 6)
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node, 'x %= 1').replacement).toBe('+=')
+    })
+
+    it('**= → *= swaps operator', () => {
+      const m = find('**= → *=')
+      const node = assignExpr('**=', 0, 1, 6, 7)
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node, 'x **= 1').replacement).toBe('*=')
+    })
   })
 
   // ── Remaining numeric boundary ──

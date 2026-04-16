@@ -55,7 +55,11 @@ export const updateOperators = [
 
 export const assignmentMutations = [
   assignmentOpSwap('+= → -=', '+=', '-='),
-  assignmentOpSwap('-= → +=', '-=', '+=')
+  assignmentOpSwap('-= → +=', '-=', '+='),
+  assignmentOpSwap('*= → /=', '*=', '/='),
+  assignmentOpSwap('/= → *=', '/=', '*='),
+  assignmentOpSwap('%= → +=', '%=', '+='),
+  assignmentOpSwap('**= → *=', '**=', '*=')
 ]
 
 export const bitwiseOperators = [
