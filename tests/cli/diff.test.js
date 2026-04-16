@@ -496,6 +496,23 @@ describe('diffReports', () => {
       })
     })
 
+    it('newMutants entries contain only formatted fields (no raw mutant properties)', () => {
+      runDiffJson(
+        { 'a.js': { mutants: [] } },
+        { 'a.js': { mutants: [makeMutant('m1', 'ArithmeticOperator', 'Survived', 3)] } }
+      )
+
+      const json = parsedOutput()
+      expect(json.newMutants).toHaveLength(1)
+      expect(json.newMutants[0]).toEqual({
+        id: 'm1',
+        file: 'a.js',
+        line: 3,
+        mutatorName: 'ArithmeticOperator',
+        status: 'Survived'
+      })
+    })
+
     it('includes removedMutants with file, line, mutatorName, and status', () => {
       runDiffJson(
         { 'a.js': { mutants: [makeMutant('m1', 'LogicalOperator', 'Killed', 9)] } },
