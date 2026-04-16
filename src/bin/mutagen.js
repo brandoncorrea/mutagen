@@ -47,11 +47,13 @@ function versionRequested(args) {
 export function isMain(argv) {
   const scriptPath = argv[1]
   if (scriptPath)
-    return import.meta.url.endsWith(toBaseName(scriptPath))
+    return toStem(import.meta.url) === toStem(scriptPath)
 }
 
-function toBaseName(path) {
-  return path.replace(/.*[\\/]/, '')
+function toStem(path) {
+  const base = path.replace(/.*[\\/]/, '')
+  const dot = base.indexOf('.')
+  return dot > 0 ? base.substring(0, dot) : base
 }
 
 /* v8 ignore next 2 */

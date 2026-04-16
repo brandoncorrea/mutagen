@@ -324,6 +324,10 @@ describe('isMain', () => {
     expect(isMain(['node', 'C:\\Users\\app\\mutagen.js'])).toBe(true)
   })
 
+  it('returns true when argv[1] is a symlink without .js extension', () => {
+    expect(isMain(['node', '/project/node_modules/.bin/mutagen'])).toBe(true)
+  })
+
   it('returns false when argv[1] is a different script', () => {
     expect(isMain(['node', '/some/other-script.js'])).toBe(false)
   })
