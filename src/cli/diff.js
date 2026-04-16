@@ -53,15 +53,15 @@ function printJsonDiff(before, after, changes, fileDeltas, out) {
     beforeScore,
     afterScore,
     delta: afterScore - beforeScore,
-    newlyKilled: changes.newlyKilled.map(({ after }) => formatMutant(after)),
-    regressions: changes.regressions.map(({ after }) => formatMutant(after)),
-    newMutants: changes.newMutants.map(formatMutant),
-    removedMutants: changes.removedMutants.map(formatMutant),
+    newlyKilled: changes.newlyKilled.map(({ after }) => toMutantSummary(after)),
+    regressions: changes.regressions.map(({ after }) => toMutantSummary(after)),
+    newMutants: changes.newMutants.map(toMutantSummary),
+    removedMutants: changes.removedMutants.map(toMutantSummary),
     fileDeltas: fileDeltaMap
   }, null, 2))
 }
 
-function formatMutant({ id, file, line, mutatorName, status }) {
+function toMutantSummary({ id, file, line, mutatorName, status }) {
   return { id, file, line, mutatorName, status }
 }
 
