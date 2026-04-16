@@ -17,14 +17,12 @@ import { resolve } from 'node:path'
 import { prepareMutationConfig } from '../core/generate.js'
 import { resolveGlobs } from '../core/resolve-globs.js'
 import { gitChangedFiles } from '../core/git-changed.js'
-import { HEADER_SEPARATOR, createReport, writeReportFile, writeStructuredReportFile } from '../core/report-data.js'
 import { diffReports } from './diff.js'
 import { parseArgs } from './args.js'
-import { runSingle, runParallel, createBatchPool, dryRun } from './runner/index.js'
+import { runSingle, runParallel, runBatch, dryRun } from './runner/index.js'
 import { runIncremental } from './incremental.js'
 import { runRetest } from './retest.js'
-import { formatQuietSummary, printScoreLine } from './report.js'
-import { isString } from './is-string.js'
+import { formatQuietSummary } from './report.js'
 
 /**
  * Create a manual mutation runner with project-specific config.
@@ -43,6 +41,7 @@ import { isString } from './is-string.js'
 export function createManualRunner(config) {
   const {
     mutators,
+    skipNodes,
     sources: explicitSources,
     include,
     exclude,
@@ -59,10 +58,10 @@ export function createManualRunner(config) {
     : include ? resolveGlobs({ include, exclude, cwd })
     : []
 
-  const mutationConfig = prepareMutationConfig({ mutators, skipNodes: config.skipNodes })
+  const mutationConfig = prepareMutationConfig({ mutators, skipNodes })
   const reportPath = `${reportDir}/${reportFile}`
 
-  const ctx = {
+  const runContext = {
     mutationConfig,
     sources,
     testSources,
@@ -73,90 +72,95 @@ export function createManualRunner(config) {
     out
   }
 
-  const incrementalConfig = {
-    sources,
-    testSources,
-    reportDir,
-    reportPath,
-    runBatch: runBatch.bind(null, ctx)
-  }
-
   return {
     runBatch: (jsonOutput, timeout, sourcesToRun) =>
-      runBatch(ctx, jsonOutput, timeout, sourcesToRun),
+      runBatch(runContext, jsonOutput, timeout, sourcesToRun),
     runIncremental: (jsonOutput, timeout) =>
-      runIncremental(incrementalConfig, jsonOutput, timeout, out),
-    run: argv => run(ctx, argv),
+      runIncremental(buildIncrementalConfig(runContext), jsonOutput, timeout, out),
+    run: argv => run(runContext, argv),
     async main() {
-      process.exit(await run(ctx))
+      process.exit(await run(runContext))
     }
   }
 }
 
-async function run(ctx, argv) {
+function buildIncrementalConfig(runContext) {
+  return {
+    sources: runContext.sources,
+    testSources: runContext.testSources,
+    reportDir: runContext.reportDir,
+    reportPath: runContext.reportPath,
+    runBatch: runBatch.bind(null, runContext)
+  }
+}
+
+async function run(runContext, argv) {
   const parsed = parseArgs(argv)
   if (parsed.help) {
-    ctx.out(parsed.help)
+    runContext.out(parsed.help)
     return 0
   }
   if (parsed.error) {
-    ctx.out(parsed.error)
+    runContext.out(parsed.error)
     return 1
   }
 
-  const quiet = parsed.quiet
-  let runCtx = quiet ? { ...ctx, out: () => {} } : ctx
-  const timeout = parsed.timeout || ctx.configTimeout
-
-  if (parsed.changed) {
-    const filtered = filterChanged(runCtx.sources)
-    runCtx = { ...runCtx, sources: filtered }
-  }
+  const effectiveContext = applyRunFlags(runContext, parsed)
+  const timeout = parsed.timeout || runContext.configTimeout
 
   if (parsed.diffMode)
-    return runDiffMode(runCtx, parsed)
-  if (parsed.dryRunMode && parsed.allMode) {
-    const { total, fileCount } = runAllDryRun(runCtx)
-    if (quiet)
-      process.stderr.write(`${total} mutations across ${fileCount} files\n`)
-    return 0
-  }
-  if (parsed.dryRunMode) {
-    const count = dryRun(parsed.sourceFile, runCtx.mutationConfig, parsed.targetLine, runCtx.out)
-    if (quiet)
-      process.stderr.write(`${count} mutations across 1 files\n`)
-    return 0
-  }
+    return runDiffMode(effectiveContext, parsed)
+  if (parsed.dryRunMode)
+    return runDryRunMode(effectiveContext, parsed)
 
-  const { parallel, survivorsOnly, minScore } = parsed
-  const pCtx = {
-    ...runCtx,
-    ...(parallel && { parallel }),
-    ...(survivorsOnly && { survivorsOnly })
-  }
+  const { stats, exitCode } = await getRunResults(parsed, effectiveContext, timeout)
 
-  const { stats, exitCode } = await getRunResults(parsed, pCtx, timeout)
-  if (quiet && stats)
+  if (parsed.quiet && stats)
     process.stderr.write(formatQuietSummary(stats) + '\n')
-
-  if (minScore != null && stats)
-    return scoreExitCode(stats, minScore)
+  if (parsed.minScore != null && stats)
+    return scoreExitCode(stats, parsed.minScore)
 
   return exitCode
 }
 
-async function getRunResults(parsed, pCtx, timeout) {
-  if (parsed.retestMode)
-    return await runRetest(pCtx, { ...parsed, timeout })
-  if (parsed.incrementalMode)
-    return await runIncrementalMode(pCtx, parsed.jsonOutput, timeout)
-  if (parsed.allMode)
-    return await runBatchMode(pCtx, parsed.jsonOutput, timeout)
-  return await runSingleMode(pCtx, parsed, timeout)
+function applyRunFlags(runContext, parsed) {
+  let context = parsed.quiet ? { ...runContext, out: () => {} } : runContext
+
+  if (parsed.changed)
+    context = { ...context, sources: filterChanged(context.sources) }
+  if (parsed.parallel)
+    context = { ...context, parallel: parsed.parallel }
+  if (parsed.survivorsOnly)
+    context = { ...context, survivorsOnly: true }
+
+  return context
 }
 
-function runDiffMode(ctx, parsed) {
-  const result = diffReports(parsed.beforeFile, parsed.afterFile, ctx.out, parsed.jsonOutput)
+function runDryRunMode(runContext, parsed) {
+  if (parsed.allMode) {
+    const { total, fileCount } = runAllDryRun(runContext)
+    if (parsed.quiet)
+      process.stderr.write(`${total} mutations across ${fileCount} files\n`)
+    return 0
+  }
+  const count = dryRun(parsed.sourceFile, runContext.mutationConfig, parsed.targetLine, runContext.out)
+  if (parsed.quiet)
+    process.stderr.write(`${count} mutations across 1 files\n`)
+  return 0
+}
+
+async function getRunResults(parsed, runContext, timeout) {
+  if (parsed.retestMode)
+    return await runRetest(runContext, { ...parsed, timeout })
+  if (parsed.incrementalMode)
+    return await runIncrementalMode(runContext, parsed.jsonOutput, timeout)
+  if (parsed.allMode)
+    return await runBatchMode(runContext, parsed.jsonOutput, timeout)
+  return await runSingleMode(runContext, parsed, timeout)
+}
+
+function runDiffMode(runContext, parsed) {
+  const result = diffReports(parsed.beforeFile, parsed.afterFile, runContext.out, parsed.jsonOutput)
   return !result || result.regressions ? 1 : 0
 }
 
@@ -168,10 +172,9 @@ function runAllDryRun({ sources, mutationConfig, out }) {
   return { total, fileCount: sources.length }
 }
 
-async function runIncrementalMode(ctx, jsonOutput, timeout) {
-  const { sources, testSources, reportDir, reportPath, out } = ctx
-  const incrementalConfig = { sources, testSources, reportDir, reportPath, runBatch: runBatch.bind(null, ctx) }
-  const { totalSurvived, totalKilled = 0, failures } = await runIncremental(incrementalConfig, jsonOutput, timeout, out)
+async function runIncrementalMode(runContext, jsonOutput, timeout) {
+  const incrementalConfig = buildIncrementalConfig(runContext)
+  const { totalSurvived, totalKilled = 0, failures } = await runIncremental(incrementalConfig, jsonOutput, timeout, runContext.out)
   const exitCode = (totalSurvived + failures) ? 1 : 0
   return {
     exitCode,
@@ -179,13 +182,13 @@ async function runIncrementalMode(ctx, jsonOutput, timeout) {
       killed: totalKilled,
       survived: totalSurvived,
       timedOut: 0,
-      fileCount: sources.length
+      fileCount: runContext.sources.length
     }
   }
 }
 
-async function runBatchMode(ctx, jsonOutput, timeout) {
-  const result = await runBatch(ctx, jsonOutput, timeout)
+async function runBatchMode(runContext, jsonOutput, timeout) {
+  const result = await runBatch(runContext, jsonOutput, timeout)
   const { totalSurvived, totalKilled, totalTimedOut, failures, fileResults } = result
   const exitCode = (totalSurvived + failures) ? 1 : 0
   return {
@@ -199,17 +202,17 @@ async function runBatchMode(ctx, jsonOutput, timeout) {
   }
 }
 
-async function runSingleMode(ctx, parsed, timeout) {
-  const opts = {
+async function runSingleMode(runContext, parsed, timeout) {
+  const runOptions = {
     sourceFile: parsed.sourceFile,
-    mutationConfig: ctx.mutationConfig,
-    createRunner: ctx.createRunner,
+    mutationConfig: runContext.mutationConfig,
+    createRunner: runContext.createRunner,
     targetLine: parsed.targetLine,
     timeout,
-    survivorsOnly: ctx.survivorsOnly,
-    out: ctx.out
+    survivorsOnly: runContext.survivorsOnly,
+    out: runContext.out
   }
-  const { error, survived, killed, timedOut } = await getSingleRunResult(ctx, opts)
+  const { error, survived, killed, timedOut } = await getSingleRunResult(runContext, runOptions)
   return {
     exitCode: error || survived ? 1 : 0,
     stats: {
@@ -221,16 +224,16 @@ async function runSingleMode(ctx, parsed, timeout) {
   }
 }
 
-async function getSingleRunResult(context, options) {
-  if (context.parallel)
+async function getSingleRunResult(runContext, runOptions) {
+  if (runContext.parallel)
     return await runParallel({
-      ...options,
-      workerCount: parallelWorkerCount(context)
+      ...runOptions,
+      workerCount: parallelWorkerCount(runContext.parallel)
     })
-  return await runSingle(options)
+  return await runSingle(runOptions)
 }
 
-function parallelWorkerCount({ parallel }) {
+function parallelWorkerCount(parallel) {
   if (typeof parallel === 'number')
     return parallel
 }
@@ -240,75 +243,6 @@ export function scoreExitCode({ killed, survived, timedOut }, minScore) {
   const total = effectiveKilled + survived
   const score = total ? (effectiveKilled / total) * 100 : 100
   return score >= minScore ? 0 : 1
-}
-
-async function runBatch(ctx, jsonOutput, timeout, sourcesToRun) {
-  const { mutationConfig, createRunner, reportDir, reportPath, sources, survivorsOnly, out } = ctx
-  const filesToRun = sourcesToRun || sources
-
-  out(`\n${HEADER_SEPARATOR}`)
-  out(`MUTAGEN — BATCH MODE`)
-  out(`   Sources: ${filesToRun.length} file(s)\n`)
-
-  const result = await accumulateResults(filesToRun, { mutationConfig, createRunner, timeout, parallel: ctx.parallel, survivorsOnly, out })
-
-  if (isString(jsonOutput)) {
-    const stats = writeStructuredReportFile(jsonOutput, filesToRun.length, result.fileResults)
-    printScoreLine(stats, filesToRun.length, jsonOutput)
-  } else if (jsonOutput)
-    writeReport(out, reportDir, reportPath, result.fileResults)
-
-  printBatchSummary(out, filesToRun.length, result)
-
-  return result
-}
-
-async function accumulateResults(filesToRun, { mutationConfig, createRunner, timeout, parallel, survivorsOnly, out }) {
-  let totalSurvived = 0
-  let totalKilled = 0
-  let totalTimedOut = 0
-  let failures = 0
-  const fileResults = {}
-
-  const workerCount = parallelWorkerCount({ parallel })
-  const pool = parallel
-    ? createBatchPool({ workerCount, sourceFile: resolve(filesToRun[0]), createRunner })
-    : null
-
-  try {
-    for (const source of filesToRun) {
-      const opts = { sourceFile: resolve(source), mutationConfig, createRunner, timeout, survivorsOnly, out }
-      const { error, survived, killed, timedOut, jsonData } = parallel
-        ? await runParallel({ ...opts, workerCount, pool })
-        : await runSingle(opts)
-      if (error) {
-        failures++
-      } else {
-        totalSurvived += survived
-        totalKilled += killed
-        totalTimedOut += timedOut || 0
-        fileResults[jsonData.path] = { mutants: jsonData.mutants }
-      }
-    }
-  } finally {
-    if (pool) await pool.close()
-  }
-
-  return { totalSurvived, totalKilled, totalTimedOut, failures, fileResults }
-}
-
-function writeReport(out, reportDir, reportPath, fileResults) {
-  writeReportFile(reportDir, reportPath, createReport(fileResults), out)
-}
-
-function printBatchSummary(out, fileCount, { totalKilled, totalSurvived, totalTimedOut, failures }) {
-  out(`\n${HEADER_SEPARATOR}`)
-  out(`BATCH SUMMARY`)
-  out(HEADER_SEPARATOR)
-  out(`Files: ${fileCount}  |  Killed: ${totalKilled}  |  Survived: ${totalSurvived}  |  Errors: ${failures}`)
-  if (totalTimedOut)
-    out(`Timed out: ${totalTimedOut} (counted as killed)`)
-  out(`${HEADER_SEPARATOR}\n`)
 }
 
 function filterChanged(sources) {

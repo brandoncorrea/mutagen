@@ -1,5 +1,5 @@
 /**
- * Separate file because this test mocks cli/runner.js directly, which is
+ * Separate file because this test mocks cli/runner/single.js directly, which is
  * incompatible with the other batch tests that run the real runner with
  * mocked node:fs. The || 0 fallback only triggers when a runner adapter
  * omits timedOut — runSingle always includes it, so this edge case can't
@@ -7,16 +7,15 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('../../../src/cli/runner/index.js', () => ({
-  runSingle: vi.fn(),
-  dryRun: vi.fn()
+vi.mock('../../../src/cli/runner/single.js', () => ({
+  runSingle: vi.fn()
 }))
 
 vi.mock('../../../src/core/temp-copy.js')
 
 import { createManualRunner } from '../../../src/cli/manual.js'
 import { createWorktree } from '../../../src/core/temp-copy.js'
-import { runSingle } from '../../../src/cli/runner/index.js'
+import { runSingle } from '../../../src/cli/runner/single.js'
 
 const noop = () => {}
 const patterns = [{ pattern: / === /g, replacement: ' !== ', name: 'test' }]
