@@ -75,7 +75,7 @@ function flushModuleState(vitest) {
       env.moduleGraph.invalidateAll()
     vite.moduleGraph.invalidateAll()
   }
-  vitest._fsCache?.clearCache()
+  vitest._fsCache?.clearCache(false)
 }
 
 function createVitestOptions({ config, root }) {
