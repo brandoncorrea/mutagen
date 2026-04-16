@@ -419,6 +419,68 @@ describe('createManualRunner', () => {
       expect(code).toBe(1)
     })
 
+    it('--quiet with preflight failure produces numeric stats, not NaN', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const runner = fakeRunner([{ passed: false }]) // preflight fails
+
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+
+      const manual = createManualRunner({
+        mutators: testMutators, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner)
+      })
+      await manual.run(['src/a.js', '--quiet'])
+
+      const stderrOutput = stderrSpy.mock.calls.map(c => c[0]).join('')
+      expect(stderrOutput).not.toContain('NaN')
+      expect(stderrOutput).not.toContain('undefined')
+      expect(stderrOutput).toContain('(0/0) | 0 survivors')
+
+      stderrSpy.mockRestore()
+    })
+
+    it('--quiet with killed mutations shows correct killed count in stats', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: false, killedBy: ['t.test.js'] }
+      ])
+
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+
+      const manual = createManualRunner({
+        mutators: testMutators, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner)
+      })
+      await manual.run(['src/a.js', '--quiet'])
+
+      const stderrOutput = stderrSpy.mock.calls.map(c => c[0]).join('')
+      expect(stderrOutput).toContain('(1/1) | 0 survivors')
+
+      stderrSpy.mockRestore()
+    })
+
+    it('--quiet with surviving mutations shows correct survived count in stats', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: true } // survived
+      ])
+
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+
+      const manual = createManualRunner({
+        mutators: testMutators, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner)
+      })
+      await manual.run(['src/a.js', '--quiet'])
+
+      const stderrOutput = stderrSpy.mock.calls.map(c => c[0]).join('')
+      expect(stderrOutput).toContain('(0/1) | 1 survivors')
+
+      stderrSpy.mockRestore()
+    })
+
     it('main() calls process.exit with run() result', async () => {
       mockFs({ [resolve('src/a.js')]: sourceCode })
       const runner = fakeRunner([
