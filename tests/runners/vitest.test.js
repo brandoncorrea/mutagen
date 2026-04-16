@@ -267,6 +267,31 @@ describe('createVitestRunner', () => {
       expect(mock._fsCache.clearCache).toHaveBeenCalled()
     })
 
+    it('skips projects with undefined _vite during flush', async () => {
+      const mock = createMockVitest()
+      mock.projects = [
+        {},  // _vite undefined — flushModuleState should skip this
+        {
+          _vite: {
+            moduleGraph: createMockModuleGraph(),
+            environments: { ssr: { moduleGraph: createMockModuleGraph() } }
+          }
+        }
+      ]
+      mock.state.getFiles.mockReturnValue([
+        { result: { state: 'pass' }, filepath: 'test/a.test.js' }
+      ])
+      startVitest.mockResolvedValue(mock)
+
+      const runner = await createVitestRunner('src/a.js')
+      await runner.switchFile('src/b.js')
+
+      // The project with _vite should still be flushed
+      const vite = mock.projects[1]._vite
+      expect(vite.moduleGraph.invalidateAll).toHaveBeenCalled()
+      expect(vite.environments.ssr.moduleGraph.invalidateAll).toHaveBeenCalled()
+    })
+
     it('flushes before recomputing related specs', async () => {
       const mock = createMockVitest()
       mock.state.getFiles.mockReturnValue([
