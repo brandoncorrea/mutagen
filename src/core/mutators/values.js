@@ -263,6 +263,22 @@ export const spreadRemoval = [
   }
 ]
 
+export const conditionalNegation = [
+  {
+    name: 'if (cond) → if (!cond)',
+    types: ['IfStatement', 'WhileStatement'],
+    test: node =>
+      node.test.type !== 'UnaryExpression'
+      || node.test.operator !== '!'
+      || !node.test.prefix,
+    mutate: node => ({
+      start: node.test.start,
+      end: node.test.start,
+      replacement: '!'
+    })
+  }
+]
+
 export const propertyAccessMutations = [
   {
     name: '.length → .length + 1',

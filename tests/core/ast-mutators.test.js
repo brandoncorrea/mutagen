@@ -33,7 +33,8 @@ describe('ast-mutators', () => {
         'ConditionalExpression', 'ReturnStatement', 'ThrowStatement',
         'AwaitExpression', 'SpreadElement', 'ArrayExpression',
         'Literal', 'BooleanLiteral', 'NumericLiteral', 'StringLiteral',
-        'ChainExpression', 'ObjectExpression'
+        'ChainExpression', 'ObjectExpression',
+        'IfStatement', 'WhileStatement'
       ])
       for (const m of javascript) {
         for (const t of m.types) {
@@ -542,6 +543,54 @@ describe('ast-mutators', () => {
     it('<= → < does not match >=', () => {
       const m = find('<= → <')
       expect(m.test(binExpr('>=', 4, 5, 9, 10))).toBe(false)
+    })
+  })
+
+  describe('conditional negation insertion', () => {
+    it('if (cond) → if (!cond) inserts negation into if-statement test', () => {
+      const m = find('if (cond) → if (!cond)')
+      const node = {
+        type: 'IfStatement',
+        test: { type: 'Identifier', name: 'ready', start: 4, end: 9 },
+        start: 0, end: 20
+      }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'if (ready) { go() }')
+      expect(patch).toEqual({ start: 4, end: 4, replacement: '!' })
+    })
+
+    it('while (cond) → while (!cond) inserts negation into while-statement test', () => {
+      const m = find('if (cond) → if (!cond)')
+      const node = {
+        type: 'WhileStatement',
+        test: { type: 'Identifier', name: 'running', start: 7, end: 14 },
+        start: 0, end: 25
+      }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'while (running) { tick() }')
+      expect(patch).toEqual({ start: 7, end: 7, replacement: '!' })
+    })
+
+    it('skips when test is already negated (!cond)', () => {
+      const m = find('if (cond) → if (!cond)')
+      const node = {
+        type: 'IfStatement',
+        test: { type: 'UnaryExpression', operator: '!', prefix: true, start: 4, end: 10 },
+        start: 0, end: 20
+      }
+      expect(m.test(node)).toBe(false)
+    })
+
+    it('matches when test is a call expression', () => {
+      const m = find('if (cond) → if (!cond)')
+      const node = {
+        type: 'IfStatement',
+        test: { type: 'CallExpression', start: 4, end: 14 },
+        start: 0, end: 25
+      }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'if (isReady()) { go() }')
+      expect(patch).toEqual({ start: 4, end: 4, replacement: '!' })
     })
   })
 
