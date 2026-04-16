@@ -53,7 +53,7 @@ export function createManualRunner(config) {
     createRunner,
     reportDir = 'reports/mutation',
     reportFile = 'manual-report.json',
-    timeout: configTimeout = null,
+    timeout: configTimeout,
     out = console.log
   } = config
 
@@ -160,14 +160,14 @@ function runDryRunMode(runContext, parsed) {
   return 0
 }
 
-async function getRunResults(parsed, runContext, timeout) {
+function getRunResults(parsed, runContext, timeout) {
   if (parsed.retestMode)
-    return await runRetest(runContext, { ...parsed, timeout })
+    return runRetest(runContext, { ...parsed, timeout })
   if (parsed.incrementalMode)
-    return await runIncrementalMode(runContext, parsed.jsonOutput, timeout)
+    return runIncrementalMode(runContext, parsed.jsonOutput, timeout)
   if (parsed.allMode)
-    return await runBatchMode(runContext, parsed.jsonOutput, timeout)
-  return await runSingleMode(runContext, parsed, timeout)
+    return runBatchMode(runContext, parsed.jsonOutput, timeout)
+  return runSingleMode(runContext, parsed, timeout)
 }
 
 function runDiffMode(runContext, parsed) {
@@ -246,13 +246,13 @@ function createSingleFileProgress(displayPath) {
   return reporter
 }
 
-async function getSingleRunResult(runContext, runOptions) {
+function getSingleRunResult(runContext, runOptions) {
   if (runContext.parallel)
-    return await runParallel({
+    return runParallel({
       ...runOptions,
       workerCount: parallelWorkerCount(runContext.parallel)
     })
-  return await runSingle(runOptions)
+  return runSingle(runOptions)
 }
 
 function parallelWorkerCount(parallel) {
