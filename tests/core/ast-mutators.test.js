@@ -144,6 +144,19 @@ describe('ast-mutators', () => {
       const patch = m.mutate(node, 's.trim()')
       expect(patch).toEqual({ start: 1, end: 8, replacement: '' })
     })
+
+    it('rejects computed member expressions', () => {
+      const m = find('toLowerCase → toUpperCase')
+      const node = callWithMethod('toLowerCase', 2, 13, 0, 15)
+      node.callee.computed = true
+      expect(m.test(node)).toBe(false)
+    })
+
+    it('rejects calls with wrong method name', () => {
+      const m = find('toLowerCase → toUpperCase')
+      const node = callWithMethod('toString', 2, 10, 0, 12)
+      expect(m.test(node)).toBe(false)
+    })
   })
 
   describe('update operators', () => {
@@ -325,6 +338,16 @@ describe('ast-mutators', () => {
       const patch = m.mutate(node, 'void callback()')
       expect(patch).toEqual({ start: 0, end: 5, replacement: '' })
     })
+
+    it('rejects non-void prefix unary expressions', () => {
+      const m = find('void expr → expr')
+      const node = {
+        type: 'UnaryExpression', operator: '!', prefix: true,
+        argument: { start: 1, end: 6 },
+        start: 0, end: 6
+      }
+      expect(m.test(node)).toBe(false)
+    })
   })
 
   describe('property access', () => {
@@ -393,6 +416,16 @@ describe('ast-mutators', () => {
       const patch = m.mutate(node)
       expect(patch).toEqual({ start: 0, end: 8, replacement: 'parseFloat' })
     })
+
+    it('rejects calls with wrong function name', () => {
+      const m = find('parseInt → parseFloat')
+      const node = {
+        type: 'CallExpression',
+        callee: { type: 'Identifier', name: 'encodeURI', start: 0, end: 9 },
+        start: 0, end: 14
+      }
+      expect(m.test(node)).toBe(false)
+    })
   })
 
   describe('string method mutations', () => {
@@ -416,6 +449,16 @@ describe('ast-mutators', () => {
       expect(m.test(node)).toBe(true)
       const patch = m.mutate(node, '-x')
       expect(patch).toEqual({ start: 0, end: 1, replacement: '' })
+    })
+
+    it('rejects non-Identifier arguments (e.g. -1)', () => {
+      const m = find('unary -x → x')
+      const node = {
+        type: 'UnaryExpression', operator: '-', prefix: true,
+        argument: { type: 'NumericLiteral', value: 1, start: 1, end: 2 },
+        start: 0, end: 2
+      }
+      expect(m.test(node)).toBe(false)
     })
   })
 
@@ -752,6 +795,13 @@ describe('ast-mutators', () => {
       expect(patch.replacement).toBe('x => true, ')
     })
 
+    it('filter(predicate) rejects filter call with no arguments', () => {
+      const m = find('filter(predicate) → filter(true) (ignore predicate)')
+      const node = callWithMethod('filter', 4, 10, 0, 12)
+      node.arguments = []
+      expect(m.test(node)).toBe(false)
+    })
+
     it('slice() → slice(1, prepends 1', () => {
       const m = find('slice() → slice(1,')
       const node = callWithMethod('slice', 4, 9, 0, 11)
@@ -857,6 +907,13 @@ describe('ast-mutators', () => {
       const node = logExpr('||', 0, 1, 5, 6)
       node.right = { type: 'Literal', value: 0 }
       expect(m.test(node)).toBe(true)
+    })
+
+    it('|| 0 → (removed) rejects Literal with string value', () => {
+      const m = find('|| 0 → (removed)')
+      const node = logExpr('||', 0, 1, 5, 7)
+      node.right = { type: 'Literal', value: '' }
+      expect(m.test(node)).toBe(false)
     })
   })
 
