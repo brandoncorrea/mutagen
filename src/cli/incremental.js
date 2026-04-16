@@ -9,6 +9,7 @@ import { resolve, relative } from 'node:path'
 
 import { tryLoadJson, writeStructuredReportFile } from '../core/report-data.js'
 import { printIncrementalHeader, updateCachedReportHashes, printAllCachedSummary, writeMergedReport, printIncrementalSummary, computeDeltas } from './incremental-report.js'
+import { isString } from './is-string.js'
 
 const HASH_PREFIX_LENGTH = 16
 
@@ -47,10 +48,6 @@ export async function runIncremental(config, jsonOutput, timeout, out = console.
     writeMergedReport(out, { config, previous, classification, fileResults: batchResult.fileResults })
 
   return printIncrementalSummary(out, batchResult, sources, previous, classification)
-}
-
-function isString(value) {
-  return typeof value === 'string'
 }
 
 function classifyAllSources(sources, testSources, previous) {

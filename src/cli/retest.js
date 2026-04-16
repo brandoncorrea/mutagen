@@ -9,6 +9,7 @@ import { resolve } from 'node:path'
 import { generateMutations } from '../core/generate.js'
 import { HEADER_SEPARATOR, tryLoadJson, writeStructuredReportFile } from '../core/report-data.js'
 import { runSingle, runParallel } from './runner/index.js'
+import { isString } from './is-string.js'
 
 /**
  * Extract retest targets from a structured report.
@@ -172,10 +173,6 @@ function printRetestSummary(out, { totalKilled, totalSurvived, totalTimedOut, to
 
 function survivorKey(file, line, name) {
   return `${file}:${line}:${name}`
-}
-
-function isString(value) {
-  return typeof value === 'string'
 }
 
 function isNumber(value) {

@@ -24,6 +24,7 @@ import { runSingle, runParallel, createBatchPool, dryRun } from './runner/index.
 import { runIncremental } from './incremental.js'
 import { runRetest } from './retest.js'
 import { formatQuietSummary } from './report.js'
+import { isString } from './is-string.js'
 
 /**
  * Create a manual mutation runner with project-specific config.
@@ -239,10 +240,6 @@ export function scoreExitCode({ killed, survived, timedOut }, minScore) {
   const total = effectiveKilled + survived
   const score = total ? (effectiveKilled / total) * 100 : 100
   return score >= minScore ? 0 : 1
-}
-
-function isString(value) {
-  return typeof value === 'string'
 }
 
 async function runBatch(ctx, jsonOutput, timeout, sourcesToRun) {
