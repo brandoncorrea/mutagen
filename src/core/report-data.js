@@ -70,7 +70,7 @@ export function countStatuses(merged) {
   const statuses = { killed: 0, survived: 0, noCoverage: 0, timeout: 0 }
   for (const fileData of Object.values(merged.files))
     for (const mutant of fileData.mutants)
-      countStatus(statuses, mutant)
+      accumulateStatus(statuses, mutant)
   return statuses
 }
 
@@ -181,7 +181,7 @@ function extractDescription(description, index) {
   return description.split(' → ')[index] || ''
 }
 
-function countStatus(statuses, { status }) {
+function accumulateStatus(statuses, { status }) {
   if (status === 'Killed')
     statuses.killed++
   else if (status === 'Survived')
