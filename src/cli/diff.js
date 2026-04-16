@@ -3,7 +3,9 @@
  * Compare two reports to find regressions, improvements, and new mutants.
  */
 
-import { mutantKey, isKilled, isAlive, tryLoadJson, countStatuses, mutationScore } from '../core/report-data.js'
+import { mutantKey } from '../core/mutation-id.js'
+import { isKilled, isAlive, countStatuses, mutationScore } from '../core/mutation-status.js'
+import { tryLoadJson } from '../core/report-data.js'
 import { printDiffReport } from './diff-print.js'
 
 /**

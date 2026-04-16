@@ -9,6 +9,7 @@ import { resolve } from 'node:path'
 import { generateMutations } from '../core/generate.js'
 import { HEADER_SEPARATOR, tryLoadJson, writeStructuredReportFile } from '../core/report-data.js'
 import { runSingle, runParallel } from './runner/index.js'
+import { printScoreLine } from './report.js'
 import { isString } from './is-string.js'
 
 /**
@@ -148,10 +149,14 @@ async function retestFiles(files, { mutationConfig, createRunner, timeout, survi
 }
 
 function writeRetestReport(parsed, fileCount, fileResults) {
-  if (isString(parsed.jsonOutput))
-    writeStructuredReportFile(parsed.jsonOutput, fileCount, fileResults)
-  else if (parsed.jsonOutput)
-    writeStructuredReportFile('reports/mutation/retest-report.json', fileCount, fileResults)
+  if (isString(parsed.jsonOutput)) {
+    const stats = writeStructuredReportFile(parsed.jsonOutput, fileCount, fileResults)
+    printScoreLine(stats, fileCount, parsed.jsonOutput)
+  } else if (parsed.jsonOutput) {
+    const outputPath = 'reports/mutation/retest-report.json'
+    const stats = writeStructuredReportFile(outputPath, fileCount, fileResults)
+    printScoreLine(stats, fileCount, outputPath)
+  }
 }
 
 function printRetestSummary(out, { totalKilled, totalSurvived, totalTimedOut, totalSkipped, failures }) {

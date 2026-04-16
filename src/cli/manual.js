@@ -23,7 +23,7 @@ import { parseArgs } from './args.js'
 import { runSingle, runParallel, createBatchPool, dryRun } from './runner/index.js'
 import { runIncremental } from './incremental.js'
 import { runRetest } from './retest.js'
-import { formatQuietSummary } from './report.js'
+import { formatQuietSummary, printScoreLine } from './report.js'
 import { isString } from './is-string.js'
 
 /**
@@ -252,9 +252,10 @@ async function runBatch(ctx, jsonOutput, timeout, sourcesToRun) {
 
   const result = await accumulateResults(filesToRun, { mutationConfig, createRunner, timeout, parallel: ctx.parallel, survivorsOnly, out })
 
-  if (isString(jsonOutput))
-    writeStructuredReportFile(jsonOutput, filesToRun.length, result.fileResults)
-  else if (jsonOutput)
+  if (isString(jsonOutput)) {
+    const stats = writeStructuredReportFile(jsonOutput, filesToRun.length, result.fileResults)
+    printScoreLine(stats, filesToRun.length, jsonOutput)
+  } else if (jsonOutput)
     writeReport(out, reportDir, reportPath, result.fileResults)
 
   printBatchSummary(out, filesToRun.length, result)

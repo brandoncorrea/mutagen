@@ -5,7 +5,9 @@
 
 import { writeFileSync } from 'node:fs'
 
-import { HEADER_SEPARATOR, isKilled, isAlive, mutantKey, createReport, writeReportFile } from '../core/report-data.js'
+import { mutantKey } from '../core/mutation-id.js'
+import { isKilled, isAlive } from '../core/mutation-status.js'
+import { HEADER_SEPARATOR, createReport, writeReportFile } from '../core/report-data.js'
 
 export function printIncrementalSummary(out, batchResult, sources, previous, classification) {
   const { totalSurvived, totalKilled, failures } = batchResult

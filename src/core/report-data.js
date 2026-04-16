@@ -1,11 +1,16 @@
 /**
  * Shared data utilities for mutation reports.
  * Used by CLI, Stryker integration, and diff/incremental modules.
+ *
+ * Mutation identity (mutationId, mutantKey) → core/mutation-id.js
+ * Mutation status (isKilled, isAlive, scoring) → core/mutation-status.js
  */
 
-import { createHash } from 'node:crypto'
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { resolve, relative, dirname } from 'node:path'
+
+import { mutationId, mutantKey } from './mutation-id.js'
+import { isKilled, isAlive } from './mutation-status.js'
 
 export const HEADER_SEPARATOR = '═'.repeat(60)
 export const SECTION_SEPARATOR = '─'.repeat(60)
@@ -34,46 +39,6 @@ export function tryLoadJson(path, out) {
   }
 }
 
-export function mutationId(file, line, name) {
-  return createHash('sha256').update(`${file}:${line}:${name}`).digest('hex').slice(0, 8)
-}
-
-export function assignMutationIds(mutations, filePath) {
-  for (const m of mutations)
-    m.id = mutationId(filePath, m.line, m.name)
-  return mutations
-}
-
-export function mutantKey(path, { location, mutatorName, replacement }) {
-  const line = location?.start?.line || 0
-  return `${path}:${line}:${mutatorName || ''}:${replacement || ''}`
-}
-
-export function isKilled({ status }) {
-  return status === 'Killed' || status === 'Timeout'
-}
-
-export function isAlive({ status }) {
-  return status === 'Survived' || status === 'NoCoverage'
-}
-
-export function totalMutants({ killed, survived, noCoverage, timeout }) {
-  return killed + survived + noCoverage + timeout
-}
-
-export function mutationScore(counts) {
-  const total = totalMutants(counts)
-  return total ? (counts.killed + counts.timeout) / total * 100 : 100
-}
-
-export function countStatuses(merged) {
-  const statuses = { killed: 0, survived: 0, noCoverage: 0, timeout: 0 }
-  for (const fileData of Object.values(merged.files))
-    for (const mutant of fileData.mutants)
-      accumulateStatus(statuses, mutant)
-  return statuses
-}
-
 export function combineReportData(reports, out = console.log) {
   const { mergedFiles, duplicates } = deduplicateMutants(loadAllEntries(reports, out))
 
@@ -99,12 +64,13 @@ export function toJsonMutants(sourceFile, results, { survivorsOnly } = {}) {
 
 /**
  * Build a structured report from file results and write to outputPath.
- * Prints a one-line score summary to stderr.
+ * Returns computed stats for callers that need to display a summary.
  *
  * @param {string} outputPath - path to write the JSON report
- * @param {number} fileCount - number of source files (for summary line)
+ * @param {number} fileCount - number of source files
  * @param {Object} fileResults - { [path]: { mutants: [...] } }
  * @param {Object} [deltas] - incremental deltas (fixes, regressions, rerunFiles, cachedFiles)
+ * @returns {{ score: number, total: number, killed: number, survived: number, timedOut: number }}
  */
 export function writeStructuredReportFile(outputPath, fileCount, fileResults, deltas) {
   const { files, survivors, totalKilled, totalSurvived, totalTimedOut } = collectStats(fileResults)
@@ -126,7 +92,7 @@ export function writeStructuredReportFile(outputPath, fileCount, fileResults, de
   mkdirSync(dirname(absPath), { recursive: true })
   writeFileSync(absPath, JSON.stringify(report, null, 2))
 
-  process.stderr.write(`Score: ${round1(score)}% (${totalKilled}/${total}) | ${totalSurvived} survivors | ${fileCount} files → ${outputPath}\n`)
+  return { score: round1(score), total, killed: totalKilled, survived: totalSurvived, timedOut: totalTimedOut }
 }
 
 function collectStats(fileResults) {
@@ -179,17 +145,6 @@ function round1(n) {
 function extractDescription(description, index) {
   if (!description) return ''
   return description.split(' → ')[index] || ''
-}
-
-function accumulateStatus(statuses, { status }) {
-  if (status === 'Killed')
-    statuses.killed++
-  else if (status === 'Survived')
-    statuses.survived++
-  else if (status === 'NoCoverage')
-    statuses.noCoverage++
-  else if (status === 'Timeout')
-    statuses.timeout++
 }
 
 function loadAllEntries(reports, out) {

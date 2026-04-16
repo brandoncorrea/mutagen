@@ -9,6 +9,7 @@ import { resolve, relative } from 'node:path'
 
 import { tryLoadJson, writeStructuredReportFile } from '../core/report-data.js'
 import { printIncrementalHeader, updateCachedReportHashes, printAllCachedSummary, writeMergedReport, printIncrementalSummary, computeDeltas } from './incremental-report.js'
+import { printScoreLine } from './report.js'
 import { isString } from './is-string.js'
 
 const HASH_PREFIX_LENGTH = 16
@@ -142,5 +143,6 @@ function writeStructuredIncrementalReport(outputPath, fileCount, previous, class
         mergedFiles[relPath] = previous.previousReport.files[relPath]
 
   const deltas = computeDeltas(previous.previousReport, freshFileResults || {}, classification)
-  writeStructuredReportFile(outputPath, fileCount, mergedFiles, deltas)
+  const stats = writeStructuredReportFile(outputPath, fileCount, mergedFiles, deltas)
+  printScoreLine(stats, fileCount, outputPath)
 }

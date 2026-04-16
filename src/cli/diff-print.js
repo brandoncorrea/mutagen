@@ -2,7 +2,8 @@
  * Display formatting for mutation diff reports.
  */
 
-import { countStatuses, totalMutants, mutationScore, isAlive, HEADER_SEPARATOR } from '../core/report-data.js'
+import { countStatuses, totalMutants, mutationScore, isAlive } from '../core/mutation-status.js'
+import { HEADER_SEPARATOR } from '../core/report-data.js'
 
 export function printDiffReport({ beforeFile, afterFile, before, after }, changes, fileDeltas, out) {
   out(`\n${HEADER_SEPARATOR}`)

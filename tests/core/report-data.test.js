@@ -11,8 +11,9 @@ vi.mock('node:fs', async (importOriginal) => {
   }
 })
 
+import { mutantKey, mutationId, assignMutationIds } from '../../src/core/mutation-id.js'
+import { countStatuses, totalMutants, mutationScore } from '../../src/core/mutation-status.js'
 import {
-  mutantKey, mutationId, assignMutationIds, countStatuses, totalMutants, mutationScore,
   toJsonMutants, createReport, writeReportFile, tryLoadJson,
   combineReportData, writeStructuredReportFile
 } from '../../src/core/report-data.js'
@@ -591,7 +592,6 @@ describe('combineReportData', () => {
 describe('writeStructuredReportFile', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
   })
 
   it('counts killed mutants and writes report', () => {

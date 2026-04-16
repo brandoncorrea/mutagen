@@ -6,7 +6,8 @@
 import { execFileSync } from 'node:child_process'
 import { existsSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 
-import { countStatuses, HEADER_SEPARATOR, combineReportData } from './core/report-data.js'
+import { countStatuses } from './core/mutation-status.js'
+import { HEADER_SEPARATOR, combineReportData } from './core/report-data.js'
 import { printSummary } from './cli/report.js'
 
 export function cleanStaleSandboxes(out = console.log) {

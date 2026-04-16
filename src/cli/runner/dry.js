@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs'
 import { relative } from 'node:path'
 
 import { generateMutations } from '../../core/generate.js'
-import { assignMutationIds } from '../../core/report-data.js'
+import { assignMutationIds } from '../../core/mutation-id.js'
 
 export function dryRun(sourceFile, mutationConfig, targetLine, out = console.log) {
   const source = readFileSync(sourceFile, 'utf-8')
