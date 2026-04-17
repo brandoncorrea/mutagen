@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isString } from '../../src/cli/runner/shared.js'
+import { isString } from '../../src/cli/shared.js'
 
 describe('isString', () => {
   it('returns true for string values', () => {

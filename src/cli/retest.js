@@ -10,7 +10,7 @@ import { generateMutations } from '../core/generate.js'
 import { HEADER_SEPARATOR, tryLoadJson, writeStructuredReportFile } from '../core/report-data.js'
 import { runSingle, runParallel } from './runner/index.js'
 import { printScoreLine } from './report.js'
-import { isString } from './runner/shared.js'
+import { isString } from './shared.js'
 
 /**
  * Extract retest targets from a structured report.

@@ -10,7 +10,7 @@ import { runSingle } from './single.js'
 import { runParallel, createBatchPool } from './parallel.js'
 import { printScoreLine, printAutoDiffLine } from '../report.js'
 import { createProgressReporter } from '../progress.js'
-import { isString } from './shared.js'
+import { isString, parallelWorkerCount } from '../shared.js'
 import { autoDiffSummary } from '../auto-diff.js'
 
 /**
@@ -88,11 +88,6 @@ function createBatchReporter(filesToRun, progress) {
     dot: status => reporter.dot(status),
     endFile() { reporter.endFile() }
   }
-}
-
-function parallelWorkerCount(parallel) {
-  if (typeof parallel === 'number')
-    return parallel
 }
 
 function printBatchSummary(out, fileCount, { totalKilled, totalSurvived, totalTimedOut, failures }) {

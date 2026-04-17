@@ -24,6 +24,7 @@ import { runIncremental } from './incremental.js'
 import { runRetest } from './retest.js'
 import { formatQuietSummary } from './report.js'
 import { formatProgressSummary, createProgressReporter } from './progress.js'
+import { parallelWorkerCount } from './shared.js'
 
 /**
  * Create a manual mutation runner with project-specific config.
@@ -253,11 +254,6 @@ function getSingleRunResult(runContext, runOptions) {
       workerCount: parallelWorkerCount(runContext.parallel)
     })
   return runSingle(runOptions)
-}
-
-function parallelWorkerCount(parallel) {
-  if (typeof parallel === 'number')
-    return parallel
 }
 
 export function scoreExitCode({ killed, survived, timedOut }, minScore) {

@@ -22,10 +22,6 @@ export function reportMutation(out, total, { number, id, line, name }, status) {
   out(`[${number}/${total}] Line ${line}: ${name}${idTag} ... ${status}`)
 }
 
-export function isString(value) {
-  return typeof value === 'string'
-}
-
 export function printBanner(out, label, sourceFile, targetLine, timeout) {
   out(`\n${HEADER_SEPARATOR}`)
   out(label)

@@ -10,7 +10,7 @@ import { resolve, relative } from 'node:path'
 import { tryLoadJson, writeStructuredReportFile } from '../core/report-data.js'
 import { printIncrementalHeader, updateCachedReportHashes, printAllCachedSummary, writeMergedReport, printIncrementalSummary, computeDeltas } from './incremental-report.js'
 import { printScoreLine } from './report.js'
-import { isString } from './runner/shared.js'
+import { isString } from './shared.js'
 
 const HASH_PREFIX_LENGTH = 16
 
