@@ -12,7 +12,7 @@
  */
 
 import { withTimeout } from './timeout.js'
-import { STATUS } from '../cli/shared.js'
+import { STATUS } from './mutation-status.js'
 
 // Module-level tracking of active pools for process signal cleanup
 const activePools = new Set()

@@ -381,13 +381,13 @@ describe('runParallel', () => {
     expect(result.killed).toBe(1)
   })
 
-  it('indexes mutations with _progressIndex when onProgress is provided', async () => {
+  it('emits ordered progress without polluting mutation objects', async () => {
     mockFs({ [resolve('src/a.js')]: sourceCode })
     const preflightRunner = fakePoolRunner([{ passed: true }])
     const statuses = []
     const poolRun = vi.fn().mockImplementation((mutations, opts) => {
       for (const m of mutations) {
-        expect(m).toHaveProperty('_progressIndex')
+        expect(m).not.toHaveProperty('_progressIndex')
         opts.onResult?.({ mutation: m, status: 'killed' })
       }
       return { killed: mutations, survived: [], timedOut: [] }

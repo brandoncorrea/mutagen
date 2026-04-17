@@ -141,7 +141,7 @@ async function retestOneFile(file, { mutationConfig, createRunner, timeout, surv
   }
 
   const result = parallel
-    ? await runParallel({ ...opts, workerCount: isNumber(parallel) ? parallel : undefined })
+    ? await runParallel({ ...opts, workerCount: typeof parallel === 'number' ? parallel : undefined })
     : await runSingle(opts)
 
   if (result.error) {
@@ -184,6 +184,3 @@ function survivorKey(file, line, name) {
   return `${file}:${line}:${name}`
 }
 
-function isNumber(value) {
-  return typeof value === 'number'
-}

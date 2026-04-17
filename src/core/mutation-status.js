@@ -3,6 +3,13 @@
  * Pure functions for categorizing and scoring mutation test results.
  */
 
+export const STATUS = {
+  SURVIVED: 'SURVIVED',
+  KILLED: 'killed',
+  KILLED_ERROR: 'killed (error)',
+  TIMEOUT: 'TIMEOUT (killed)'
+}
+
 export function isKilled({ status }) {
   return status === 'Killed' || status === 'Timeout'
 }

@@ -29,7 +29,20 @@ export async function runSingle(options) {
   const tempSourceFile = tempCopy.resolve(sourceFile)
   const runner = await createRunner(tempSourceFile, { root: tempCopy.root })
 
-  const runOptions = { out, runner, timeout, sourceFile, tempSourceFile, targetLine, original, mutationConfig, survivorsOnly, retestMutations, tempCopy, onProgress: options.onProgress }
+  const runOptions = {
+    out,
+    runner,
+    timeout,
+    sourceFile,
+    tempSourceFile,
+    targetLine,
+    original,
+    mutationConfig,
+    survivorsOnly,
+    retestMutations,
+    tempCopy,
+    onProgress: options.onProgress
+  }
 
   try {
     return await runMutations(runOptions)

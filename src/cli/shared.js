@@ -2,12 +2,7 @@
  * Shared helpers for CLI modules.
  */
 
-export const STATUS = {
-  SURVIVED: 'SURVIVED',
-  KILLED: 'killed',
-  KILLED_ERROR: 'killed (error)',
-  TIMEOUT: 'TIMEOUT (killed)'
-}
+export { STATUS } from '../core/mutation-status.js'
 
 export function isString(value) {
   return typeof value === 'string'

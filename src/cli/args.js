@@ -47,26 +47,18 @@ export function parseArgs(argv = process.argv.slice(2)) {
 }
 
 function incrementalOptions(argv) {
-  const timeout = parseTimeout(argv)
-  if (timeout?.error) return timeout
-  const parallel = parseParallel(argv)
-  if (parallel?.error) return parallel
-  const minScore = parseMinScore(argv)
-  if (minScore?.error) return minScore
-  return {
-    incrementalMode: true,
-    timeout,
-    parallel,
-    jsonOutput: parseJsonOutput(argv),
-    quiet: hasFlag(argv, '--quiet'),
-    progress: hasFlag(argv, '--progress'),
-    survivorsOnly: hasFlag(argv, '--survivors-only'),
-    changed: hasFlag(argv, '--changed'),
-    minScore
-  }
+  const common = commonOptions(argv)
+  if (common.error) return common
+  return { incrementalMode: true, ...common }
 }
 
 function allOptions(argv) {
+  const common = commonOptions(argv)
+  if (common.error) return common
+  return { allMode: true, dryRunMode: hasFlag(argv, '--dry-run'), ...common }
+}
+
+function commonOptions(argv) {
   const timeout = parseTimeout(argv)
   if (timeout?.error) return timeout
   const parallel = parseParallel(argv)
@@ -74,11 +66,9 @@ function allOptions(argv) {
   const minScore = parseMinScore(argv)
   if (minScore?.error) return minScore
   return {
-    allMode: true,
     timeout,
     parallel,
     jsonOutput: parseJsonOutput(argv),
-    dryRunMode: hasFlag(argv, '--dry-run'),
     quiet: hasFlag(argv, '--quiet'),
     progress: hasFlag(argv, '--progress'),
     survivorsOnly: hasFlag(argv, '--survivors-only'),

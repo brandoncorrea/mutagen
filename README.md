@@ -156,7 +156,7 @@ skipNodes: [{ type: 'CallExpression', callee: { object: { name: 'console' } } }]
 --help, -h                      Show usage information
 ```
 
-`--json`, `--timeout`, `--parallel`, `--quiet`, `--survivors-only`, and `--changed` work across single-file, `--all`, and `--incremental` modes.
+`--json`, `--timeout`, `--parallel`, `--quiet`, `--progress`, `--survivors-only`, and `--changed` work across single-file, `--all`, and `--incremental` modes.
 
 ## Programmatic API
 

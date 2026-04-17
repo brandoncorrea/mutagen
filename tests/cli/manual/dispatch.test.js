@@ -732,7 +732,7 @@ describe('createManualRunner', () => {
       expect(lines).toEqual([])
       expect(stderrSpy).toHaveBeenCalled()
       const stderrOutput = stderrSpy.mock.calls.map(c => c[0]).join('')
-      expect(stderrOutput).toBe('1 mutations across 1 files\n')
+      expect(stderrOutput).toBe('1 mutations across 1 file\n')
       expect(code).toBe(0)
 
       stderrSpy.mockRestore()

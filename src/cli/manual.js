@@ -160,12 +160,12 @@ function runDryRunMode(runContext, parsed) {
   if (parsed.allMode) {
     const { total, fileCount } = runAllDryRun(runContext)
     if (parsed.quiet)
-      process.stderr.write(`${total} mutations across ${fileCount} files\n`)
+      process.stderr.write(`${total} mutations across ${fileCount} file${fileCount !== 1 ? 's' : ''}\n`)
     return 0
   }
   const count = dryRun(parsed.sourceFile, runContext.mutationConfig, parsed.targetLine, runContext.out)
   if (parsed.quiet)
-    process.stderr.write(`${count} mutations across 1 files\n`)
+    process.stderr.write(`${count} mutations across 1 file\n`)
   return 0
 }
 

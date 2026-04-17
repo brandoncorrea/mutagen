@@ -52,16 +52,16 @@ function printNewMutants(out, newMutants) {
 }
 
 function printRemovedMutants(out, removedMutants) {
-  const total = removedMutants.length
-  if (total)
-    out(`\n- REMOVED MUTANTS: ${total}`)
+  if (!removedMutants.length) return
+  out(`\n- REMOVED MUTANTS: ${removedMutants.length}`)
 }
 
 function printFileDeltas(out, fileDeltas) {
   if (!fileDeltas.length) return
   fileDeltas.sort((a, b) => b.delta - a.delta)
   out(`\nPER-FILE CHANGES:`)
-  fileDeltas.forEach(d => printFileDelta(out, d))
+  for (const d of fileDeltas)
+    printFileDelta(out, d)
 }
 
 function printFileDelta(out, { label, file, after, before, delta }) {

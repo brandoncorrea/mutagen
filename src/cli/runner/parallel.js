@@ -132,18 +132,19 @@ async function runPool(pool, mutations, { sourceFile, timeout, survivorsOnly, ou
   const orderedEmit = onProgress
     ? createOrderedBuffer(onProgress)
     : null
-  const indexed = orderedEmit
-    ? mutations.map((m, i) => ({ ...m, _progressIndex: i }))
-    : mutations
+  const progressIndex = orderedEmit
+    ? new Map(mutations.map((m, i) => [m, i]))
+    : null
 
   function onResult({ mutation, status }) {
     completed++
-    orderedEmit?.(mutation._progressIndex, status)
+    if (progressIndex)
+      orderedEmit(progressIndex.get(mutation), status)
     if (!survivorsOnly || status === STATUS.SURVIVED)
       reportMutation(out, total, { number: completed, ...mutation }, status)
   }
 
-  const outcomes = await pool.run(indexed, { timeout, onResult })
+  const outcomes = await pool.run(mutations, { timeout, onResult })
 
   printRunReport(mutations, outcomes, out)
 
