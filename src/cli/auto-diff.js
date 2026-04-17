@@ -42,26 +42,27 @@ export function autoDiffSummary(previousReport, currentFileResults) {
 }
 
 function buildPreviousIdMap(report) {
+  return buildFromLegacyFormat(report)
+    || buildFromStructuredFormat(report)
+    || null
+}
+
+function buildFromLegacyFormat(report) {
+  if (!report.files) return null
   const map = new Map()
-
-  // Legacy format: files[path].mutants with full status data
-  if (report.files) {
-    for (const fileData of Object.values(report.files)) {
-      if (!Array.isArray(fileData.mutants)) continue
-      for (const m of fileData.mutants) {
-        if (m.id) map.set(m.id, isAlive(m) ? 'survived' : 'killed')
-      }
-    }
-    if (map.size > 0) return map
+  for (const fileData of Object.values(report.files)) {
+    if (!Array.isArray(fileData.mutants)) continue
+    for (const m of fileData.mutants)
+      if (m.id) map.set(m.id, isAlive(m) ? 'survived' : 'killed')
   }
+  return map.size > 0 ? map : null
+}
 
-  // Structured format: survivors array (killed IDs not available)
-  if (report.survivors) {
-    for (const s of report.survivors) {
-      if (s.id) map.set(s.id, 'survived')
-    }
-  }
-
+function buildFromStructuredFormat(report) {
+  if (!report.survivors) return null
+  const map = new Map()
+  for (const s of report.survivors)
+    if (s.id) map.set(s.id, 'survived')
   return map.size > 0 ? map : null
 }
 

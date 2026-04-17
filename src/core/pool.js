@@ -12,6 +12,7 @@
  */
 
 import { withTimeout } from './timeout.js'
+import { STATUS } from '../cli/shared.js'
 
 // Module-level tracking of active pools for process signal cleanup
 const activePools = new Set()
@@ -156,18 +157,18 @@ async function runOne(runner, mutation, outcomes, options = {}) {
 
     if (passed) {
       outcomes.survived.push({ ...mutation, coveredBy })
-      onResult?.({ mutation, status: 'SURVIVED' })
+      onResult?.({ mutation, status: STATUS.SURVIVED })
     } else {
       outcomes.killed.push({ ...mutation, killedBy })
-      onResult?.({ mutation, status: 'killed' })
+      onResult?.({ mutation, status: STATUS.KILLED })
     }
   } catch (err) {
     if (err.message?.includes('timed out')) {
       outcomes.timedOut.push(mutation)
-      onResult?.({ mutation, status: 'TIMEOUT (killed)' })
+      onResult?.({ mutation, status: STATUS.TIMEOUT })
     } else {
       outcomes.killed.push(mutation)
-      onResult?.({ mutation, status: 'killed' })
+      onResult?.({ mutation, status: STATUS.KILLED })
     }
   }
 }

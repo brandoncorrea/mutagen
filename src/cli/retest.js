@@ -149,14 +149,12 @@ async function retestFiles(files, { mutationConfig, createRunner, timeout, survi
 }
 
 function writeRetestReport(parsed, fileCount, fileResults) {
-  if (isString(parsed.jsonOutput)) {
-    const stats = writeStructuredReportFile(parsed.jsonOutput, fileResults)
-    printScoreLine(stats, fileCount, parsed.jsonOutput)
-  } else if (parsed.jsonOutput) {
-    const outputPath = 'reports/mutation/retest-report.json'
-    const stats = writeStructuredReportFile(outputPath, fileResults)
-    printScoreLine(stats, fileCount, outputPath)
-  }
+  if (!parsed.jsonOutput) return
+  const outputPath = isString(parsed.jsonOutput)
+    ? parsed.jsonOutput
+    : 'reports/mutation/retest-report.json'
+  const stats = writeStructuredReportFile(outputPath, fileResults)
+  printScoreLine(stats, fileCount, outputPath)
 }
 
 function printRetestSummary(out, { totalKilled, totalSurvived, totalTimedOut, totalSkipped, failures }) {

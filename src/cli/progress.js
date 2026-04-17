@@ -6,6 +6,7 @@
  */
 
 import { mutationScore } from '../core/mutation-status.js'
+import { STATUS } from './shared.js'
 
 export function createProgressReporter(files, { write = text => process.stderr.write(text) } = {}) {
   const maxWidth = files.reduce((max, f) => Math.max(max, f.length), 0)
@@ -45,7 +46,7 @@ export function createOrderedBuffer(onDot) {
 }
 
 function dotChar(status) {
-  if (status === 'SURVIVED') return '!'
-  if (status === 'TIMEOUT (killed)') return 'T'
+  if (status === STATUS.SURVIVED) return '!'
+  if (status === STATUS.TIMEOUT) return 'T'
   return '.'
 }

@@ -15,6 +15,7 @@ import { createTempCopy } from '../../core/temp-copy.js'
 import { printRunReport } from '../report.js'
 import { createOrderedBuffer } from '../progress.js'
 import { runPreflightTests, reportMutation, printBanner } from './shared.js'
+import { STATUS } from '../shared.js'
 
 const DEFAULT_WORKER_COUNT = 2
 
@@ -160,7 +161,7 @@ async function runPool(pool, mutations, { sourceFile, timeout, survivorsOnly, ou
   function onResult({ mutation, status }) {
     completed++
     orderedEmit?.(mutation._progressIndex, status)
-    if (!survivorsOnly || status === 'SURVIVED')
+    if (!survivorsOnly || status === STATUS.SURVIVED)
       reportMutation(out, total, { number: completed, ...mutation }, status)
   }
 

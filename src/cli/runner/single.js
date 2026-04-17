@@ -14,6 +14,7 @@ import { toJsonMutants } from '../../core/report-data.js'
 import { createTempCopy } from '../../core/temp-copy.js'
 import { printRunReport } from '../report.js'
 import { runPreflightTests, reportMutation, printBanner } from './shared.js'
+import { STATUS } from '../shared.js'
 
 /**
  * @returns {{ survived: number, killed: number, timedOut: number, jsonData: { path: string, mutants: Array }, error?: boolean }}
@@ -75,22 +76,22 @@ async function runMutation(runOptions, total, outcomes, mutation) {
 
     if (result.passed) {
       outcomes.survived.push({ ...mutation, coveredBy: tempCopy.mapPaths(result.coveredBy) })
-      onProgress?.('SURVIVED')
-      reportMutation(out, total, mutation, 'SURVIVED')
+      onProgress?.(STATUS.SURVIVED)
+      reportMutation(out, total, mutation, STATUS.SURVIVED)
     } else {
       outcomes.killed.push({ ...mutation, killedBy: tempCopy.mapPaths(result.killedBy) })
-      onProgress?.('killed')
-      if (!survivorsOnly) reportMutation(out, total, mutation, 'killed')
+      onProgress?.(STATUS.KILLED)
+      if (!survivorsOnly) reportMutation(out, total, mutation, STATUS.KILLED)
     }
   } catch (err) {
     if (err.message?.includes('timed out')) {
       outcomes.timedOut.push(mutation)
-      onProgress?.('TIMEOUT (killed)')
-      if (!survivorsOnly) reportMutation(out, total, mutation, 'TIMEOUT (killed)')
+      onProgress?.(STATUS.TIMEOUT)
+      if (!survivorsOnly) reportMutation(out, total, mutation, STATUS.TIMEOUT)
     } else {
       outcomes.killed.push(mutation)
-      onProgress?.('killed (error)')
-      if (!survivorsOnly) reportMutation(out, total, mutation, 'killed (error)')
+      onProgress?.(STATUS.KILLED_ERROR)
+      if (!survivorsOnly) reportMutation(out, total, mutation, STATUS.KILLED_ERROR)
     }
   }
 }

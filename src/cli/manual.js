@@ -134,18 +134,20 @@ async function run(runContext, argv) {
 }
 
 function applyRunFlags(runContext, parsed) {
-  let context = (parsed.quiet || parsed.progress) ? { ...runContext, out: () => {} } : runContext
+  const overrides = {}
 
+  if (parsed.quiet || parsed.progress)
+    overrides.out = () => {}
   if (parsed.progress)
-    context = { ...context, progress: true }
+    overrides.progress = true
   if (parsed.changed)
-    context = { ...context, sources: filterChanged(context.sources) }
+    overrides.sources = filterChanged(runContext.sources)
   if (parsed.parallel)
-    context = { ...context, parallel: parsed.parallel }
+    overrides.parallel = parsed.parallel
   if (parsed.survivorsOnly)
-    context = { ...context, survivorsOnly: true }
+    overrides.survivorsOnly = true
 
-  return context
+  return { ...runContext, ...overrides }
 }
 
 function runDryRunMode(runContext, parsed) {
