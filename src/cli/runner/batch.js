@@ -42,11 +42,9 @@ export async function runBatch(runContext, jsonOutput, timeout, sourcesToRun) {
   return result
 }
 
-async function accumulateResults(filesToRun, { mutationConfig, createRunner, timeout, parallel, survivorsOnly, progress, out }) {
-  let totalSurvived = 0
-  let totalKilled = 0
-  let totalTimedOut = 0
-  let failures = 0
+async function accumulateResults(filesToRun, options) {
+  const { parallel, createRunner, progress } = options
+  const totals = { survived: 0, killed: 0, timedOut: 0, failures: 0 }
   const fileResults = {}
 
   const reporter = createBatchReporter(filesToRun, progress)
@@ -56,27 +54,45 @@ async function accumulateResults(filesToRun, { mutationConfig, createRunner, tim
     : null
 
   try {
-    for (let i = 0; i < filesToRun.length; i++) {
-      reporter.startFile(i)
-      const runOptions = { sourceFile: resolve(filesToRun[i]), mutationConfig, createRunner, timeout, survivorsOnly, out, onProgress: reporter.dot }
-      const { error, survived, killed, timedOut, jsonData } = parallel
-        ? await runParallel({ ...runOptions, workerCount, pool })
-        : await runSingle(runOptions)
-      reporter.endFile()
-      if (error) {
-        failures++
-      } else {
-        totalSurvived += survived
-        totalKilled += killed
-        totalTimedOut += timedOut || 0
-        fileResults[jsonData.path] = { mutants: jsonData.mutants }
-      }
-    }
+    for (let i = 0; i < filesToRun.length; i++)
+      await processOneFile(i, filesToRun, options, { reporter, workerCount, pool }, totals, fileResults)
   } finally {
     if (pool) await pool.close()
   }
 
-  return { totalSurvived, totalKilled, totalTimedOut, failures, fileResults }
+  return {
+    totalSurvived: totals.survived,
+    totalKilled: totals.killed,
+    totalTimedOut: totals.timedOut,
+    failures: totals.failures,
+    fileResults
+  }
+}
+
+async function processOneFile(i, filesToRun, { mutationConfig, createRunner, timeout, parallel, survivorsOnly, out }, { reporter, workerCount, pool }, totals, fileResults) {
+  reporter.startFile(i)
+  const runOptions = {
+    sourceFile: resolve(filesToRun[i]),
+    mutationConfig,
+    createRunner,
+    timeout,
+    survivorsOnly,
+    out,
+    onProgress: reporter.dot
+  }
+  const { error, survived, killed, timedOut, jsonData } = parallel
+    ? await runParallel({ ...runOptions, workerCount, pool })
+    : await runSingle(runOptions)
+  reporter.endFile()
+
+  if (error) {
+    totals.failures++
+  } else {
+    totals.survived += survived
+    totals.killed += killed
+    totals.timedOut += timedOut || 0
+    fileResults[jsonData.path] = { mutants: jsonData.mutants }
+  }
 }
 
 function createBatchReporter(filesToRun, progress) {

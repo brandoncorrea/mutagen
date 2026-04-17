@@ -123,14 +123,20 @@ async function run(runContext, argv) {
 
   const { stats, exitCode } = await getRunResults(parsed, effectiveContext, timeout)
 
-  if (parsed.progress && stats)
-    process.stderr.write(formatProgressSummary(stats) + '\n')
-  else if (parsed.quiet && stats)
-    process.stderr.write(formatQuietSummary(stats) + '\n')
+  printPostRunSummary(parsed, stats)
+
   if (parsed.minScore != null && stats)
     return scoreExitCode(stats, parsed.minScore)
 
   return exitCode
+}
+
+function printPostRunSummary(parsed, stats) {
+  if (!stats) return
+  if (parsed.progress)
+    process.stderr.write(formatProgressSummary(stats) + '\n')
+  else if (parsed.quiet)
+    process.stderr.write(formatQuietSummary(stats) + '\n')
 }
 
 function applyRunFlags(runContext, parsed) {
