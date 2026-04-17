@@ -33,15 +33,10 @@ export function createBatchPool({ workerCount = DEFAULT_WORKER_COUNT, sourceFile
 export async function runParallel(options) {
   const {
     sourceFile,
-    mutationConfig,
     createRunner,
     targetLine,
     timeout,
-    survivorsOnly,
-    retestMutations,
     workerCount = DEFAULT_WORKER_COUNT,
-    pool: externalPool,
-    onProgress,
     out = console.log
   } = options
   const original = readFileSync(sourceFile, 'utf-8')
@@ -49,30 +44,16 @@ export async function runParallel(options) {
   printBanner(out, `MUTAGEN (parallel — ${workerCount} workers)`, sourceFile, targetLine, timeout)
 
   const preflightRunner = await createRunner(sourceFile)
-  const runOptions = {
-    sourceFile,
-    mutationConfig,
-    createRunner,
-    targetLine,
-    timeout,
-    survivorsOnly,
-    retestMutations,
-    workerCount,
-    pool: externalPool,
-    onProgress,
-    original,
-    out
-  }
 
   try {
-    return await runAfterPreflight(preflightRunner, runOptions)
+    return await runAfterPreflight(preflightRunner, { ...options, workerCount, original, out })
   } finally {
     await preflightRunner.close()
   }
 }
 
 async function runAfterPreflight(preflightRunner, options) {
-  const { sourceFile, mutationConfig, createRunner, targetLine, timeout, survivorsOnly, retestMutations, workerCount, original, out } = options
+  const { sourceFile, mutationConfig, targetLine, retestMutations, original, out } = options
 
   const preflight = await runPreflightTests(out, preflightRunner)
   if (preflight.error) return preflight
@@ -82,13 +63,12 @@ async function runAfterPreflight(preflightRunner, options) {
   assignMutationIds(mutations, relative(process.cwd(), sourceFile))
   out(`Found ${mutations.length} mutation(s) to run.\n`)
 
-  return await executeWithPool(mutations, { sourceFile, createRunner, workerCount, pool: options.pool, timeout, survivorsOnly, out, onProgress: options.onProgress })
+  return await executeWithPool(mutations, options)
 }
 
 async function executeWithPool(mutations, options) {
-  const { pool: externalPool } = options
-  if (externalPool)
-    return await runWithExternalPool(externalPool, mutations, options)
+  if (options.pool)
+    return await runWithExternalPool(options.pool, mutations, options)
   return await runWithNewPool(mutations, options)
 }
 
@@ -134,12 +114,10 @@ async function createRunnerWithOptions(options) {
       writeFileSync(state.tempSource, readFileSync(state.sourceFile, 'utf-8'))
       state.sourceFile = newSourceFile
       state.tempSource = tempCopy.resolve(newSourceFile)
-      if (state.runner.switchFile) {
-        await state.runner.switchFile(state.tempSource)
-      } else {
-        await state.runner.close()
-        state.runner = await createRunner(state.tempSource, { root: tempCopy.root })
-      }
+      if (state.runner.switchFile)
+        return await state.runner.switchFile(state.tempSource)
+      await state.runner.close()
+      state.runner = await createRunner(state.tempSource, { root: tempCopy.root })
     },
     async close() {
       await state.runner.close()
