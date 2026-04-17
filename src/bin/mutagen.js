@@ -11,7 +11,7 @@
  *   npx mutagen --version               # Print version
  */
 
-import { resolve } from 'node:path'
+import { resolve, parse as parsePath } from 'node:path'
 import { createRequire } from 'node:module'
 import { pathToFileURL } from 'node:url'
 import { createManualRunner } from '../cli/manual.js'
@@ -47,13 +47,11 @@ function versionRequested(args) {
 export function isMain(argv) {
   const scriptPath = argv[1]
   if (scriptPath)
-    return toStem(import.meta.url) === toStem(scriptPath)
+    return stemOf(import.meta.url) === stemOf(scriptPath)
 }
 
-function toStem(path) {
-  const base = path.replace(/.*[\\/]/, '')
-  const dot = base.indexOf('.')
-  return dot > 0 ? base.substring(0, dot) : base
+function stemOf(filepath) {
+  return parsePath(filepath.replace(/\\/g, '/')).name
 }
 
 /* v8 ignore next 2 */

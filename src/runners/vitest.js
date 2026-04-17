@@ -9,6 +9,8 @@
  *   warm    - attempt warm rerun (default: true). Falls back to cold if warm fails.
  */
 
+import { basename, parse as parsePath } from 'node:path'
+
 export async function createVitestRunner(sourceFile, options = {}) {
   const { testFile, warm = true } = options
   const { startVitest } = await import('vitest/node')
@@ -147,22 +149,12 @@ function coldRunner(startVitest, testFilter, vitestOpts) {
 function splitSpecs(specs, sourceFile) {
   if (!sourceFile) return { direct: specs, indirect: [] }
 
-  const stem = fileStem(sourceFile)
+  const stem = parsePath(sourceFile).name
   const direct = []
   const indirect = []
   for (const spec of specs)
-    (fileBasename(spec.moduleId).includes(stem) ? direct : indirect).push(spec)
+    (basename(spec.moduleId).includes(stem) ? direct : indirect).push(spec)
   return { direct, indirect }
-}
-
-function fileStem(filepath) {
-  const base = fileBasename(filepath)
-  const dot = base.indexOf('.')
-  return dot > 0 ? base.substring(0, dot) : base
-}
-
-function fileBasename(filepath) {
-  return filepath.substring(filepath.lastIndexOf('/') + 1)
 }
 
 function compileResults(vitest) {
