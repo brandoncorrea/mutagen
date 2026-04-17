@@ -15,10 +15,24 @@ vi.mock('node:fs', async (importOriginal) => {
 
 vi.mock('../../src/core/temp-copy.js')
 
+vi.mock('../../src/cli/manual.js', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    createManualRunner: vi.fn((...args) => actual.createManualRunner(...args))
+  }
+})
+
 import { run, isMain } from '../../src/bin/mutagen.js'
+import { createManualRunner } from '../../src/cli/manual.js'
 import { createTempCopy } from '../../src/core/temp-copy.js'
 import { readFileSync, existsSync, readdirSync } from 'node:fs'
 import { testMutators } from '../cli/helpers.js'
+
+// Pre-warm vitest module cache so pathToFileURL dynamic imports are fast
+import './fixtures/test-config.js'
+import './fixtures/named-config.js'
+import './fixtures/default-config/mutagen.config.js'
 
 const noop = () => {}
 const silent = { out: noop, err: noop }
@@ -67,11 +81,7 @@ describe('--version flag', () => {
 
 describe('bin/mutagen CLI', () => {
   it('resolves mutagen.config.js from cwd when no configPath given', async () => {
-    const sourceCode = 'if (a === b) {}'
-    readFileSync.mockImplementation((path, enc) => {
-      if (enc === 'utf-8') return sourceCode
-      return Buffer.from(sourceCode)
-    })
+    createManualRunner.mockReturnValueOnce({ run: vi.fn().mockResolvedValue(0) })
 
     const originalCwd = process.cwd()
     process.chdir(resolve('tests/bin/fixtures/default-config'))
@@ -79,17 +89,16 @@ describe('bin/mutagen CLI', () => {
     try {
       const code = await run(['src/a.js'], silent)
       expect(code).toBe(0)
+      expect(createManualRunner).toHaveBeenCalledWith(
+        expect.objectContaining({ mutators: expect.any(Array), sources: ['src/a.js'] })
+      )
     } finally {
       process.chdir(originalCwd)
     }
   })
 
   it('loads config from configPath via dynamic import', async () => {
-    const sourceCode = 'if (a === b) {}'
-    readFileSync.mockImplementation((path, enc) => {
-      if (enc === 'utf-8') return sourceCode
-      return Buffer.from(sourceCode)
-    })
+    createManualRunner.mockReturnValueOnce({ run: vi.fn().mockResolvedValue(0) })
 
     const code = await run(['src/a.js'], {
       ...silent,
@@ -97,14 +106,13 @@ describe('bin/mutagen CLI', () => {
     })
 
     expect(code).toBe(0)
+    expect(createManualRunner).toHaveBeenCalledWith(
+      expect.objectContaining({ mutators: expect.any(Array), sources: ['src/a.js'] })
+    )
   })
 
   it('falls back to named exports when config has no default export', async () => {
-    const sourceCode = 'if (a === b) {}'
-    readFileSync.mockImplementation((path, enc) => {
-      if (enc === 'utf-8') return sourceCode
-      return Buffer.from(sourceCode)
-    })
+    createManualRunner.mockReturnValueOnce({ run: vi.fn().mockResolvedValue(0) })
 
     const code = await run(['src/a.js'], {
       ...silent,
@@ -112,6 +120,9 @@ describe('bin/mutagen CLI', () => {
     })
 
     expect(code).toBe(0)
+    expect(createManualRunner).toHaveBeenCalledWith(
+      expect.objectContaining({ mutators: expect.any(Array), sources: ['src/a.js'] })
+    )
   })
 
   it('exits 1 with error when no config file found', async () => {
