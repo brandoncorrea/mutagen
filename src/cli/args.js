@@ -22,7 +22,7 @@ Options:
   --json [path]      Output JSON report (to stdout, or to path if given)
   --dry-run          List mutations without running tests
   --timeout N        Per-mutation timeout in milliseconds
-  --parallel [N]     Run mutations in parallel (default: CPU count, max 32)
+  --parallel [N]     Run mutations in parallel (default: 2 workers, max 32)
   --quiet            Suppress per-mutation output; print summary to stderr
   --progress         Show compact per-file dot notation progress on stderr
   --survivors-only   Only display surviving mutations in output

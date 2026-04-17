@@ -66,7 +66,6 @@ npx mutagen --diff before.json after.json --json
 |------|---------|
 | 0 | All mutations killed |
 | 1 | Surviving mutations or errors |
-| 2 | Safety check failed (source may be corrupted) |
 
 ### JSON report schema
 
@@ -145,14 +144,15 @@ skipNodes: [{ type: 'CallExpression', callee: { object: { name: 'console' } } }]
 --all --dry-run                 Preview across all sources
 --incremental                   Hash-based caching, skip unchanged
 --incremental --json            Incremental + JSON report with deltas
---parallel                      Run mutations in parallel (default: 2 workers)
---parallel N                    Run with N parallel workers
+--parallel [N]                  Run mutations in parallel (default: 2 workers, max 32)
 --quiet                         Suppress verbose output, one-line summary to stderr
 --survivors-only                Only report surviving mutations
 --changed                       Only mutate files with uncommitted git changes
+--progress                      Show compact per-file dot notation progress on stderr
 --min-score N                   Exit 1 if mutation score is below N%
 --retest <report.json>          Re-run only previously-surviving mutations
 --diff <before> <after>         Compare two JSON report files
+--version, -v                   Print version number
 --help, -h                      Show usage information
 ```
 
