@@ -135,17 +135,19 @@ function computeFileDelta(beforeScores, afterScores, file) {
 
 function buildMutantMap(report) {
   const map = {}
-  for (const [path, fileData] of Object.entries(report.files)) {
-    for (const mutant of fileData.mutants) {
-      const key = mutant.id || mutantKey(path, mutant)
-      map[key] = {
-        ...mutant,
-        file: path,
-        line: mutant.location?.start?.line || 0
-      }
-    }
-  }
+  for (const [path, fileData] of Object.entries(report.files))
+    for (const mutant of fileData.mutants)
+      setMutant(map, path, mutant)
   return map
+}
+
+function setMutant(map, path, mutant) {
+  const key = mutant.id || mutantKey(path, mutant)
+  map[key] = {
+    ...mutant,
+    file: path,
+    line: mutant.location?.start?.line || 0
+  }
 }
 
 function fileScores(report) {

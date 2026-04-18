@@ -55,9 +55,9 @@ export const mathMethodSwaps = [
     name: 'Math.abs → (removed)',
     types: ['CallExpression'],
     test: node => isStaticCall(node, 'Math', 'abs'),
-    mutate: node => ({
-      start: node.callee.start,
-      end: node.callee.end,
+    mutate: ({ callee }) => ({
+      start: callee.start,
+      end: callee.end,
       replacement: ''
     })
   },
@@ -73,9 +73,9 @@ export const arrayMethodSwaps = [
     name: 'Array.isArray → !Array.isArray',
     types: ['CallExpression'],
     test: node => isStaticCall(node, 'Array', 'isArray'),
-    mutate: node => ({
-      start: node.start,
-      end: node.start,
+    mutate: ({ start }) => ({
+      start,
+      end: start,
       replacement: '!'
     })
   },
@@ -85,8 +85,8 @@ export const arrayMethodSwaps = [
     types: ['CallExpression'],
     test: node => isMemberCall(node, 'shift') && !node.arguments.length,
     mutate: node => {
-      const prop = node.callee.property
-      return { start: prop.start, end: prop.end, replacement: 'pop' }
+      const { start, end } = node.callee.property
+      return { start, end, replacement: 'pop' }
     }
   },
   methodNameSwap('unshift → push', 'unshift', 'push'),
@@ -96,9 +96,9 @@ export const arrayMethodSwaps = [
     name: 'reverse() → (removed)',
     types: ['CallExpression'],
     test: node => isMemberCall(node, 'reverse') && !node.arguments.length,
-    mutate: node => ({
-      start: node.callee.object.end,
-      end: node.end,
+    mutate: ({ callee, end }) => ({
+      start: callee.object.end,
+      end,
       replacement: ''
     })
   },
@@ -113,8 +113,8 @@ export const objectMethodSwaps = [
       isStaticCall(node, 'Object', 'keys')
       && !(parent?.type === 'MemberExpression' && parent.property?.name === 'length'),
     mutate: node => {
-      const prop = node.callee.property
-      return { start: prop.start, end: prop.end, replacement: 'values' }
+      const { start, end } = node.callee.property
+      return { start, end, replacement: 'values' }
     }
   },
   {
@@ -124,8 +124,8 @@ export const objectMethodSwaps = [
       isStaticCall(node, 'Object', 'values')
       && !(parent?.type === 'MemberExpression' && parent.property?.name === 'length'),
     mutate: node => {
-      const prop = node.callee.property
-      return { start: prop.start, end: prop.end, replacement: 'keys' }
+      const { start, end } = node.callee.property
+      return { start, end, replacement: 'keys' }
     }
   },
   staticMethodSwap('Object.entries → Object.keys', 'Object', 'entries', 'keys')

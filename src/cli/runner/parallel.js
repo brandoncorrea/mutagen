@@ -28,7 +28,16 @@ export function createBatchPool({ workerCount = DEFAULT_WORKER_COUNT, sourceFile
 }
 
 /**
- * @returns {{ survived: number, killed: number, timedOut: number, jsonData: { path: string, mutants: Array }, error?: boolean }}
+ * @returns {{
+ *   survived: number,
+ *   killed: number,
+ *   timedOut: number,
+ *   jsonData: {
+ *     path: string,
+ *     mutants: Array
+ *   },
+ *   error?: boolean
+ * }}
  */
 export async function runParallel(options) {
   const {

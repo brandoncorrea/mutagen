@@ -301,7 +301,10 @@ describe('createVitestRunner', () => {
 
       const callOrder = []
       mock.projects[0]._vite.moduleGraph.invalidateAll.mockImplementation(() => callOrder.push('flush'))
-      mock.globTestSpecifications.mockImplementation(() => { callOrder.push('glob'); return [] })
+      mock.globTestSpecifications.mockImplementation(() => {
+        callOrder.push('glob')
+        return []
+      })
 
       const runner = await createVitestRunner('src/a.js')
       callOrder.length = 0

@@ -10,10 +10,10 @@
 function findUnescapedInPattern(pattern, char) {
   let inClass = false
   for (let i = 0; i < pattern.length; i++) {
-    if (pattern[i] === '\\') { i++; continue }
-    if (pattern[i] === '[') { inClass = true; continue }
-    if (pattern[i] === ']') { inClass = false; continue }
-    if (!inClass && pattern[i] === char) return i
+    if (pattern[i] === '\\') i++
+    else if (pattern[i] === '[') inClass = true
+    else if (pattern[i] === ']') inClass = false
+    else if (!inClass && pattern[i] === char) return i
   }
   return -1
 }
@@ -27,10 +27,10 @@ function regexCharMutator(name, char, replacement) {
     name,
     types: ['RegExpLiteral'],
     test: node => hasUnescapedChar(node.pattern, char),
-    mutate: (node, source) => {
-      const patternOffset = findUnescapedInPattern(node.pattern, char)
+    mutate: ({ pattern, start }, _source) => {
+      const patternOffset = findUnescapedInPattern(pattern, char)
       if (patternOffset === -1) return null
-      const sourcePos = node.start + 1 + patternOffset
+      const sourcePos = start + 1 + patternOffset
       return { start: sourcePos, end: sourcePos + 1, replacement }
     }
   }

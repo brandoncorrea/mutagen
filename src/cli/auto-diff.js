@@ -15,30 +15,11 @@ import { isKilled, isAlive } from '../core/mutation-status.js'
  */
 export function autoDiffSummary(previousReport, currentFileResults) {
   if (!previousReport) return null
-
   const prevIds = buildPreviousIdMap(previousReport)
   if (!prevIds) return null
-
-  let newlyKilled = 0
-  let regressions = 0
-  let unchangedSurvivors = 0
-
-  for (const { mutants } of Object.values(currentFileResults)) {
-    for (const m of mutants) {
-      if (!m.id) continue
-      const prev = prevIds.get(m.id)
-      if (prev === 'survived') {
-        if (isKilled(m)) newlyKilled++
-        else if (isAlive(m)) unchangedSurvivors++
-      } else if (prev === 'killed' && isAlive(m)) {
-        regressions++
-      }
-    }
-  }
-
-  if (!newlyKilled && !regressions && !unchangedSurvivors) return null
-
-  return formatSummary(newlyKilled, regressions, unchangedSurvivors)
+  const summary = compileSummary(prevIds, currentFileResults)
+  if (isUnchanged(summary)) return null
+  return formatSummary(summary)
 }
 
 function buildPreviousIdMap(report) {
@@ -66,7 +47,40 @@ function buildFromStructuredFormat(report) {
   return map.size > 0 ? map : null
 }
 
-function formatSummary(newlyKilled, regressions, unchangedSurvivors) {
+function compileSummary(prevIds, currentFileResults) {
+  const summary = {
+    newlyKilled: 0,
+    regressions: 0,
+    unchangedSurvivors: 0
+  }
+
+  for (const { mutants } of Object.values(currentFileResults))
+    for (const mutant of mutants)
+      summarizeMutant(summary, prevIds, mutant)
+
+  return summary
+}
+
+function summarizeMutant(summary, prevIds, mutant) {
+  if (!mutant.id) return
+  const prev = prevIds.get(mutant.id)
+  if (prev === 'survived') {
+    if (isKilled(mutant))
+      summary.newlyKilled += 1
+    else if (isAlive(mutant))
+      summary.unchangedSurvivors += 1
+  } else if (prev === 'killed' && isAlive(mutant)) {
+    summary.regressions += 1
+  }
+}
+
+function isUnchanged(summary) {
+  return !summary.newlyKilled
+    && !summary.regressions
+    && !summary.unchangedSurvivors
+}
+
+function formatSummary({ newlyKilled, regressions, unchangedSurvivors }) {
   return [
     `+${newlyKilled} newly killed`,
     `${regressions} regression${regressions !== 1 ? 's' : ''}`,

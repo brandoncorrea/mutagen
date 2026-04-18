@@ -10,13 +10,13 @@ export const booleanLiterals = [
     name: 'true → false',
     types: ['Literal', 'BooleanLiteral'],
     test: node => node.value === true,
-    mutate: node => ({ start: node.start, end: node.end, replacement: 'false' })
+    mutate: ({ start, end }) => ({ start, end, replacement: 'false' })
   },
   {
     name: 'false → true',
     types: ['Literal', 'BooleanLiteral'],
     test: node => node.value === false,
-    mutate: node => ({ start: node.start, end: node.end, replacement: 'true' })
+    mutate: ({ start, end }) => ({ start, end, replacement: 'true' })
   }
 ]
 
@@ -31,9 +31,9 @@ export const stringLiterals = [
         && !arg.value
         && source[arg.start] === "'"
     },
-    mutate: node => ({
-      start: node.argument.start,
-      end: node.argument.end,
+    mutate: ({ argument }) => ({
+      start: argument.start,
+      end: argument.end,
       replacement: "'mutant'"
     })
   },
@@ -47,9 +47,9 @@ export const stringLiterals = [
         && !arg.value
         && source[arg.start] === '"'
     },
-    mutate: node => ({
-      start: node.argument.start,
-      end: node.argument.end,
+    mutate: ({ argument }) => ({
+      start: argument.start,
+      end: argument.end,
       replacement: '"mutant"'
     })
   }
@@ -59,35 +59,35 @@ export const fallbackRemovals = [
   {
     name: '|| [] → (removed)',
     types: ['LogicalExpression'],
-    test: node =>
-      node.operator === '||'
-      && node.right.type === 'ArrayExpression'
-      && !node.right.elements.length,
-    mutate: node => ({
-      start: node.left.end,
-      end: node.end,
+    test: ({ operator, right }) =>
+      operator === '||'
+      && right.type === 'ArrayExpression'
+      && !right.elements.length,
+    mutate: ({ left, end }) => ({
+      start: left.end,
+      end,
       replacement: ''
     })
   },
   {
     name: "|| '' → (removed)",
     types: ['LogicalExpression'],
-    test: node =>
-      node.operator === '||' && isStringLiteral(node.right) && !node.right.value,
-    mutate: node => ({
-      start: node.left.end,
-      end: node.end,
+    test: ({ operator, right }) =>
+      operator === '||' && isStringLiteral(right) && !right.value,
+    mutate: ({ left, end }) => ({
+      start: left.end,
+      end,
       replacement: ''
     })
   },
   {
     name: '|| 0 → (removed)',
     types: ['LogicalExpression'],
-    test: node =>
-      node.operator === '||' && isNumericLiteral(node.right) && !node.right.value,
-    mutate: node => ({
-      start: node.left.end,
-      end: node.end,
+    test: ({ operator, right }) =>
+      operator === '||' && isNumericLiteral(right) && !right.value,
+    mutate: ({ left, end }) => ({
+      start: left.end,
+      end,
       replacement: ''
     })
   }
@@ -98,36 +98,32 @@ export const numericBoundary = [
     name: '0 → 1',
     types: ['Literal', 'NumericLiteral'],
     test: node => !node.value,
-    mutate: (node, source) => {
-      const raw = source.slice(node.start, node.end)
+    mutate: ({ start, end }, source) => {
+      const raw = source.slice(start, end)
       if (/^0[xXoObB]/.test(raw) || raw.includes('.')) return null
-      return { start: node.start, end: node.end, replacement: '1' }
+      return { start, end, replacement: '1' }
     }
   },
   {
     name: '1 → 0',
     types: ['Literal', 'NumericLiteral'],
     test: node => node.value === 1,
-    mutate: (node, source) => {
-      const raw = source.slice(node.start, node.end)
+    mutate: ({ start, end }, source) => {
+      const raw = source.slice(start, end)
       if (/^0[xXoObB]/.test(raw)) return null
-      if (node.start && /[.\d]/.test(source[node.start - 1])) return null
-      return { start: node.start, end: node.end, replacement: '0' }
+      if (start && /[.\d]/.test(source[start - 1])) return null
+      return { start, end, replacement: '0' }
     }
   },
   {
     name: '-1 → 0',
     types: ['UnaryExpression'],
-    test: node =>
-      node.operator === '-'
-      && node.prefix
-      && isNumericLiteral(node.argument)
-      && node.argument.value === 1,
-    mutate: node => ({
-      start: node.start,
-      end: node.end,
-      replacement: '0'
-    })
+    test: ({ operator, prefix, argument }) =>
+      operator === '-'
+      && prefix
+      && isNumericLiteral(argument)
+      && argument.value === 1,
+    mutate: ({ start, end }) => ({ start, end, replacement: '0' })
   }
 ]
 
@@ -135,54 +131,54 @@ export const spreadRemoval = [
   {
     name: '[...x] → x (remove copy)',
     types: ['ArrayExpression'],
-    test: node =>
-      node.elements.length === 1
-      && node.elements[0]?.type === 'SpreadElement',
-    mutate: (node, source) => ({
-      start: node.start,
-      end: node.end,
+    test: ({ elements }) =>
+      elements.length === 1
+      && elements[0]?.type === 'SpreadElement',
+    mutate: ({ start, end, elements }, source) => ({
+      start,
+      end,
       replacement: source.slice(
-        node.elements[0].argument.start,
-        node.elements[0].argument.end
+        elements[0].argument.start,
+        elements[0].argument.end
       )
     })
   },
   {
     name: '[...x, y] → [y] (remove spread)',
     types: ['ArrayExpression'],
-    test: node =>
-      node.elements.length >= 2
-      && node.elements[0]?.type === 'SpreadElement',
-    mutate: (node, _source) => ({
-      start: node.start + 1,
-      end: node.elements[1].start,
+    test: ({ elements }) =>
+      elements.length >= 2
+      && elements[0]?.type === 'SpreadElement',
+    mutate: ({ start, elements }, _source) => ({
+      start: start + 1,
+      end: elements[1].start,
       replacement: ''
     })
   },
   {
     name: '{...obj} → obj (remove copy)',
     types: ['ObjectExpression'],
-    test: node =>
-      node.properties.length === 1
-      && node.properties[0]?.type === 'SpreadElement',
-    mutate: (node, source) => ({
-      start: node.start,
-      end: node.end,
+    test: ({ properties }) =>
+      properties.length === 1
+      && properties[0]?.type === 'SpreadElement',
+    mutate: ({ start, end, properties }, source) => ({
+      start,
+      end,
       replacement: source.slice(
-        node.properties[0].argument.start,
-        node.properties[0].argument.end
+        properties[0].argument.start,
+        properties[0].argument.end
       )
     })
   },
   {
     name: '{...obj, key: val} → {key: val} (remove spread)',
     types: ['ObjectExpression'],
-    test: node =>
-      node.properties.length >= 2
-      && node.properties[0]?.type === 'SpreadElement',
-    mutate: (node, _source) => ({
-      start: node.start + 1,
-      end: node.properties[1].start,
+    test: ({ properties }) =>
+      properties.length >= 2
+      && properties[0]?.type === 'SpreadElement',
+    mutate: ({ start, properties }, _source) => ({
+      start: start + 1,
+      end: properties[1].start,
       replacement: ''
     })
   }
@@ -193,9 +189,9 @@ export const propertyAccessMutations = [
     name: '.length → .length + 1',
     types: ['MemberExpression'],
     test: node => !node.computed && node.property?.name === 'length',
-    mutate: node => ({
-      start: node.end,
-      end: node.end,
+    mutate: ({ end }) => ({
+      start: end,
+      end,
       replacement: ' + 1'
     })
   }

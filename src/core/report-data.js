@@ -91,7 +91,13 @@ export function writeStructuredReportFile(outputPath, fileResults, deltas) {
   mkdirSync(dirname(absPath), { recursive: true })
   writeFileSync(absPath, JSON.stringify(report, null, 2))
 
-  return { score: round1(score), total, killed: totalKilled, survived: totalSurvived, timedOut: totalTimedOut }
+  return {
+    score: round1(score),
+    total,
+    killed: totalKilled,
+    survived: totalSurvived,
+    timedOut: totalTimedOut
+  }
 }
 
 function collectStats(fileResults) {
@@ -105,14 +111,14 @@ function collectStats(fileResults) {
     const mutants = fileData.mutants
     let fileKilled = 0
 
-    for (const m of mutants) {
-      if (isKilled(m)) {
+    for (const mutant of mutants) {
+      if (isKilled(mutant)) {
         fileKilled++
         totalKilled++
-        if (m.status === 'Timeout') totalTimedOut++
-      } else if (isAlive(m)) {
+        if (mutant.status === 'Timeout') totalTimedOut++
+      } else if (isAlive(mutant)) {
         totalSurvived++
-        survivors.push(toSurvivor(path, m))
+        survivors.push(toSurvivor(path, mutant))
       }
     }
 
@@ -124,16 +130,17 @@ function collectStats(fileResults) {
   return { files, survivors, totalKilled, totalSurvived, totalTimedOut }
 }
 
-function toSurvivor(file, m) {
-  const line = m.location?.start?.line || 0
+function toSurvivor(file, mutation) {
+  const { location, mutatorName, description, coveredBy } = mutation
+  const line = location?.start?.line || 0
   return {
-    id: mutationId(file, line, m.mutatorName),
+    id: mutationId(file, line, mutatorName),
     file,
     line,
-    name: m.mutatorName,
-    original: extractDescription(m.description, 0),
-    mutated: extractDescription(m.description, 1),
-    ...(m.coveredBy?.length && { coveredBy: m.coveredBy })
+    name: mutatorName,
+    original: extractDescription(description, 0),
+    mutated: extractDescription(description, 1),
+    ...(coveredBy?.length && { coveredBy })
   }
 }
 

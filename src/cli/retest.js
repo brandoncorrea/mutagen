@@ -21,9 +21,9 @@ export function loadRetestTargets(report) {
   const survivorKeys = new Set()
   const fileSet = new Set()
 
-  for (const s of survivors) {
-    fileSet.add(s.file)
-    survivorKeys.add(survivorKey(s.file, s.line, s.name))
+  for (const { file, line, name } of survivors) {
+    fileSet.add(file)
+    survivorKeys.add(survivorKey(file, line, name))
   }
 
   return { files: [...fileSet], survivorKeys }
@@ -71,7 +71,14 @@ export async function runRetest(runContext, parsed) {
   out(`   Report: ${reportPath}`)
   out(`   Survivors to retest: ${survivorKeys.size} across ${files.length} file(s)\n`)
 
-  const result = await retestFiles(files, { mutationConfig, createRunner, timeout, survivorKeys, parallel: parsed.parallel, out })
+  const result = await retestFiles(files, {
+    mutationConfig,
+    createRunner,
+    timeout,
+    survivorKeys,
+    parallel: parsed.parallel,
+    out
+  })
 
   writeRetestReport(parsed, files.length, result.fileResults)
   printRetestSummary(out, result)
@@ -89,7 +96,13 @@ export async function runRetest(runContext, parsed) {
 }
 
 async function retestFiles(files, options) {
-  const totals = { killed: 0, survived: 0, timedOut: 0, skipped: 0, failures: 0 }
+  const totals = {
+    killed: 0,
+    survived: 0,
+    timedOut: 0,
+    skipped: 0,
+    failures: 0
+  }
   const fileResults = {}
 
   for (const file of files)

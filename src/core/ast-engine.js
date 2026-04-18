@@ -92,7 +92,7 @@ function applyRangeMutation(source, start, end, replacement) {
 }
 
 function isObject(value) {
-  return value && typeof value === 'object'
+  return Boolean(value) && typeof value === 'object'
 }
 
 function collectSkipRanges(ast, skipNodes) {
@@ -124,17 +124,13 @@ function isInSkipRange(node, ranges) {
  * @returns {boolean}
  */
 export function matchesPattern(node, pattern) {
-  if (!isObject(node) || !isObject(pattern)) return false
-  for (const key of Object.keys(pattern)) {
-    if (!matchesValue(node[key], pattern[key]))
-      return false
-  }
-  return true
+  return isObject(node) 
+    && isObject(pattern)
+    && Object.keys(pattern).every(key => matchesValue(node[key], pattern[key]))
 }
 
 function matchesValue(nodeVal, patternVal) {
   if (!nodeVal) return false
-
   if (typeof patternVal === 'string')
     return matchesStringPattern(nodeVal, patternVal)
   if (isObject(patternVal))

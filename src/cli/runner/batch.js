@@ -71,7 +71,12 @@ async function accumulateResults(filesToRun, options) {
   }
 }
 
-async function processOneFile(sourceFile, { mutationConfig, createRunner, timeout, parallel, survivorsOnly, out }, { reporter, workerCount, pool }, { totals, fileResults }) {
+async function processOneFile(
+  sourceFile,
+  { mutationConfig, createRunner, timeout, parallel, survivorsOnly, out },
+  { reporter, workerCount, pool },
+  { totals, fileResults }
+) {
   reporter.startFile(sourceFile)
   const runOptions = {
     sourceFile,

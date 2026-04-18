@@ -20,10 +20,14 @@ export function dryRun(sourceFile, mutationConfig, targetLine, out = console.log
   const byLine = mutationsByLine(mutations)
   const mutationLines = Object.entries(byLine)
   for (const [line, entries] of mutationLines)
-    out(`  L${line}: ${entries.map(e => `${e.name} [${e.id}]`).join(', ')}`)
+    out(`  L${line}: ${entries.map(formatEntry).join(', ')}`)
 
   out(`\n  Total: ${mutations.length} mutations`)
   return mutations.length
+}
+
+function formatEntry(entry) {
+  return `${entry.name} [${entry.id}]`
 }
 
 function mutationsByLine(mutations) {

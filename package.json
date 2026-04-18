@@ -44,7 +44,7 @@
     "test:coverage": "vitest run --coverage",
     "mutate": "node src/bin/mutagen.js --all --progress --parallel 8 --json reports/mutation/all.json",
     "mutate:dry": "node src/bin/mutagen.js --all --dry-run",
-    "mutate:incremental": "node src/bin/mutagen.js --incremental",
+    "mutate:incremental": "node src/bin/mutagen.js --incremental --progress --json reports/mutation/all.json",
     "mutate:json": "node src/bin/mutagen.js --all --json"
   },
   "peerDependenciesMeta": {

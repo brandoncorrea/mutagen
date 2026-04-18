@@ -37,8 +37,8 @@ export const updateOperators = [
     name: '++ → --',
     types: ['UpdateExpression'],
     test: node => node.operator === '++',
-    mutate: node => {
-      const op = node.prefix ? node.start : node.argument.end
+    mutate: ({ prefix, start, argument }) => {
+      const op = prefix ? start : argument.end
       return { start: op, end: op + 2, replacement: '--' }
     }
   },
@@ -46,8 +46,8 @@ export const updateOperators = [
     name: '-- → ++',
     types: ['UpdateExpression'],
     test: node => node.operator === '--',
-    mutate: node => {
-      const op = node.prefix ? node.start : node.argument.end
+    mutate: ({ prefix, start, argument }) => {
+      const op = prefix ? start : argument.end
       return { start: op, end: op + 2, replacement: '++' }
     }
   }
@@ -79,8 +79,8 @@ export const optionalChaining = [
     name: '?. → .',
     types: ['MemberExpression', 'CallExpression'],
     test: node => node.optional === true,
-    mutate: (node, source) => {
-      const searchFrom = node.object?.end ?? node.callee?.end ?? node.start
+    mutate: ({ object, callee, start }, source) => {
+      const searchFrom = object?.end ?? callee?.end ?? start
       const idx = source.indexOf('?.', searchFrom)
       if (idx === -1) return null
       return { start: idx, end: idx + 2, replacement: '.' }
@@ -92,10 +92,10 @@ export const negationRemoval = [
   {
     name: '!var → var',
     types: ['UnaryExpression'],
-    test: node => node.operator === '!' && node.prefix,
-    mutate: node => ({
-      start: node.start,
-      end: node.argument.start,
+    test: ({ operator, prefix }) => operator === '!' && prefix,
+    mutate: ({ start, argument }) => ({
+      start: start,
+      end: argument.start,
       replacement: ''
     })
   }
@@ -105,13 +105,13 @@ export const unaryMinusRemoval = [
   {
     name: 'unary -x → x',
     types: ['UnaryExpression'],
-    test: node =>
-      node.operator === '-'
-      && node.prefix
-      && node.argument.type === 'Identifier',
-    mutate: node => ({
-      start: node.start,
-      end: node.argument.start,
+    test: ({ operator, prefix, argument }) =>
+      operator === '-'
+      && prefix
+      && argument.type === 'Identifier',
+    mutate: ({ start, argument }) => ({
+      start,
+      end: argument.start,
       replacement: ''
     })
   }
@@ -121,10 +121,10 @@ export const voidRemoval = [
   {
     name: 'void expr → expr',
     types: ['UnaryExpression'],
-    test: node => node.operator === 'void' && node.prefix,
-    mutate: node => ({
-      start: node.start,
-      end: node.argument.start,
+    test: ({ operator, prefix }) => operator === 'void' && prefix,
+    mutate: ({ start, argument }) => ({
+      start,
+      end: argument.start,
       replacement: ''
     })
   }

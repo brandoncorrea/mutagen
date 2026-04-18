@@ -8,9 +8,9 @@ export const conditionalExpressions = [
     name: 'ternary → always truthy',
     types: ['ConditionalExpression'],
     test: () => true,
-    mutate: node => ({
-      start: node.consequent.start,
-      end: node.consequent.start,
+    mutate: ({ consequent }) => ({
+      start: consequent.start,
+      end: consequent.start,
       replacement: 'true || '
     })
   },
@@ -18,9 +18,9 @@ export const conditionalExpressions = [
     name: 'ternary → always falsy',
     types: ['ConditionalExpression'],
     test: () => true,
-    mutate: node => ({
-      start: node.consequent.start,
-      end: node.consequent.start,
+    mutate: ({ consequent }) => ({
+      start: consequent.start,
+      end: consequent.start,
       replacement: 'false && '
     })
   }
@@ -30,13 +30,13 @@ export const conditionalNegation = [
   {
     name: 'if (cond) → if (!cond)',
     types: ['IfStatement', 'WhileStatement'],
-    test: node =>
-      node.test.type !== 'UnaryExpression'
-      || node.test.operator !== '!'
-      || !node.test.prefix,
-    mutate: node => ({
-      start: node.test.start,
-      end: node.test.start,
+    test: ({ test }) =>
+      test.type !== 'UnaryExpression'
+      || test.operator !== '!'
+      || !test.prefix,
+    mutate: ({ test }) => ({
+      start: test.start,
+      end: test.start,
       replacement: '!'
     })
   }
@@ -47,19 +47,19 @@ export const blockStatements = [
     name: 'return {} → Object.freeze (syntax break)',
     types: ['ReturnStatement'],
     test: node => node.argument?.type === 'ObjectExpression',
-    mutate: node => ({
-      start: node.argument.start,
-      end: node.argument.start,
+    mutate: ({ argument }) => ({
+      start: argument.start,
+      end: argument.start,
       replacement: 'Object.freeze('
     })
   },
   {
     name: 'return → void',
     types: ['ReturnStatement'],
-    test: node =>
-      node.argument != null
-      && node.argument.type !== 'ObjectExpression'
-      && node.argument.type !== 'ArrayExpression',
+    test: ({ argument }) =>
+      argument != null
+      && argument.type !== 'ObjectExpression'
+      && argument.type !== 'ArrayExpression',
     mutate: (node, source) => {
       const idx = source.indexOf('return', node.start)
       if (idx === -1) return null
@@ -73,9 +73,9 @@ export const asyncMutations = [
     name: 'await → (removed)',
     types: ['AwaitExpression'],
     test: () => true,
-    mutate: node => ({
-      start: node.start,
-      end: node.argument.start,
+    mutate: ({ start, argument }) => ({
+      start,
+      end: argument.start,
       replacement: ''
     })
   }
@@ -99,7 +99,11 @@ export const defaultParameterRemoval = [
     name: 'param = value → param (remove default)',
     types: ['AssignmentPattern'],
     test: () => true,
-    mutate: node => ({ start: node.left.end, end: node.end, replacement: '' })
+    mutate: ({ left, end }) => ({
+      start: left.end,
+      end,
+      replacement: ''
+    })
   }
 ]
 
@@ -108,7 +112,11 @@ export const arrowShortCircuit = [
     name: '() => expr → () => undefined',
     types: ['ArrowFunctionExpression'],
     test: node => node.expression === true,
-    mutate: node => ({ start: node.body.start, end: node.body.end, replacement: 'undefined' })
+    mutate: ({ body }) => ({
+      start: body.start,
+      end: body.end,
+      replacement: 'undefined'
+    })
   }
 ]
 
@@ -117,9 +125,9 @@ export const newKeywordRemoval = [
     name: 'new X() → X()',
     types: ['NewExpression'],
     test: () => true,
-    mutate: node => ({
-      start: node.start,
-      end: node.callee.start,
+    mutate: ({ start, callee }) => ({
+      start,
+      end: callee.start,
       replacement: ''
     })
   }

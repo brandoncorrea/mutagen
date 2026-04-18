@@ -46,7 +46,7 @@ export function createOrderedBuffer(onDot) {
 }
 
 function dotChar(status) {
-  if (status === STATUS.SURVIVED) return '!'
-  if (status === STATUS.TIMEOUT) return 'T'
-  return '.'
+  return status === STATUS.SURVIVED ? '!'
+    : status === STATUS.TIMEOUT ? 'T'
+    : '.'
 }

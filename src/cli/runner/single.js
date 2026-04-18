@@ -17,10 +17,25 @@ import { runPreflightTests, reportMutation, printBanner } from './shared.js'
 import { STATUS } from '../shared.js'
 
 /**
- * @returns {{ survived: number, killed: number, timedOut: number, jsonData: { path: string, mutants: Array }, error?: boolean }}
+ * @returns {{
+ *   survived: number,
+ *   killed: number,
+ *   timedOut: number,
+ *   jsonData: {
+ *     path: string,
+ *     mutants: Array
+ *   },
+ *   error?: boolean
+ * }}
  */
 export async function runSingle(options) {
-  const { sourceFile, mutationConfig, createRunner, targetLine, timeout, survivorsOnly, retestMutations, out = console.log } = options
+  const {
+    sourceFile,
+    createRunner,
+    targetLine,
+    timeout,
+    out = console.log
+  } = options
   const original = readFileSync(sourceFile, 'utf-8')
   const tempCopy = createTempCopy(process.cwd())
 
@@ -30,18 +45,11 @@ export async function runSingle(options) {
   const runner = await createRunner(tempSourceFile, { root: tempCopy.root })
 
   const runOptions = {
-    out,
-    runner,
-    timeout,
-    sourceFile,
-    tempSourceFile,
-    targetLine,
     original,
-    mutationConfig,
-    survivorsOnly,
-    retestMutations,
     tempCopy,
-    onProgress: options.onProgress
+    tempSourceFile,
+    runner,
+    ...options
   }
 
   try {
@@ -53,7 +61,16 @@ export async function runSingle(options) {
 }
 
 async function runMutations(runOptions) {
-  const { out, runner, sourceFile, targetLine, original, mutationConfig, survivorsOnly, retestMutations } = runOptions
+  const {
+    out,
+    runner,
+    sourceFile,
+    targetLine,
+    original,
+    mutationConfig,
+    survivorsOnly,
+    retestMutations
+  } = runOptions
   const preflight = await runPreflightTests(out, runner)
   if (preflight.error) return preflight
   out(`Tests pass on original source. Beginning mutations.\n`)
@@ -81,30 +98,39 @@ async function runMutations(runOptions) {
 }
 
 async function runMutation(runOptions, total, outcomes, mutation) {
-  const { out, runner, timeout, tempSourceFile, survivorsOnly, tempCopy, onProgress } = runOptions
+  const { runner, timeout, tempSourceFile, tempCopy } = runOptions
   try {
     writeFileSync(tempSourceFile, mutation.source)
 
     const result = await withTimeout(runner.run, timeout)
 
     if (result.passed) {
-      outcomes.survived.push({ ...mutation, coveredBy: tempCopy.mapPaths(result.coveredBy) })
-      onProgress?.(STATUS.SURVIVED)
-      reportMutation(out, total, mutation, STATUS.SURVIVED)
+      outcomes.survived.push({
+        ...mutation,
+        coveredBy: tempCopy.mapPaths(result.coveredBy)
+      })
+      maybeReportMutation(runOptions, total, mutation, STATUS.SURVIVED)
     } else {
-      outcomes.killed.push({ ...mutation, killedBy: tempCopy.mapPaths(result.killedBy) })
-      onProgress?.(STATUS.KILLED)
-      if (!survivorsOnly) reportMutation(out, total, mutation, STATUS.KILLED)
+      outcomes.killed.push({
+        ...mutation,
+        killedBy: tempCopy.mapPaths(result.killedBy)
+      })
+      maybeReportMutation(runOptions, total, mutation, STATUS.KILLED)
     }
   } catch (err) {
     if (err.message?.includes('timed out')) {
       outcomes.timedOut.push(mutation)
-      onProgress?.(STATUS.TIMEOUT)
-      if (!survivorsOnly) reportMutation(out, total, mutation, STATUS.TIMEOUT)
+      maybeReportMutation(runOptions, total, mutation, STATUS.TIMEOUT)
     } else {
       outcomes.killed.push(mutation)
-      onProgress?.(STATUS.KILLED_ERROR)
-      if (!survivorsOnly) reportMutation(out, total, mutation, STATUS.KILLED_ERROR)
+      maybeReportMutation(runOptions, total, mutation, STATUS.KILLED_ERROR)
     }
   }
+}
+
+function maybeReportMutation(runOptions, total, mutation, status) {
+  const { out, survivorsOnly, onProgress } = runOptions
+  onProgress?.(status)
+  if (!survivorsOnly || status === STATUS.SURVIVED)
+    reportMutation(out, total, mutation, status)
 }
