@@ -156,6 +156,36 @@ export const arrayMethodSwaps = [
   methodNameSwap('flatMap → map', 'flatMap', 'map')
 ]
 
+export const mapSetMethodSwaps = [
+  methodNameSwap('.get → .has', 'get', 'has'),
+  methodNameSwap('.has → .get', 'has', 'get'),
+  methodNameSwap('.add → .delete', 'add', 'delete'),
+  methodNameSwap('.delete → .add', 'delete', 'add')
+]
+
+export const miscMethodMutations = [
+  {
+    name: 'split() → (removed)',
+    types: ['CallExpression'],
+    test: node => isMemberCall(node, 'split'),
+    mutate: ({ callee, end }) => ({
+      start: callee.object.end,
+      end,
+      replacement: ''
+    })
+  },
+  {
+    name: 'join() → (removed)',
+    types: ['CallExpression'],
+    test: node => isMemberCall(node, 'join'),
+    mutate: ({ callee, end }) => ({
+      start: callee.object.end,
+      end,
+      replacement: ''
+    })
+  }
+]
+
 export const objectMethodSwaps = [
   {
     name: 'Object.keys → Object.values',

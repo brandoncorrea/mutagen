@@ -318,3 +318,36 @@ export const elseBlockRemoval = [
     }
   }
 ]
+
+export const loopBodyEmptying = [
+  {
+    name: 'for body → {} (empty)',
+    types: ['ForStatement'],
+    test: ({ body }) => body.type === 'BlockStatement' && body.body.length > 0,
+    mutate: ({ body }) => ({
+      start: body.start,
+      end: body.end,
+      replacement: '{}'
+    })
+  },
+  {
+    name: 'while body → {} (empty)',
+    types: ['WhileStatement'],
+    test: ({ body }) => body.type === 'BlockStatement' && body.body.length > 0,
+    mutate: ({ body }) => ({
+      start: body.start,
+      end: body.end,
+      replacement: '{}'
+    })
+  },
+  {
+    name: 'do...while body → {} (empty)',
+    types: ['DoWhileStatement'],
+    test: ({ body }) => body.type === 'BlockStatement' && body.body.length > 0,
+    mutate: ({ body }) => ({
+      start: body.start,
+      end: body.end,
+      replacement: '{}'
+    })
+  }
+]

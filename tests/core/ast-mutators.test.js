@@ -41,6 +41,7 @@ describe('ast-mutators', () => {
         'CatchClause', 'TryStatement',
         'ForInStatement', 'ForOfStatement',
         'YieldExpression', 'TemplateLiteral',
+        'ForStatement', 'DoWhileStatement',
         'MethodDefinition', 'PropertyDefinition',
         'ClassMethod', 'ClassProperty'
       ])
@@ -2683,6 +2684,146 @@ describe('ast-mutators', () => {
       const node = staticCall('Object', 'assign', 0, 16, 7, 13)
       node.arguments = []
       expect(m.test(node)).toBe(false)
+    })
+  })
+
+  // ── loop body emptying ──
+
+  describe('loop body emptying', () => {
+    it('for body → {} empties for-loop body', () => {
+      const m = find('for body → {} (empty)')
+      const node = {
+        type: 'ForStatement',
+        body: {
+          type: 'BlockStatement',
+          body: [{ type: 'ExpressionStatement' }],
+          start: 21, end: 35
+        },
+        start: 0, end: 35
+      }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node)
+      expect(patch).toEqual({ start: 21, end: 35, replacement: '{}' })
+    })
+
+    it('for body skips empty blocks', () => {
+      const m = find('for body → {} (empty)')
+      const node = {
+        type: 'ForStatement',
+        body: { type: 'BlockStatement', body: [], start: 21, end: 23 },
+        start: 0, end: 23
+      }
+      expect(m.test(node)).toBe(false)
+    })
+
+    it('while body → {} empties while-loop body', () => {
+      const m = find('while body → {} (empty)')
+      const node = {
+        type: 'WhileStatement',
+        test: { start: 7, end: 11 },
+        body: {
+          type: 'BlockStatement',
+          body: [{ type: 'ExpressionStatement' }],
+          start: 13, end: 25
+        },
+        start: 0, end: 25
+      }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node)
+      expect(patch).toEqual({ start: 13, end: 25, replacement: '{}' })
+    })
+
+    it('while body skips empty blocks', () => {
+      const m = find('while body → {} (empty)')
+      const node = {
+        type: 'WhileStatement',
+        test: { start: 7, end: 11 },
+        body: { type: 'BlockStatement', body: [], start: 13, end: 15 },
+        start: 0, end: 15
+      }
+      expect(m.test(node)).toBe(false)
+    })
+
+    it('do...while body → {} empties do-while body', () => {
+      const m = find('do...while body → {} (empty)')
+      const node = {
+        type: 'DoWhileStatement',
+        body: {
+          type: 'BlockStatement',
+          body: [{ type: 'ExpressionStatement' }],
+          start: 3, end: 18
+        },
+        test: { start: 26, end: 30 },
+        start: 0, end: 31
+      }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node)
+      expect(patch).toEqual({ start: 3, end: 18, replacement: '{}' })
+    })
+
+    it('do...while body skips empty blocks', () => {
+      const m = find('do...while body → {} (empty)')
+      const node = {
+        type: 'DoWhileStatement',
+        body: { type: 'BlockStatement', body: [], start: 3, end: 5 },
+        test: { start: 13, end: 17 },
+        start: 0, end: 18
+      }
+      expect(m.test(node)).toBe(false)
+    })
+  })
+
+  // ── Map/Set method swaps ──
+
+  describe('Map/Set method swaps', () => {
+    it('.get → .has swaps', () => {
+      const m = find('.get → .has')
+      const node = callWithMethod('get', 4, 7, 0, 12)
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node).replacement).toBe('has')
+    })
+
+    it('.has → .get swaps', () => {
+      const m = find('.has → .get')
+      const node = callWithMethod('has', 4, 7, 0, 12)
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node).replacement).toBe('get')
+    })
+
+    it('.add → .delete swaps', () => {
+      const m = find('.add → .delete')
+      const node = callWithMethod('add', 4, 7, 0, 12)
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node).replacement).toBe('delete')
+    })
+
+    it('.delete → .add swaps', () => {
+      const m = find('.delete → .add')
+      const node = callWithMethod('delete', 4, 10, 0, 15)
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node).replacement).toBe('add')
+    })
+  })
+
+  // ── split / join removal ──
+
+  describe('split / join removal', () => {
+    it('split() → (removed) removes .split()', () => {
+      const m = find('split() → (removed)')
+      const node = callWithMethod('split', 3, 8, 0, 13)
+      node.callee.object = { end: 2 }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'st.split(",")')
+      expect(patch).toEqual({ start: 2, end: 13, replacement: '' })
+    })
+
+    it('join() → (removed) removes .join()', () => {
+      const m = find('join() → (removed)')
+      const node = callWithMethod('join', 4, 8, 0, 13)
+      node.callee.object = { end: 3 }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'arr.join(",")')
+      expect(patch).toEqual({ start: 3, end: 13, replacement: '' })
     })
   })
 })

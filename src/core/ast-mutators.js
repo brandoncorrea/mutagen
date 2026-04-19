@@ -29,7 +29,8 @@ import {
 import {
   methodExpressions, stringMethodSwaps, mathMethodSwaps, arrayMethodSwaps,
   objectMethodSwaps, stringMethodMutations, typeConversions, promiseMethodSwaps,
-  objectMutationRemovals, jsonMethodSwaps, promiseChainMutations
+  objectMutationRemovals, jsonMethodSwaps, promiseChainMutations,
+  mapSetMethodSwaps, miscMethodMutations
 } from './mutators/methods.js'
 
 import {
@@ -37,7 +38,8 @@ import {
   asyncMutations, throwRemoval, defaultParameterRemoval, newKeywordRemoval,
   arrowShortCircuit, breakRemoval, continueRemoval, catchBlockEmptying,
   finallyRemoval, emptyReturnRemoval, forInOfSwap, yieldRemoval, deleteRemoval,
-  staticKeywordRemoval, errorTypeSwap, ifBlockEmptying, elseBlockRemoval
+  staticKeywordRemoval, errorTypeSwap, ifBlockEmptying, elseBlockRemoval,
+  loopBodyEmptying
 } from './mutators/statements.js'
 
 import {
@@ -109,5 +111,8 @@ export const javascript = [
   ...numericOffByOne,
   ...ifBlockEmptying,
   ...elseBlockRemoval,
-  ...promiseChainMutations
+  ...loopBodyEmptying,
+  ...promiseChainMutations,
+  ...mapSetMethodSwaps,
+  ...miscMethodMutations
 ]
