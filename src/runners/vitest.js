@@ -21,18 +21,22 @@ export async function createVitestRunner(sourceFile, options = {}) {
   if (!warm)
     return coldRunner(startVitest, testFilter, vitestOpts)
 
-  // Warm runner: start vitest in watch mode to keep the worker pool alive
-  // between mutations. watch:true is required — watch:false shuts down the
-  // pool after the initial run, making subsequent runTestSpecifications fail.
-  const vitest = await startVitestClean(startVitest, testFilter, { ...vitestOpts, watch: true })
+  return warmRunner(startVitest, testFilter, vitestOpts, sourceFile)
+}
+
+/**
+ * Warm runner: keeps vitest in watch mode so the worker pool stays alive
+ * between mutations. watch:true is required — watch:false shuts down the
+ * pool after the initial run, making subsequent runTestSpecifications fail.
+ */
+async function warmRunner(startVitest, testFilter, vitestOpts, sourceFile) {
+  const vitest = await startVitestClean(
+    startVitest, testFilter, { ...vitestOpts, watch: true }
+  )
   await vitest.waitForTestRunEnd()
 
-  // The initial run serves as preflight — check if tests pass.
-  const initialResults = vitest.state.getFiles()
-  const preflightPassed = initialResults.every(isPassing)
+  const preflightPassed = vitest.state.getFiles().every(isPassing)
 
-  // Build related-test specs by walking the vite module graph.
-  // Only test files that transitively import the source file need to run.
   let currentSourceFile = sourceFile
   let relatedSpecs = await findRelatedSpecs(vitest, sourceFile)
 
@@ -44,29 +48,37 @@ export async function createVitestRunner(sourceFile, options = {}) {
       relatedSpecs = await findRelatedSpecs(vitest, newSourceFile)
     },
     async run() {
-      if (currentSourceFile) vitest.invalidateFile(currentSourceFile)
-      const specs = relatedSpecs || await vitest.globTestSpecifications()
-      const { direct, indirect } = splitSpecs(specs, currentSourceFile)
-
-      const tier1Specs = direct.length ? direct : specs
-      await vitest.runTestSpecifications(tier1Specs)
-      const tier1 = compileResults(vitest)
-
-      if (!tier1.passed || !indirect.length || !direct.length)
-        return tier1
-
-      await vitest.runTestSpecifications(indirect)
-      const tier2 = compileResults(vitest)
-
-      return {
-        passed: tier2.passed,
-        killedBy: tier2.killedBy,
-        coveredBy: [...tier1.coveredBy, ...tier2.coveredBy]
-      }
+      return runTieredSpecs(vitest, currentSourceFile, relatedSpecs)
     },
     async close() {
       await vitest.close()
     }
+  }
+}
+
+/**
+ * Run specs in two tiers: direct (test name matches source) first,
+ * then indirect. Short-circuits if tier 1 finds a failure.
+ */
+async function runTieredSpecs(vitest, sourceFile, relatedSpecs) {
+  if (sourceFile) vitest.invalidateFile(sourceFile)
+  const specs = relatedSpecs || await vitest.globTestSpecifications()
+  const { direct, indirect } = splitSpecs(specs, sourceFile)
+
+  const tier1Specs = direct.length ? direct : specs
+  await vitest.runTestSpecifications(tier1Specs)
+  const tier1 = compileResults(vitest)
+
+  if (!tier1.passed || !indirect.length || !direct.length)
+    return tier1
+
+  await vitest.runTestSpecifications(indirect)
+  const tier2 = compileResults(vitest)
+
+  return {
+    passed: tier2.passed,
+    killedBy: tier2.killedBy,
+    coveredBy: [...tier1.coveredBy, ...tier2.coveredBy]
   }
 }
 
