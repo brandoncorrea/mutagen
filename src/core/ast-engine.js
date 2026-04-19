@@ -98,7 +98,7 @@ function isObject(value) {
 function collectSkipRanges(ast, skipNodes) {
   if (!skipNodes?.length) return []
   const ranges = []
-  walk(ast.program, null, (node) => {
+  walk(ast.program, null, node => {
     if (skipNodes.some(pattern => matchesPattern(node, pattern)))
       ranges.push([node.start, node.end])
   })
@@ -106,7 +106,8 @@ function collectSkipRanges(ast, skipNodes) {
 }
 
 function isInSkipRange(node, ranges) {
-  return ranges.some(([start, end]) => node.start >= start && node.end <= end)
+  return ranges.some(([start, end]) =>
+    node.start >= start && node.end <= end)
 }
 
 /**
