@@ -6,6 +6,7 @@ vi.mock('node:fs', () => ({
 }))
 
 import { diffReports } from '../../src/cli/diff.js'
+import { makeMutant } from './helpers.js'
 
 describe('diffReports', () => {
   let lines, out
@@ -21,16 +22,6 @@ describe('diffReports', () => {
       files,
       schemaVersion: '1',
       thresholds: { high: 80, low: 60 }
-    }
-  }
-
-  function makeMutant(id, mutatorName, status, line = 1) {
-    return {
-      id,
-      mutatorName,
-      status,
-      location: { start: { line }, column: 0 },
-      replacement: ''
     }
   }
 

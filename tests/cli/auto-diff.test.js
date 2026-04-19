@@ -1,10 +1,7 @@
 import { describe, it, expect } from 'vitest'
 
 import { autoDiffSummary } from '../../src/cli/auto-diff.js'
-
-function makeMutant(id, status, mutatorName = 'EqualityOperator', line = 1) {
-  return { id, mutatorName, status, location: { start: { line } } }
-}
+import { makeMutant } from './helpers.js'
 
 function legacyReport(files) {
   return { schemaVersion: '1', thresholds: { high: 80, low: 60 }, files }
@@ -16,7 +13,7 @@ function structuredReport({ survivors = [], files = {}, score = 0, total = 0, ki
 
 describe('autoDiffSummary', () => {
   it('returns null when no previous report', () => {
-    const current = { 'a.js': { mutants: [makeMutant('m1', 'Killed')] } }
+    const current = { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Killed')] } }
     expect(autoDiffSummary(null, current)).toBeNull()
   })
 
@@ -29,14 +26,14 @@ describe('autoDiffSummary', () => {
     it('detects newly killed mutants', () => {
       const previous = legacyReport({
         'a.js': { mutants: [
-          makeMutant('m1', 'Survived'),
-          makeMutant('m2', 'Survived')
+          makeMutant('m1', 'EqualityOperator', 'Survived'),
+          makeMutant('m2', 'EqualityOperator', 'Survived')
         ] }
       })
       const current = {
         'a.js': { mutants: [
-          makeMutant('m1', 'Killed'),
-          makeMutant('m2', 'Killed')
+          makeMutant('m1', 'EqualityOperator', 'Killed'),
+          makeMutant('m2', 'EqualityOperator', 'Killed')
         ] }
       }
 
@@ -47,14 +44,14 @@ describe('autoDiffSummary', () => {
     it('detects regressions', () => {
       const previous = legacyReport({
         'a.js': { mutants: [
-          makeMutant('m1', 'Killed'),
-          makeMutant('m2', 'Killed')
+          makeMutant('m1', 'EqualityOperator', 'Killed'),
+          makeMutant('m2', 'EqualityOperator', 'Killed')
         ] }
       })
       const current = {
         'a.js': { mutants: [
-          makeMutant('m1', 'Survived'),
-          makeMutant('m2', 'Killed')
+          makeMutant('m1', 'EqualityOperator', 'Survived'),
+          makeMutant('m2', 'EqualityOperator', 'Killed')
         ] }
       }
 
@@ -65,14 +62,14 @@ describe('autoDiffSummary', () => {
     it('counts unchanged survivors', () => {
       const previous = legacyReport({
         'a.js': { mutants: [
-          makeMutant('m1', 'Survived'),
-          makeMutant('m2', 'Survived')
+          makeMutant('m1', 'EqualityOperator', 'Survived'),
+          makeMutant('m2', 'EqualityOperator', 'Survived')
         ] }
       })
       const current = {
         'a.js': { mutants: [
-          makeMutant('m1', 'Survived'),
-          makeMutant('m2', 'Survived')
+          makeMutant('m1', 'EqualityOperator', 'Survived'),
+          makeMutant('m2', 'EqualityOperator', 'Survived')
         ] }
       }
 
@@ -82,10 +79,10 @@ describe('autoDiffSummary', () => {
 
     it('returns null when all mutants are new (no overlap)', () => {
       const previous = legacyReport({
-        'a.js': { mutants: [makeMutant('m1', 'Killed')] }
+        'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Killed')] }
       })
       const current = {
-        'b.js': { mutants: [makeMutant('m2', 'Killed')] }
+        'b.js': { mutants: [makeMutant('m2', 'EqualityOperator', 'Killed')] }
       }
 
       expect(autoDiffSummary(previous, current)).toBeNull()
@@ -94,16 +91,16 @@ describe('autoDiffSummary', () => {
     it('handles mixed changes', () => {
       const previous = legacyReport({
         'a.js': { mutants: [
-          makeMutant('m1', 'Survived'),
-          makeMutant('m2', 'Killed'),
-          makeMutant('m3', 'Survived')
+          makeMutant('m1', 'EqualityOperator', 'Survived'),
+          makeMutant('m2', 'EqualityOperator', 'Killed'),
+          makeMutant('m3', 'EqualityOperator', 'Survived')
         ] }
       })
       const current = {
         'a.js': { mutants: [
-          makeMutant('m1', 'Killed'),
-          makeMutant('m2', 'Survived'),
-          makeMutant('m3', 'Survived')
+          makeMutant('m1', 'EqualityOperator', 'Killed'),
+          makeMutant('m2', 'EqualityOperator', 'Survived'),
+          makeMutant('m3', 'EqualityOperator', 'Survived')
         ] }
       }
 
@@ -115,10 +112,10 @@ describe('autoDiffSummary', () => {
 
     it('treats Timeout as killed', () => {
       const previous = legacyReport({
-        'a.js': { mutants: [makeMutant('m1', 'Survived')] }
+        'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Survived')] }
       })
       const current = {
-        'a.js': { mutants: [makeMutant('m1', 'Timeout')] }
+        'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Timeout')] }
       }
 
       const result = autoDiffSummary(previous, current)
@@ -127,10 +124,10 @@ describe('autoDiffSummary', () => {
 
     it('treats NoCoverage as alive', () => {
       const previous = legacyReport({
-        'a.js': { mutants: [makeMutant('m1', 'Killed')] }
+        'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Killed')] }
       })
       const current = {
-        'a.js': { mutants: [makeMutant('m1', 'NoCoverage')] }
+        'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'NoCoverage')] }
       }
 
       const result = autoDiffSummary(previous, current)
@@ -150,8 +147,8 @@ describe('autoDiffSummary', () => {
       })
       const current = {
         'a.js': { mutants: [
-          makeMutant('m1', 'Killed'),
-          makeMutant('m2', 'Killed')
+          makeMutant('m1', 'EqualityOperator', 'Killed'),
+          makeMutant('m2', 'EqualityOperator', 'Killed')
         ] }
       }
 
@@ -169,8 +166,8 @@ describe('autoDiffSummary', () => {
       })
       const current = {
         'a.js': { mutants: [
-          makeMutant('m1', 'Survived'),
-          makeMutant('m2', 'Killed')
+          makeMutant('m1', 'EqualityOperator', 'Survived'),
+          makeMutant('m2', 'EqualityOperator', 'Killed')
         ] }
       }
 
@@ -185,7 +182,7 @@ describe('autoDiffSummary', () => {
         score: 100, total: 5, killed: 5, survived: 0
       })
       const current = {
-        'a.js': { mutants: [makeMutant('m1', 'Killed')] }
+        'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Killed')] }
       }
 
       expect(autoDiffSummary(previous, current)).toBeNull()
@@ -195,10 +192,10 @@ describe('autoDiffSummary', () => {
   describe('format', () => {
     it('uses singular "regression" for count of 1', () => {
       const previous = legacyReport({
-        'a.js': { mutants: [makeMutant('m1', 'Killed')] }
+        'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Killed')] }
       })
       const current = {
-        'a.js': { mutants: [makeMutant('m1', 'Survived')] }
+        'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Survived')] }
       }
 
       expect(autoDiffSummary(previous, current)).toContain('1 regression,')
@@ -207,14 +204,14 @@ describe('autoDiffSummary', () => {
     it('uses plural "regressions" for count != 1', () => {
       const previous = legacyReport({
         'a.js': { mutants: [
-          makeMutant('m1', 'Killed'),
-          makeMutant('m2', 'Killed')
+          makeMutant('m1', 'EqualityOperator', 'Killed'),
+          makeMutant('m2', 'EqualityOperator', 'Killed')
         ] }
       })
       const current = {
         'a.js': { mutants: [
-          makeMutant('m1', 'Survived'),
-          makeMutant('m2', 'Survived')
+          makeMutant('m1', 'EqualityOperator', 'Survived'),
+          makeMutant('m2', 'EqualityOperator', 'Survived')
         ] }
       }
 
@@ -223,10 +220,10 @@ describe('autoDiffSummary', () => {
 
     it('uses singular "survivor" for count of 1', () => {
       const previous = legacyReport({
-        'a.js': { mutants: [makeMutant('m1', 'Survived')] }
+        'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Survived')] }
       })
       const current = {
-        'a.js': { mutants: [makeMutant('m1', 'Survived')] }
+        'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Survived')] }
       }
 
       expect(autoDiffSummary(previous, current)).toContain('1 unchanged survivor')
@@ -236,14 +233,14 @@ describe('autoDiffSummary', () => {
     it('matches expected format from issue', () => {
       const previous = legacyReport({
         'a.js': { mutants: [
-          ...Array.from({ length: 7 }, (_, i) => makeMutant(`kill-${i}`, 'Survived')),
-          ...Array.from({ length: 15 }, (_, i) => makeMutant(`surv-${i}`, 'Survived'))
+          ...Array.from({ length: 7 }, (_, i) => makeMutant(`kill-${i}`, 'EqualityOperator', 'Survived')),
+          ...Array.from({ length: 15 }, (_, i) => makeMutant(`surv-${i}`, 'EqualityOperator', 'Survived'))
         ] }
       })
       const current = {
         'a.js': { mutants: [
-          ...Array.from({ length: 7 }, (_, i) => makeMutant(`kill-${i}`, 'Killed')),
-          ...Array.from({ length: 15 }, (_, i) => makeMutant(`surv-${i}`, 'Survived'))
+          ...Array.from({ length: 7 }, (_, i) => makeMutant(`kill-${i}`, 'EqualityOperator', 'Killed')),
+          ...Array.from({ length: 15 }, (_, i) => makeMutant(`surv-${i}`, 'EqualityOperator', 'Survived'))
         ] }
       }
 
@@ -256,13 +253,13 @@ describe('autoDiffSummary', () => {
   it('skips legacy mutants without id while processing those with id', () => {
     const previous = legacyReport({
       'a.js': { mutants: [
-        makeMutant('m1', 'Survived'),
+        makeMutant('m1', 'EqualityOperator', 'Survived'),
         { mutatorName: 'x', status: 'Survived' }  // no id — skipped
       ] }
     })
     const current = {
       'a.js': { mutants: [
-        makeMutant('m1', 'Killed'),
+        makeMutant('m1', 'EqualityOperator', 'Killed'),
         { mutatorName: 'x', status: 'Killed' }
       ] }
     }
@@ -284,12 +281,12 @@ describe('autoDiffSummary', () => {
 
   it('skips current mutants without id when previous has valid entries', () => {
     const previous = legacyReport({
-      'a.js': { mutants: [makeMutant('m1', 'Survived')] }
+      'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Survived')] }
     })
     const current = {
       'a.js': { mutants: [
         { mutatorName: 'x', status: 'Killed' },    // no id — should be skipped
-        makeMutant('m1', 'Killed')                   // has id — newly killed
+        makeMutant('m1', 'EqualityOperator', 'Killed')                   // has id — newly killed
       ] }
     }
 
@@ -300,14 +297,14 @@ describe('autoDiffSummary', () => {
   it('ignores previously survived mutant with unrecognized current status', () => {
     const previous = legacyReport({
       'a.js': { mutants: [
-        makeMutant('m1', 'Survived'),
-        makeMutant('m2', 'Survived')
+        makeMutant('m1', 'EqualityOperator', 'Survived'),
+        makeMutant('m2', 'EqualityOperator', 'Survived')
       ] }
     })
     const current = {
       'a.js': { mutants: [
-        makeMutant('m1', 'Killed'),
-        makeMutant('m2', 'CompileError')   // neither killed nor alive
+        makeMutant('m1', 'EqualityOperator', 'Killed'),
+        makeMutant('m2', 'EqualityOperator', 'CompileError')   // neither killed nor alive
       ] }
     }
 
@@ -327,7 +324,7 @@ describe('autoDiffSummary', () => {
     })
     const current = {
       'a.js': { mutants: [
-        makeMutant('m1', 'Killed')
+        makeMutant('m1', 'EqualityOperator', 'Killed')
       ] }
     }
 

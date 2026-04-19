@@ -56,6 +56,10 @@ export const killedMutation = {
   mutated: 'a !== b', source: 'if (a !== b) {}', killedBy: ['t.js']
 }
 
+export function makeMutant(id, mutatorName, status, line = 1) {
+  return { id, mutatorName, status, location: { start: { line } }, replacement: '' }
+}
+
 export function setupPool(createPool, results = { killed: [], survived: [], timedOut: [] }) {
   const poolRun = vi.fn().mockResolvedValue(results)
   const poolClose = vi.fn().mockResolvedValue()

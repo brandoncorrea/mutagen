@@ -1,13 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import { printDiffReport } from '../../src/cli/diff-print.js'
+import { makeMutant } from './helpers.js'
 
 function capture() {
   const lines = []
   return { out: { log: msg => lines.push(msg), error: () => {} }, lines }
-}
-
-function makeMutant(id, mutatorName, status, line = 1) {
-  return { id, mutatorName, status, location: { start: { line } }, replacement: '' }
 }
 
 describe('printDiffReport', () => {
