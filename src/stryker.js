@@ -3,6 +3,8 @@
  * Import only if your project uses Stryker alongside mutagen.
  */
 
+const STRYKER_TIMEOUT_MS = 600_000
+
 import { execFileSync } from 'node:child_process'
 import { existsSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 
@@ -36,7 +38,7 @@ export function runStrykerScope(name, scope, { reportDir = 'reports/mutation', s
     execFileSync(
       'npx',
       ['stryker', 'run', '--mutate', mutateArg],
-      { stdio: 'inherit', timeout: 600000 }
+      { stdio: 'inherit', timeout: STRYKER_TIMEOUT_MS }
     )
   } catch (err) {
     if (isUnexpectedError(err))

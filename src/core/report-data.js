@@ -6,14 +6,16 @@
  * Mutation status (isKilled, isAlive, scoring) → core/mutation-status.js
  */
 
+const SEPARATOR_WIDTH = 60
+
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { resolve, relative, dirname } from 'node:path'
 
 import { mutationId, mutantKey } from './mutation-id.js'
 import { STATUS, isKilled, isAlive } from './mutation-status.js'
 
-export const HEADER_SEPARATOR = '═'.repeat(60)
-export const SECTION_SEPARATOR = '─'.repeat(60)
+export const HEADER_SEPARATOR = '═'.repeat(SEPARATOR_WIDTH)
+export const SECTION_SEPARATOR = '─'.repeat(SEPARATOR_WIDTH)
 
 export function createReport(files, extra) {
   return {

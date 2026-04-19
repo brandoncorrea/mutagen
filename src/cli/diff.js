@@ -3,6 +3,8 @@
  * Compare two reports to find regressions, improvements, and new mutants.
  */
 
+const SCORE_DELTA_THRESHOLD = 0.05
+
 import { mutantKey } from '../core/mutation-id.js'
 import { isKilled, isAlive, countStatuses, mutationScore } from '../core/mutation-status.js'
 import { tryLoadJson } from '../core/report-data.js'
@@ -129,7 +131,7 @@ function computeFileDelta(beforeScores, afterScores, file) {
     return { file, before, delta: 0, label: 'REMOVED' }
 
   const delta = after - before
-  if (Math.abs(delta) > 0.05)
+  if (Math.abs(delta) > SCORE_DELTA_THRESHOLD)
     return { file, before, after, delta }
 }
 
