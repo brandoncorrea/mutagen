@@ -34,7 +34,7 @@ import {
   asyncMutations, throwRemoval, defaultParameterRemoval, newKeywordRemoval,
   arrowShortCircuit, breakRemoval, continueRemoval, catchBlockEmptying,
   finallyRemoval, emptyReturnRemoval, forInOfSwap, yieldRemoval, deleteRemoval,
-  ternaryBranchRemoval, staticKeywordRemoval, errorTypeSwap
+  staticKeywordRemoval, errorTypeSwap
 } from './mutators/statements.js'
 
 import {
@@ -100,7 +100,6 @@ export const javascript = [
   ...jsonMethodSwaps,
   ...inOperatorNegation,
   ...logicalShortCircuit,
-  ...ternaryBranchRemoval,
   ...staticKeywordRemoval,
   ...errorTypeSwap,
   ...stringLiteralsAnyContext,

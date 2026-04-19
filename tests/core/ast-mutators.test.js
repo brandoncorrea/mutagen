@@ -117,16 +117,30 @@ describe('ast-mutators', () => {
   })
 
   describe('conditional expression', () => {
-    it('ternary → always truthy inserts true || before consequent', () => {
-      const mutator = find('ternary → always truthy')
+    it('cond → true (ternary) replaces condition with true', () => {
+      const mutator = find('cond → true (ternary)')
       const node = {
         type: 'ConditionalExpression',
-        consequent: { start: 6, end: 7 },
+        test: { start: 0, end: 4 },
+        consequent: { start: 7, end: 8 },
         start: 0, end: 12
       }
       expect(mutator.test(node)).toBe(true)
       const patch = mutator.mutate(node, 'cond ? b : c')
-      expect(patch).toEqual({ start: 6, end: 6, replacement: 'true || ' })
+      expect(patch).toEqual({ start: 0, end: 4, replacement: 'true' })
+    })
+
+    it('cond → false (ternary) replaces condition with false', () => {
+      const mutator = find('cond → false (ternary)')
+      const node = {
+        type: 'ConditionalExpression',
+        test: { start: 0, end: 4 },
+        consequent: { start: 7, end: 8 },
+        start: 0, end: 12
+      }
+      expect(mutator.test(node)).toBe(true)
+      const patch = mutator.mutate(node, 'cond ? b : c')
+      expect(patch).toEqual({ start: 0, end: 4, replacement: 'false' })
     })
   })
 
@@ -798,22 +812,6 @@ describe('ast-mutators', () => {
       expect(m.test({ type: 'BooleanLiteral', value: false })).toBe(true)
       const patch = m.mutate({ type: 'Literal', value: false, start: 10, end: 15 })
       expect(patch).toEqual({ start: 10, end: 15, replacement: 'true' })
-    })
-  })
-
-  // ── Remaining conditional ──
-
-  describe('remaining conditional', () => {
-    it('ternary → always falsy inserts false && before consequent', () => {
-      const m = find('ternary → always falsy')
-      const node = {
-        type: 'ConditionalExpression',
-        consequent: { start: 6, end: 7 },
-        start: 0, end: 12
-      }
-      expect(m.test(node)).toBe(true)
-      const patch = m.mutate(node, 'cond ? b : c')
-      expect(patch).toEqual({ start: 6, end: 6, replacement: 'false && ' })
     })
   })
 
@@ -2159,34 +2157,6 @@ describe('ast-mutators', () => {
       const node = logExpr('&&', 0, 9, 13, 25)
       const patch = m.mutate(node, 'isValid() && process(x)')
       expect(patch).toEqual({ start: 0, end: 25, replacement: 'isValid()' })
-    })
-  })
-
-  // ── ternary branch removal ──
-
-  describe('ternary branch removal', () => {
-    it('cond ? a : b → a replaces ternary with consequent', () => {
-      const m = find('cond ? a : b → a')
-      const node = {
-        type: 'ConditionalExpression',
-        consequent: { start: 10, end: 19 },
-        alternate: { start: 22, end: 30 },
-        start: 0, end: 30
-      }
-      const patch = m.mutate(node, 'isAdmin ? adminView : userView')
-      expect(patch).toEqual({ start: 0, end: 30, replacement: 'adminView' })
-    })
-
-    it('cond ? a : b → b replaces ternary with alternate', () => {
-      const m = find('cond ? a : b → b')
-      const node = {
-        type: 'ConditionalExpression',
-        consequent: { start: 10, end: 19 },
-        alternate: { start: 22, end: 30 },
-        start: 0, end: 30
-      }
-      const patch = m.mutate(node, 'isAdmin ? adminView : userView')
-      expect(patch).toEqual({ start: 0, end: 30, replacement: 'userView' })
     })
   })
 

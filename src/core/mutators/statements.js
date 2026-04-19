@@ -5,23 +5,23 @@
 
 export const conditionalExpressions = [
   {
-    name: 'ternary → always truthy',
+    name: 'cond → true (ternary)',
     types: ['ConditionalExpression'],
     test: () => true,
-    mutate: ({ consequent }) => ({
-      start: consequent.start,
-      end: consequent.start,
-      replacement: 'true || '
+    mutate: ({ test }) => ({
+      start: test.start,
+      end: test.end,
+      replacement: 'true'
     })
   },
   {
-    name: 'ternary → always falsy',
+    name: 'cond → false (ternary)',
     types: ['ConditionalExpression'],
     test: () => true,
-    mutate: ({ consequent }) => ({
-      start: consequent.start,
-      end: consequent.start,
-      replacement: 'false && '
+    mutate: ({ test }) => ({
+      start: test.start,
+      end: test.end,
+      replacement: 'false'
     })
   }
 ]
@@ -244,29 +244,6 @@ export const deleteRemoval = [
       start,
       end,
       replacement: 'true'
-    })
-  }
-]
-
-export const ternaryBranchRemoval = [
-  {
-    name: 'cond ? a : b → a',
-    types: ['ConditionalExpression'],
-    test: () => true,
-    mutate: ({ start, end, consequent }, source) => ({
-      start,
-      end,
-      replacement: source.slice(consequent.start, consequent.end)
-    })
-  },
-  {
-    name: 'cond ? a : b → b',
-    types: ['ConditionalExpression'],
-    test: () => true,
-    mutate: ({ start, end, alternate }, source) => ({
-      start,
-      end,
-      replacement: source.slice(alternate.start, alternate.end)
     })
   }
 ]
