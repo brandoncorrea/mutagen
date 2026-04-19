@@ -10,6 +10,7 @@
  */
 
 import { basename, parse as parsePath } from 'node:path'
+import { Readable } from 'node:stream'
 
 export async function createVitestRunner(sourceFile, options = {}) {
   const { testFile, warm = true } = options
@@ -84,7 +85,7 @@ function createVitestOptions({ config, root }) {
   return {
     reporters: [{ onFinished() {} }],
     bail: 1,
-    stdin: false,
+    stdin: new Readable({ read() {} }),
     ...(config && { config }),
     ...(root && { root })
   }
