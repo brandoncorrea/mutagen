@@ -382,7 +382,7 @@ describe('writeReportFile', () => {
 
   it('creates the directory, writes JSON, and logs the path', () => {
     const report = { schemaVersion: '1', thresholds: { high: 80, low: 60 }, files: {} }
-    const out = vi.fn()
+    const out = { log: vi.fn(), error: vi.fn() }
 
     writeReportFile('reports/mutation', 'reports/mutation/report.json', report, out)
 
@@ -391,7 +391,7 @@ describe('writeReportFile', () => {
       'reports/mutation/report.json',
       JSON.stringify(report, null, 2)
     )
-    expect(out).toHaveBeenCalledWith('JSON report: reports/mutation/report.json')
+    expect(out.log).toHaveBeenCalledWith('JSON report: reports/mutation/report.json')
   })
 })
 
@@ -411,23 +411,23 @@ describe('tryLoadJson', () => {
 
   it('returns undefined and calls out on read error', () => {
     readFileSync.mockImplementation(() => { throw new Error('ENOENT') })
-    const out = vi.fn()
+    const out = { log: vi.fn(), error: vi.fn() }
 
     const result = tryLoadJson('/tmp/missing.json', out)
 
     expect(result).toBeUndefined()
-    expect(out).toHaveBeenCalledWith(expect.stringContaining('Warning'))
-    expect(out).toHaveBeenCalledWith(expect.stringContaining('missing.json'))
+    expect(out.log).toHaveBeenCalledWith(expect.stringContaining('Warning'))
+    expect(out.log).toHaveBeenCalledWith(expect.stringContaining('missing.json'))
   })
 
   it('returns undefined and calls out on invalid JSON', () => {
     readFileSync.mockReturnValue('not valid json {{{')
-    const out = vi.fn()
+    const out = { log: vi.fn(), error: vi.fn() }
 
     const result = tryLoadJson('/tmp/bad.json', out)
 
     expect(result).toBeUndefined()
-    expect(out).toHaveBeenCalledWith(expect.stringContaining('Warning'))
+    expect(out.log).toHaveBeenCalledWith(expect.stringContaining('Warning'))
   })
 
   it('returns undefined silently when no out callback provided', () => {
@@ -479,7 +479,7 @@ describe('combineReportData', () => {
       .mockReturnValueOnce(JSON.stringify(report1))
       .mockReturnValueOnce(JSON.stringify(report2))
 
-    const merged = combineReportData(['file1.json', 'file2.json'], () => {})
+    const merged = combineReportData(['file1.json', 'file2.json'], { log: () => {}, error: () => {} })
 
     expect(Object.keys(merged.files)).toEqual(['a.js', 'b.js'])
     expect(merged.files['a.js'].mutants).toHaveLength(1)
@@ -504,11 +504,11 @@ describe('combineReportData', () => {
       .mockReturnValueOnce(JSON.stringify(report))
       .mockReturnValueOnce(JSON.stringify(report))
 
-    const out = vi.fn()
+    const out = { log: vi.fn(), error: vi.fn() }
     const merged = combineReportData(['file1.json', 'file2.json'], out)
 
     expect(merged.files['a.js'].mutants).toHaveLength(1)
-    expect(out).toHaveBeenCalledWith(expect.stringContaining('Deduplicated'))
+    expect(out.log).toHaveBeenCalledWith(expect.stringContaining('Deduplicated'))
   })
 
   it('reports the exact duplicate count', () => {
@@ -527,20 +527,20 @@ describe('combineReportData', () => {
       .mockReturnValueOnce(JSON.stringify(report))
       .mockReturnValueOnce(JSON.stringify(report))
 
-    const out = vi.fn()
+    const out = { log: vi.fn(), error: vi.fn() }
     combineReportData(['file1.json', 'file2.json'], out)
 
-    expect(out).toHaveBeenCalledWith('  Deduplicated: 1 duplicate mutant(s) removed')
+    expect(out.log).toHaveBeenCalledWith('  Deduplicated: 1 duplicate mutant(s) removed')
   })
 
   it('handles unreadable files gracefully', () => {
     readFileSync.mockImplementation(() => { throw new Error('ENOENT') })
-    const out = vi.fn()
+    const out = { log: vi.fn(), error: vi.fn() }
 
     const merged = combineReportData(['bad.json'], out)
 
     expect(Object.keys(merged.files)).toHaveLength(0)
-    expect(out).toHaveBeenCalledWith(expect.stringContaining('Warning'))
+    expect(out.log).toHaveBeenCalledWith(expect.stringContaining('Warning'))
   })
 
   it('merges mutants into the same file from different reports', () => {
@@ -578,13 +578,13 @@ describe('combineReportData', () => {
       .mockReturnValueOnce(JSON.stringify(report1))
       .mockReturnValueOnce(JSON.stringify(report2))
 
-    const merged = combineReportData(['file1.json', 'file2.json'], () => {})
+    const merged = combineReportData(['file1.json', 'file2.json'], { log: () => {}, error: () => {} })
 
     expect(merged.files['a.js'].mutants).toHaveLength(2)
   })
 
   it('returns empty files for empty input', () => {
-    const merged = combineReportData([], () => {})
+    const merged = combineReportData([], { log: () => {}, error: () => {} })
     expect(Object.keys(merged.files)).toHaveLength(0)
   })
 })

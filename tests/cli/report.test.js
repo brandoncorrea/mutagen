@@ -4,7 +4,7 @@ import { printRunReport, printSummary, formatQuietSummary } from '../../src/cli/
 describe('printSummary', () => {
   it('prints file count, statuses, and mutation score', () => {
     const lines = []
-    const out = msg => lines.push(msg)
+    const out = { log: msg => lines.push(msg), error: () => {} }
     const merged = {
       files: {
         'a.js': { mutants: [{ status: 'Killed' }, { status: 'Survived' }] },
@@ -25,7 +25,7 @@ describe('printSummary', () => {
 
   it('shows 100.0% when no mutants', () => {
     const lines = []
-    const out = msg => lines.push(msg)
+    const out = { log: msg => lines.push(msg), error: () => {} }
     const counts = { killed: 0, survived: 0, noCoverage: 0, timeout: 0 }
     printSummary({ files: {} }, counts, null, out)
     const output = lines.join('\n')
@@ -35,7 +35,7 @@ describe('printSummary', () => {
 
   it('includes timeout in score calculation', () => {
     const lines = []
-    const out = msg => lines.push(msg)
+    const out = { log: msg => lines.push(msg), error: () => {} }
     const merged = {
       files: { 'a.js': { mutants: [{ status: 'Timeout' }, { status: 'Survived' }] } }
     }
@@ -89,7 +89,7 @@ describe('formatQuietSummary', () => {
 describe('printRunReport', () => {
   it('prints mutation score for all-killed results', () => {
     const lines = []
-    const out = msg => lines.push(msg)
+    const out = { log: msg => lines.push(msg), error: () => {} }
     const mutations = [{ line: 1, name: 'test' }]
     const results = { killed: [{ line: 1, name: 'test' }], survived: [] }
 
@@ -102,7 +102,7 @@ describe('printRunReport', () => {
 
   it('prints surviving mutations when some survive', () => {
     const lines = []
-    const out = msg => lines.push(msg)
+    const out = { log: msg => lines.push(msg), error: () => {} }
     const mutations = [
       { line: 1, name: 'a' },
       { line: 2, name: 'b' }
@@ -123,7 +123,7 @@ describe('printRunReport', () => {
 
   it('includes mutation ID in surviving mutation output when present', () => {
     const lines = []
-    const out = msg => lines.push(msg)
+    const out = { log: msg => lines.push(msg), error: () => {} }
     const mutations = [
       { line: 2, name: 'b', id: 'a1b2c3d4' }
     ]
@@ -140,7 +140,7 @@ describe('printRunReport', () => {
 
   it('prints coveredBy test files for surviving mutations', () => {
     const lines = []
-    const out = msg => lines.push(msg)
+    const out = { log: msg => lines.push(msg), error: () => {} }
     const mutations = [
       { line: 1, name: 'a' },
       { line: 2, name: 'b' }
@@ -164,14 +164,14 @@ describe('printRunReport', () => {
 
   it('reports 100% for zero mutations', () => {
     const lines = []
-    const out = msg => lines.push(msg)
+    const out = { log: msg => lines.push(msg), error: () => {} }
     printRunReport([], { killed: [], survived: [] }, out)
     expect(lines.join('\n')).toContain('100.0%')
   })
 
   it('counts timed-out mutations as killed in score', () => {
     const lines = []
-    const out = msg => lines.push(msg)
+    const out = { log: msg => lines.push(msg), error: () => {} }
     const mutations = [
       { line: 1, name: 'a' },
       { line: 2, name: 'b' }
@@ -193,15 +193,15 @@ describe('printRunReport', () => {
     expect(output).toContain('ALL mutations killed')
   })
 
-  it('defaults to console.log when no log function provided', () => {
-    vi.spyOn(console, 'log').mockImplementation(() => {})
+  it('uses out.log for output', () => {
+    const lines = []
+    const out = { log: msg => lines.push(msg), error: () => {} }
     const mutations = [{ line: 1, name: 'test' }]
     const results = { killed: [{ line: 1, name: 'test' }], survived: [] }
 
-    printRunReport(mutations, results)
+    printRunReport(mutations, results, out)
 
-    const output = console.log.mock.calls.map(c => c[0]).join('\n')
+    const output = lines.join('\n')
     expect(output).toContain('100.0%')
-    console.log.mockRestore()
   })
 })

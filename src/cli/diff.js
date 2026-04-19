@@ -15,7 +15,7 @@ import { printDiffReport } from './diff-print.js'
  * @param {Function} [out=console.log] - output function
  * @param {boolean} [jsonOutput=false] - when true, output structured JSON instead of text
  */
-export function diffReports(beforeFile, afterFile, out = console.log, jsonOutput = false) {
+export function diffReports(beforeFile, afterFile, out, jsonOutput = false) {
   const before = tryLoadJson(beforeFile, out)
   const after = tryLoadJson(afterFile, out)
 
@@ -51,7 +51,7 @@ function printJsonDiff(before, after, changes, fileDeltas, out) {
       delta: delta.delta
     }
 
-  out(JSON.stringify({
+  out.log(JSON.stringify({
     beforeScore,
     afterScore,
     delta: afterScore - beforeScore,

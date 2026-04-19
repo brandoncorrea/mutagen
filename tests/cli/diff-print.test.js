@@ -3,7 +3,7 @@ import { printDiffReport } from '../../src/cli/diff-print.js'
 
 function capture() {
   const lines = []
-  return { out: msg => lines.push(msg), lines }
+  return { out: { log: msg => lines.push(msg), error: () => {} }, lines }
 }
 
 function makeMutant(id, mutatorName, status, line = 1) {

@@ -46,7 +46,7 @@ export async function runParallel(options) {
     targetLine,
     timeout,
     workerCount = DEFAULT_WORKER_COUNT,
-    out = console.log
+    out
   } = options
   const original = readFileSync(sourceFile, 'utf-8')
 
@@ -66,11 +66,11 @@ async function runAfterPreflight(preflightRunner, options) {
 
   const preflight = await runPreflightTests(out, preflightRunner)
   if (preflight.error) return preflight
-  out(`Tests pass on original source. Beginning mutations.\n`)
+  out.log(`Tests pass on original source. Beginning mutations.\n`)
 
   const mutations = retestMutations || generateMutations(original, mutationConfig, targetLine)
   assignMutationIds(mutations, relative(process.cwd(), sourceFile))
-  out(`Found ${mutations.length} mutation(s) to run.\n`)
+  out.log(`Found ${mutations.length} mutation(s) to run.\n`)
 
   return await executeWithPool(mutations, options)
 }

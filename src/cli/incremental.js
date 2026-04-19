@@ -26,7 +26,7 @@ const HASH_PREFIX_LENGTH = 16
  * @param {boolean} jsonOutput - whether to write JSON report
  * @param {number} timeout - per-mutation timeout in ms
  */
-export async function runIncremental(config, jsonOutput, timeout, out = console.log) {
+export async function runIncremental(config, jsonOutput, timeout, out) {
   const { sources, testSources, reportPath, runBatch } = config
   const previous = loadPreviousReport(reportPath, out)
   const classification = classifyAllSources(sources, testSources, previous)
@@ -35,7 +35,7 @@ export async function runIncremental(config, jsonOutput, timeout, out = console.
 
   if (!classification.changedSources.length) {
     if (isString(jsonOutput) && previous.previousReport)
-      writeStructuredIncrementalReport(jsonOutput, sources.length, previous, classification)
+      writeStructuredIncrementalReport(out, jsonOutput, sources.length, previous, classification)
     else if (jsonOutput && previous.previousReport)
       updateCachedReportHashes(config.reportPath, previous.previousReport, classification)
     return printAllCachedSummary(out, sources, previous, classification)
@@ -44,7 +44,7 @@ export async function runIncremental(config, jsonOutput, timeout, out = console.
   const batchResult = await runBatch(false, timeout, classification.changedSources)
 
   if (isString(jsonOutput))
-    writeStructuredIncrementalReport(jsonOutput, sources.length, previous, classification, batchResult.fileResults)
+    writeStructuredIncrementalReport(out, jsonOutput, sources.length, previous, classification, batchResult.fileResults)
   else if (jsonOutput)
     writeMergedReport(out, { config, previous, classification, fileResults: batchResult.fileResults })
 
@@ -83,7 +83,7 @@ function classifySources(sources, previousHashes, testInvalidated) {
   return { currentHashes, changedSources, unchangedSources }
 }
 
-function loadPreviousReport(reportPath, out = console.log) {
+function loadPreviousReport(reportPath, out) {
   const previousReport = existsSync(reportPath) ? tryLoadJson(reportPath, out) : undefined
   return {
     previousReport,
@@ -135,7 +135,7 @@ function isInvalidatedMutant({ killedBy, status }, changedTestAbs) {
     || status === 'Survived'
 }
 
-function writeStructuredIncrementalReport(outputPath, fileCount, previous, classification, freshFileResults) {
+function writeStructuredIncrementalReport(out, outputPath, fileCount, previous, classification, freshFileResults) {
   const mergedFiles = { ...freshFileResults }
   if (previous.previousReport)
     for (const relPath of classification.unchangedSources)
@@ -144,5 +144,5 @@ function writeStructuredIncrementalReport(outputPath, fileCount, previous, class
 
   const deltas = computeDeltas(previous.previousReport, freshFileResults || {}, classification)
   const stats = writeStructuredReportFile(outputPath, mergedFiles, deltas)
-  printScoreLine(stats, fileCount, outputPath)
+  printScoreLine(out, stats, fileCount, outputPath)
 }

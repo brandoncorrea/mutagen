@@ -29,7 +29,7 @@ describe('dryRun', () => {
   it('outputs mutation names for each line', () => {
     mockFs({ [resolve('src/a.js')]: sourceCode })
     const lines = []
-    dryRun(resolve('src/a.js'), mutationConfig, null, msg => lines.push(msg))
+    dryRun(resolve('src/a.js'), mutationConfig, null, { log: msg => lines.push(msg), error: () => {} })
 
     const mutationLines = lines.filter(l => /^\s+L\d+:/.test(l))
     expect(mutationLines.length).toBeGreaterThan(0)

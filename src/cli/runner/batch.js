@@ -20,21 +20,21 @@ export async function runBatch(runContext, jsonOutput, timeout, sourcesToRun) {
   const { mutationConfig, createRunner, reportDir, reportPath, sources, survivorsOnly, progress, out } = runContext
   const filesToRun = sourcesToRun || sources
 
-  out(`\n${HEADER_SEPARATOR}`)
-  out(`MUTAGEN — BATCH MODE`)
-  out(`   Sources: ${filesToRun.length} file(s)\n`)
+  out.log(`\n${HEADER_SEPARATOR}`)
+  out.log(`MUTAGEN — BATCH MODE`)
+  out.log(`   Sources: ${filesToRun.length} file(s)\n`)
 
   const result = await accumulateResults(filesToRun, { mutationConfig, createRunner, timeout, parallel: runContext.parallel, survivorsOnly, progress, out })
 
   if (isString(jsonOutput)) {
     const previous = tryLoadJson(resolve(jsonOutput))
     const stats = writeStructuredReportFile(jsonOutput, result.fileResults)
-    printScoreLine(stats, filesToRun.length, jsonOutput)
-    printAutoDiffLine(autoDiffSummary(previous, result.fileResults))
+    printScoreLine(out, stats, filesToRun.length, jsonOutput)
+    printAutoDiffLine(out, autoDiffSummary(previous, result.fileResults))
   } else if (jsonOutput) {
     const previous = tryLoadJson(resolve(reportPath))
     writeReportFile(reportDir, reportPath, createReport(result.fileResults), out)
-    printAutoDiffLine(autoDiffSummary(previous, result.fileResults))
+    printAutoDiffLine(out, autoDiffSummary(previous, result.fileResults))
   }
 
   printBatchSummary(out, filesToRun.length, result)
@@ -43,11 +43,11 @@ export async function runBatch(runContext, jsonOutput, timeout, sourcesToRun) {
 }
 
 async function accumulateResults(filesToRun, options) {
-  const { parallel, createRunner, progress } = options
+  const { parallel, createRunner, progress, out } = options
   const totals = { survived: 0, killed: 0, timedOut: 0, failures: 0 }
   const fileResults = {}
 
-  const reporter = createBatchReporter(filesToRun, progress)
+  const reporter = createBatchReporter(filesToRun, progress, out)
   const workerCount = parallelWorkerCount(parallel)
   const pool = parallel
     ? createBatchPool({ workerCount, sourceFile: resolve(filesToRun[0]), createRunner })
@@ -102,10 +102,10 @@ async function processOneFile(
   }
 }
 
-function createBatchReporter(filesToRun, progress) {
+function createBatchReporter(filesToRun, progress, out) {
   if (!progress) return { startFile() {}, dot: undefined, endFile() {} }
   const displayPaths = filesToRun.map(f => relative(process.cwd(), resolve(f)))
-  const reporter = createProgressReporter(displayPaths)
+  const reporter = createProgressReporter(displayPaths, { write: out.error })
   return {
     startFile(absPath) { reporter.startFile(relative(process.cwd(), absPath)) },
     dot: status => reporter.dot(status),
@@ -114,11 +114,11 @@ function createBatchReporter(filesToRun, progress) {
 }
 
 function printBatchSummary(out, fileCount, { totalKilled, totalSurvived, totalTimedOut, failures }) {
-  out(`\n${HEADER_SEPARATOR}`)
-  out(`BATCH SUMMARY`)
-  out(HEADER_SEPARATOR)
-  out(`Files: ${fileCount}  |  Killed: ${totalKilled}  |  Survived: ${totalSurvived}  |  Errors: ${failures}`)
+  out.log(`\n${HEADER_SEPARATOR}`)
+  out.log(`BATCH SUMMARY`)
+  out.log(HEADER_SEPARATOR)
+  out.log(`Files: ${fileCount}  |  Killed: ${totalKilled}  |  Survived: ${totalSurvived}  |  Errors: ${failures}`)
   if (totalTimedOut)
-    out(`Timed out: ${totalTimedOut} (counted as killed)`)
-  out(`${HEADER_SEPARATOR}\n`)
+    out.log(`Timed out: ${totalTimedOut} (counted as killed)`)
+  out.log(`${HEADER_SEPARATOR}\n`)
 }

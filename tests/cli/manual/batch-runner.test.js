@@ -57,7 +57,7 @@ describe('createManualRunner', () => {
       const manual = _createManualRunner({
         mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner),
-        out: msg => lines.push(msg)
+        out: { log: msg => lines.push(msg), error: () => {} }
       })
       await manual.runBatch(false, null)
 
@@ -79,7 +79,7 @@ describe('createManualRunner', () => {
       const manual = _createManualRunner({
         mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner),
-        out: msg => lines.push(msg)
+        out: { log: msg => lines.push(msg), error: () => {} }
       })
       await manual.runBatch(false, null)
 

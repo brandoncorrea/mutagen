@@ -397,7 +397,7 @@ describe('createManualRunner', () => {
         mutators: testMutators,
         sources: ['src/a.js', 'src/b.js'],
         createRunner: vi.fn().mockResolvedValue(runner),
-        out: msg => lines.push(msg)
+        out: { log: msg => lines.push(msg), error: () => {} }
       })
       const result = await manual.runIncremental(false, null)
 
@@ -424,7 +424,7 @@ describe('createManualRunner', () => {
         mutators: testMutators,
         sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner),
-        out: msg => lines.push(msg)
+        out: { log: msg => lines.push(msg), error: () => {} }
       })
       await manual.runIncremental(false, null)
 
@@ -441,9 +441,11 @@ describe('createManualRunner', () => {
         { passed: true } // survived
       ])
 
-      const manual = createManualRunner({
+      const errorLines = []
+      const manual = _createManualRunner({
         mutators: testMutators, sources: ['src/a.js'],
-        createRunner: vi.fn().mockResolvedValue(runner)
+        createRunner: vi.fn().mockResolvedValue(runner),
+        out: { log: () => {}, error: msg => errorLines.push(msg) }
       })
       await manual.runIncremental('reports/custom.json', null)
 
@@ -466,8 +468,8 @@ describe('createManualRunner', () => {
       )
       expect(defaultCalls).toHaveLength(0)
 
-      const stderrOutput = process.stderr.write.mock.calls.map(c => c[0]).join('')
-      expect(stderrOutput).toContain('Score:')
+      const errorOutput = errorLines.join('')
+      expect(errorOutput).toContain('Score:')
     })
 
     it('writes structured report with cached + fresh results when jsonOutput is a path', async () => {

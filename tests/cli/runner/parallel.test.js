@@ -172,7 +172,7 @@ describe('runParallel', () => {
       mutationConfig,
       createRunner: vi.fn().mockResolvedValue(preflightRunner),
       workerCount: 2,
-      out: msg => lines.push(msg)
+      out: { log: msg => lines.push(msg), error: () => {} }
     })
 
     const progressLines = lines.filter(l => /\[\d+\/\d+\]/.test(l))
@@ -195,7 +195,7 @@ describe('runParallel', () => {
       mutationConfig,
       createRunner: vi.fn().mockResolvedValue(preflightRunner),
       workerCount: 2,
-      out: msg => lines.push(msg)
+      out: { log: msg => lines.push(msg), error: () => {} }
     })
 
     expect(lines.some(l => l.includes('SURVIVED'))).toBe(true)
@@ -218,7 +218,7 @@ describe('runParallel', () => {
       mutationConfig,
       createRunner: vi.fn().mockResolvedValue(preflightRunner),
       workerCount: 2,
-      out: msg => lines.push(msg)
+      out: { log: msg => lines.push(msg), error: () => {} }
     })
 
     const reportLines = lines.filter(l => l.includes('MUTATION REPORT') || l.includes('Killed'))
@@ -300,7 +300,7 @@ describe('runParallel', () => {
       createRunner: vi.fn().mockResolvedValue(preflightRunner),
       workerCount: 2,
       survivorsOnly: true,
-      out: msg => lines.push(msg)
+      out: { log: msg => lines.push(msg), error: () => {} }
     })
 
     const progressLines = lines.filter(l => /\[\d+\/\d+\]/.test(l))
@@ -323,7 +323,7 @@ describe('runParallel', () => {
       createRunner: vi.fn().mockResolvedValue(preflightRunner),
       workerCount: 2,
       survivorsOnly: true,
-      out: msg => lines.push(msg)
+      out: { log: msg => lines.push(msg), error: () => {} }
     })
 
     const progressLines = lines.filter(l => /\[\d+\/\d+\]/.test(l))

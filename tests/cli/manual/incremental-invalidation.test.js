@@ -271,7 +271,7 @@ describe('createManualRunner', () => {
         sources: ['src/a.js'],
         testSources: ['test/a.test.js'],
         createRunner: vi.fn().mockResolvedValue(runner),
-        out: msg => lines.push(msg)
+        out: { log: msg => lines.push(msg), error: () => {} }
       })
       await manual.runIncremental(false, null)
 

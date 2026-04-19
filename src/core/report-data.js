@@ -24,10 +24,10 @@ export function createReport(files, extra) {
   }
 }
 
-export function writeReportFile(reportDir, reportPath, report, out = console.log) {
+export function writeReportFile(reportDir, reportPath, report, out) {
   mkdirSync(reportDir, { recursive: true })
   writeFileSync(reportPath, JSON.stringify(report, null, 2))
-  out(`JSON report: ${reportPath}`)
+  out.log(`JSON report: ${reportPath}`)
 }
 
 export function tryLoadJson(path, out) {
@@ -35,15 +35,15 @@ export function tryLoadJson(path, out) {
     return JSON.parse(readFileSync(path, 'utf-8'))
   } catch (err) {
     if (out)
-      out(`Warning: could not read ${path}: ${err.message}`)
+      out.log(`Warning: could not read ${path}: ${err.message}`)
   }
 }
 
-export function combineReportData(reports, out = console.log) {
+export function combineReportData(reports, out) {
   const { mergedFiles, duplicates } = deduplicateMutants(loadAllEntries(reports, out))
 
   if (duplicates)
-    out(`  Deduplicated: ${duplicates} duplicate mutant(s) removed`)
+    out.log(`  Deduplicated: ${duplicates} duplicate mutant(s) removed`)
 
   return createReport(mergedFiles)
 }

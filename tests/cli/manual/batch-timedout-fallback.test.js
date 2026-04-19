@@ -43,7 +43,7 @@ describe('createManualRunner', () => {
         jsonData: { path: 'src/a.js', mutants: [] }
       })
 
-      const manual = createManualRunner({ patterns, sources: ['src/a.js'], createRunner: vi.fn(), out: noop })
+      const manual = createManualRunner({ patterns, sources: ['src/a.js'], createRunner: vi.fn(), out: { log: noop, error: noop } })
       const result = await manual.runBatch(false, null)
 
       expect(result.totalTimedOut).toBe(0)

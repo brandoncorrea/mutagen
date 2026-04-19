@@ -14,7 +14,7 @@ export const testMutators = [{
 
 export const sourceCode = 'if (a === b) {}'
 export const HASH_PREFIX_LENGTH = 16
-export const noop = () => {}
+export const noop = { log: () => {}, error: () => {} }
 
 export function hashOf(content) {
   return createHash('sha256')

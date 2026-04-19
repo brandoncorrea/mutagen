@@ -6,11 +6,11 @@ import { countStatuses, totalMutants, mutationScore, isAlive } from '../core/mut
 import { HEADER_SEPARATOR } from '../core/report-data.js'
 
 export function printDiffReport({ beforeFile, afterFile, before, after }, changes, fileDeltas, out) {
-  out(`\n${HEADER_SEPARATOR}`)
-  out(`MUTATION DIFF`)
-  out(`${HEADER_SEPARATOR}`)
-  out(`Before: ${beforeFile}`)
-  out(`After:  ${afterFile}\n`)
+  out.log(`\n${HEADER_SEPARATOR}`)
+  out.log(`MUTATION DIFF`)
+  out.log(`${HEADER_SEPARATOR}`)
+  out.log(`Before: ${beforeFile}`)
+  out.log(`After:  ${afterFile}\n`)
 
   printDiffSummary(out, before, after)
   printCategory(out, '✓ NEWLY KILLED', changes.newlyKilled)
@@ -18,7 +18,7 @@ export function printDiffReport({ beforeFile, afterFile, before, after }, change
   printNewMutants(out, changes.newMutants)
   printRemovedMutants(out, changes.removedMutants)
   printFileDeltas(out, fileDeltas)
-  out(`\n${HEADER_SEPARATOR}\n`)
+  out.log(`\n${HEADER_SEPARATOR}\n`)
 }
 
 function printDiffSummary(out, before, after) {
@@ -30,47 +30,47 @@ function printDiffSummary(out, before, after) {
   const aScore = mutationScore(aCounts)
   const delta = aScore - bScore
 
-  out(`Overall: ${formatTenth(bScore)}% → ${formatTenth(aScore)}% (${formatSigned(delta)}%)`)
-  out(`Mutations: ${bTotal} → ${aTotal}`)
-  out(`Killed: ${bCounts.killed} → ${aCounts.killed}  |  Survived: ${bCounts.survived} → ${aCounts.survived}`)
+  out.log(`Overall: ${formatTenth(bScore)}% → ${formatTenth(aScore)}% (${formatSigned(delta)}%)`)
+  out.log(`Mutations: ${bTotal} → ${aTotal}`)
+  out.log(`Killed: ${bCounts.killed} → ${aCounts.killed}  |  Survived: ${bCounts.survived} → ${aCounts.survived}`)
 }
 
 function printCategory(out, label, results) {
   if (!results.length) return
-  out(`\n${label} (${results.length})`)
+  out.log(`\n${label} (${results.length})`)
   for (const { after } of results)
-    out(`  ${after.file}:${after.line} ${after.mutatorName}`)
+    out.log(`  ${after.file}:${after.line} ${after.mutatorName}`)
 }
 
 function printNewMutants(out, newMutants) {
   if (!newMutants.length) return
   const newSurvived = newMutants.filter(isAlive)
   const newKilled = newMutants.length - newSurvived.length
-  out(`\n+ NEW MUTANTS: ${newMutants.length} (${newKilled} killed, ${newSurvived.length} survived)`)
+  out.log(`\n+ NEW MUTANTS: ${newMutants.length} (${newKilled} killed, ${newSurvived.length} survived)`)
   for (const { file, line, mutatorName } of newSurvived)
-    out(`  ${file}:${line} ${mutatorName} — SURVIVED`)
+    out.log(`  ${file}:${line} ${mutatorName} — SURVIVED`)
 }
 
 function printRemovedMutants(out, removedMutants) {
   if (!removedMutants.length) return
-  out(`\n- REMOVED MUTANTS: ${removedMutants.length}`)
+  out.log(`\n- REMOVED MUTANTS: ${removedMutants.length}`)
 }
 
 function printFileDeltas(out, fileDeltas) {
   if (!fileDeltas.length) return
   fileDeltas.sort((a, b) => b.delta - a.delta)
-  out(`\nPER-FILE CHANGES:`)
+  out.log(`\nPER-FILE CHANGES:`)
   for (const d of fileDeltas)
     printFileDelta(out, d)
 }
 
 function printFileDelta(out, { label, file, after, before, delta }) {
   if (label === 'NEW')
-    out(`  ${file}: NEW (${formatTenth(after)}%)`)
+    out.log(`  ${file}: NEW (${formatTenth(after)}%)`)
   else if (label === 'REMOVED')
-    out(`  ${file}: REMOVED (was ${formatTenth(before)}%)`)
+    out.log(`  ${file}: REMOVED (was ${formatTenth(before)}%)`)
   else
-    out(`  ${file}: ${formatTenth(before)}% → ${formatTenth(after)}% (${formatSigned(delta)}%)`)
+    out.log(`  ${file}: ${formatTenth(before)}% → ${formatTenth(after)}% (${formatSigned(delta)}%)`)
 }
 
 function formatSigned(value) {

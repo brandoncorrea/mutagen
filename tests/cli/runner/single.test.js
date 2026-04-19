@@ -178,7 +178,7 @@ describe('--survivors-only output filtering', () => {
   it('suppresses killed mutation lines in text output when survivorsOnly is true', async () => {
     mockFs({ [resolve('src/a.js')]: sourceCode })
     const lines = []
-    const out = msg => lines.push(msg)
+    const out = { log: msg => lines.push(msg), error: () => {} }
     const runner = {
       run: vi.fn()
         .mockResolvedValueOnce({ passed: true })   // preflight
@@ -201,7 +201,7 @@ describe('--survivors-only output filtering', () => {
   it('shows survived mutation lines when survivorsOnly is true', async () => {
     mockFs({ [resolve('src/a.js')]: sourceCode })
     const lines = []
-    const out = msg => lines.push(msg)
+    const out = { log: msg => lines.push(msg), error: () => {} }
     const runner = {
       run: vi.fn()
         .mockResolvedValueOnce({ passed: true })  // preflight
@@ -328,7 +328,7 @@ describe('runSingle', () => {
       mutationConfig,
       createRunner: vi.fn().mockResolvedValue(runner),
       survivorsOnly: true,
-      out: msg => lines.push(msg)
+      out: { log: msg => lines.push(msg), error: () => {} }
     })
 
     expect(lines.some(l => l.includes('TIMEOUT'))).toBe(false)
@@ -349,7 +349,7 @@ describe('runSingle', () => {
       mutationConfig,
       createRunner: vi.fn().mockResolvedValue(runner),
       survivorsOnly: true,
-      out: msg => lines.push(msg)
+      out: { log: msg => lines.push(msg), error: () => {} }
     })
 
     expect(lines.some(l => l.includes('killed (error)'))).toBe(false)
@@ -357,7 +357,7 @@ describe('runSingle', () => {
 
   it('reportMutation omits id tag when mutation has no id', () => {
     const lines = []
-    reportMutation(msg => lines.push(msg), 3, { number: 1, line: 5, name: '=== → !==' }, 'killed')
+    reportMutation({ log: msg => lines.push(msg), error: () => {} }, 3, { number: 1, line: 5, name: '=== → !==' }, 'killed')
     expect(lines[0]).toBe('[1/3] Line 5: === → !== ... killed')
   })
 
@@ -414,7 +414,7 @@ describe('runSingle', () => {
       sourceFile: resolve('src/a.js'),
       mutationConfig,
       createRunner: vi.fn().mockResolvedValue(runner),
-      out: msg => lines.push(msg)
+      out: { log: msg => lines.push(msg), error: () => {} }
     })
 
     expect(result.error).toBe(true)

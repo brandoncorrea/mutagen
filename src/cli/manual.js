@@ -24,7 +24,7 @@ import { runIncremental } from './incremental.js'
 import { runRetest } from './retest.js'
 import { formatQuietSummary } from './report.js'
 import { formatProgressSummary, createProgressReporter } from './progress.js'
-import { parallelWorkerCount } from './shared.js'
+import { defaultOut, parallelWorkerCount } from './shared.js'
 
 /**
  * Create a manual mutation runner with project-specific config.
@@ -55,7 +55,7 @@ export function createManualRunner(config) {
     reportDir = 'reports/mutation',
     reportFile = 'manual-report.json',
     timeout: configTimeout,
-    out = console.log
+    out = defaultOut()
   } = config
 
   const sources = explicitSources?.length ? explicitSources
@@ -105,11 +105,11 @@ function buildIncrementalConfig(runContext) {
 async function run(runContext, argv) {
   const parsed = parseArgs(argv)
   if (parsed.help) {
-    runContext.out(parsed.help)
+    runContext.out.log(parsed.help)
     return 0
   }
   if (parsed.error) {
-    runContext.out(parsed.error)
+    runContext.out.log(parsed.error)
     return 1
   }
 
@@ -123,7 +123,7 @@ async function run(runContext, argv) {
 
   const { stats, exitCode } = await getRunResults(parsed, effectiveContext, timeout)
 
-  printPostRunSummary(parsed, stats)
+  printPostRunSummary(effectiveContext.out, parsed, stats)
 
   if (parsed.minScore != null && stats)
     return scoreExitCode(stats, parsed.minScore)
@@ -131,19 +131,19 @@ async function run(runContext, argv) {
   return exitCode
 }
 
-function printPostRunSummary(parsed, stats) {
+function printPostRunSummary(out, parsed, stats) {
   if (!stats) return
   if (parsed.progress)
-    process.stderr.write(formatProgressSummary(stats) + '\n')
+    out.error(formatProgressSummary(stats) + '\n')
   else if (parsed.quiet)
-    process.stderr.write(formatQuietSummary(stats) + '\n')
+    out.error(formatQuietSummary(stats) + '\n')
 }
 
 function applyRunFlags(runContext, parsed) {
   const overrides = {}
 
   if (parsed.quiet || parsed.progress)
-    overrides.out = () => {}
+    overrides.out = { log: () => {}, error: runContext.out.error }
   if (parsed.progress)
     overrides.progress = true
   if (parsed.changed)
@@ -160,12 +160,12 @@ function runDryRunMode(runContext, parsed) {
   if (parsed.allMode) {
     const { total, fileCount } = runAllDryRun(runContext)
     if (parsed.quiet)
-      process.stderr.write(`${total} mutations across ${fileCount} file${fileCount !== 1 ? 's' : ''}\n`)
+      runContext.out.error(`${total} mutations across ${fileCount} file${fileCount !== 1 ? 's' : ''}\n`)
     return 0
   }
   const count = dryRun(parsed.sourceFile, runContext.mutationConfig, parsed.targetLine, runContext.out)
   if (parsed.quiet)
-    process.stderr.write(`${count} mutations across 1 file\n`)
+    runContext.out.error(`${count} mutations across 1 file\n`)
   return 0
 }
 
@@ -188,7 +188,7 @@ function runAllDryRun({ sources, mutationConfig, out }) {
   let total = 0
   for (const source of sources)
     total += dryRun(resolve(source), mutationConfig, null, out)
-  out(`\n  Grand total: ${total} mutations across ${sources.length} files`)
+  out.log(`\n  Grand total: ${total} mutations across ${sources.length} files`)
   return { total, fileCount: sources.length }
 }
 
@@ -224,7 +224,7 @@ async function runBatchMode(runContext, jsonOutput, timeout) {
 
 async function runSingleMode(runContext, parsed, timeout) {
   const progress = runContext.progress
-    ? createSingleFileProgress(relative(process.cwd(), parsed.sourceFile))
+    ? createSingleFileProgress(runContext.out, relative(process.cwd(), parsed.sourceFile))
     : null
   const runOptions = {
     sourceFile: parsed.sourceFile,
@@ -249,8 +249,8 @@ async function runSingleMode(runContext, parsed, timeout) {
   }
 }
 
-function createSingleFileProgress(displayPath) {
-  const reporter = createProgressReporter([displayPath])
+function createSingleFileProgress(out, displayPath) {
+  const reporter = createProgressReporter([displayPath], { write: out.error })
   reporter.startFile(displayPath)
   return reporter
 }

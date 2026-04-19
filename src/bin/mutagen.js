@@ -19,9 +19,11 @@ import { createManualRunner } from '../cli/manual.js'
 const require = createRequire(import.meta.url)
 const { version } = require('../../package.json')
 
-export async function run(args, { config, configPath, out = console.log, err = console.error } = {}) {
+export async function run(args, { config, configPath, out, err = console.error } = {}) {
+  if (!out) out = { log: console.log, error: text => process.stderr.write(text) }
+
   if (versionRequested(args)) {
-    out(version)
+    out.log(version)
     return 0
   }
 

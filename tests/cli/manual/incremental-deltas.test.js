@@ -76,9 +76,11 @@ describe('incremental deltas', () => {
         { passed: true },
         { passed: false, killedBy: ['t.test.js'] }
       ])
-      const manual = createManualRunner({
+      const errorLines = []
+      const manual = _createManualRunner({
         mutators: testMutators, sources: ['src/a.js'],
-        createRunner: vi.fn().mockResolvedValue(runner)
+        createRunner: vi.fn().mockResolvedValue(runner),
+        out: { log: () => {}, error: msg => errorLines.push(msg) }
       })
       await manual.runIncremental('reports/out.json', null)
 
@@ -96,8 +98,8 @@ describe('incremental deltas', () => {
         name: '=== → !=='
       })
 
-      const stderrOutput = process.stderr.write.mock.calls.map(c => c[0]).join('')
-      expect(stderrOutput).toContain('1 files')
+      const errorOutput = errorLines.join('')
+      expect(errorOutput).toContain('1 files')
     })
 
     it('includes regressions when new survivors appear', async () => {
@@ -212,14 +214,16 @@ describe('incremental deltas', () => {
         })
       })
 
-      const manual = createManualRunner({
+      const errorLines = []
+      const manual = _createManualRunner({
         mutators: testMutators, sources: ['src/a.js'],
-        createRunner: vi.fn()
+        createRunner: vi.fn(),
+        out: { log: () => {}, error: msg => errorLines.push(msg) }
       })
       await manual.runIncremental('reports/out.json', null)
 
-      const stderrOutput = process.stderr.write.mock.calls.map(c => c[0]).join('')
-      expect(stderrOutput).toContain('1 files')
+      const errorOutput = errorLines.join('')
+      expect(errorOutput).toContain('1 files')
     })
 
     it('has no deltas on first run (no previous report)', async () => {
@@ -360,7 +364,7 @@ describe('writeMergedReport', () => {
       }
     }
 
-    writeMergedReport(() => {}, {
+    writeMergedReport({ log: () => {}, error: () => {} }, {
       config: { reportDir: 'reports/mutation', reportPath: 'reports/mutation/report.json' },
       previous: { previousReport },
       classification: {

@@ -17,7 +17,7 @@ import {
 
 function capture() {
   const lines = []
-  return { out: msg => lines.push(msg), lines }
+  return { out: { log: msg => lines.push(msg), error: () => {} }, lines }
 }
 
 beforeEach(() => { vi.clearAllMocks() })

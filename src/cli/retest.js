@@ -55,21 +55,21 @@ export async function runRetest(runContext, parsed) {
 
   const report = tryLoadJson(reportPath, out)
   if (!report) {
-    out(`Error: could not load report from ${reportPath}`)
+    out.log(`Error: could not load report from ${reportPath}`)
     return { exitCode: 1 }
   }
 
   if (!report.survivors?.length) {
-    out(`No survivors in report — nothing to retest.`)
+    out.log(`No survivors in report — nothing to retest.`)
     return { exitCode: 0, stats: { killed: 0, survived: 0, timedOut: 0, skipped: 0, fileCount: 0 } }
   }
 
   const { files, survivorKeys } = loadRetestTargets(report)
 
-  out(`\n${HEADER_SEPARATOR}`)
-  out(`MUTAGEN — RETEST MODE`)
-  out(`   Report: ${reportPath}`)
-  out(`   Survivors to retest: ${survivorKeys.size} across ${files.length} file(s)\n`)
+  out.log(`\n${HEADER_SEPARATOR}`)
+  out.log(`MUTAGEN — RETEST MODE`)
+  out.log(`   Report: ${reportPath}`)
+  out.log(`   Survivors to retest: ${survivorKeys.size} across ${files.length} file(s)\n`)
 
   const result = await retestFiles(files, {
     mutationConfig,
@@ -80,7 +80,7 @@ export async function runRetest(runContext, parsed) {
     out
   })
 
-  writeRetestReport(parsed, files.length, result.fileResults)
+  writeRetestReport(out, parsed, files.length, result.fileResults)
   printRetestSummary(out, result)
 
   return {
@@ -124,7 +124,7 @@ async function retestOneFile(file, { mutationConfig, createRunner, timeout, surv
   try {
     source = readFileSync(absPath, 'utf-8')
   } catch {
-    out(`  Skipping ${file} — file not found`)
+    out.log(`  Skipping ${file} — file not found`)
     totals.skipped += [...survivorKeys].filter(k => k.startsWith(file + ':')).length
     return
   }
@@ -134,14 +134,14 @@ async function retestOneFile(file, { mutationConfig, createRunner, timeout, surv
   totals.skipped += skipped
 
   if (skipped)
-    out(`  ${file}: ${skipped} survivor(s) no longer exist (line shifted or code deleted)`)
+    out.log(`  ${file}: ${skipped} survivor(s) no longer exist (line shifted or code deleted)`)
 
   if (!matched.length) {
-    out(`  ${file}: no matching mutations — all survivors gone`)
+    out.log(`  ${file}: no matching mutations — all survivors gone`)
     return
   }
 
-  out(`  ${file}: retesting ${matched.length} mutation(s)`)
+  out.log(`  ${file}: retesting ${matched.length} mutation(s)`)
 
   const opts = {
     sourceFile: absPath,
@@ -167,30 +167,30 @@ async function retestOneFile(file, { mutationConfig, createRunner, timeout, surv
   }
 }
 
-function writeRetestReport(parsed, fileCount, fileResults) {
+function writeRetestReport(out, parsed, fileCount, fileResults) {
   if (!parsed.jsonOutput) return
   const outputPath = isString(parsed.jsonOutput)
     ? parsed.jsonOutput
     : 'reports/mutation/retest-report.json'
   const stats = writeStructuredReportFile(outputPath, fileResults)
-  printScoreLine(stats, fileCount, outputPath)
+  printScoreLine(out, stats, fileCount, outputPath)
 }
 
 function printRetestSummary(out, { totalKilled, totalSurvived, totalTimedOut, totalSkipped, failures }) {
-  out(`\n${HEADER_SEPARATOR}`)
-  out(`RETEST SUMMARY`)
-  out(HEADER_SEPARATOR)
-  out(`Retested: ${totalKilled + totalSurvived}  |  Killed: ${totalKilled}  |  Still surviving: ${totalSurvived}  |  Skipped: ${totalSkipped}  |  Errors: ${failures}`)
+  out.log(`\n${HEADER_SEPARATOR}`)
+  out.log(`RETEST SUMMARY`)
+  out.log(HEADER_SEPARATOR)
+  out.log(`Retested: ${totalKilled + totalSurvived}  |  Killed: ${totalKilled}  |  Still surviving: ${totalSurvived}  |  Skipped: ${totalSkipped}  |  Errors: ${failures}`)
   if (totalTimedOut)
-    out(`Timed out: ${totalTimedOut} (counted as killed)`)
-  out(HEADER_SEPARATOR)
+    out.log(`Timed out: ${totalTimedOut} (counted as killed)`)
+  out.log(HEADER_SEPARATOR)
 
   const allKilled = !totalSurvived && !failures
   if (allKilled && !totalSkipped)
-    out(`\nAll previous survivors are now killed!`)
+    out.log(`\nAll previous survivors are now killed!`)
   else if (allKilled)
-    out(`\nAll retestable survivors are now killed. ${totalSkipped} could not be retested (code changed).`)
-  out('')
+    out.log(`\nAll retestable survivors are now killed. ${totalSkipped} could not be retested (code changed).`)
+  out.log('')
 }
 
 function survivorKey(file, line, name) {

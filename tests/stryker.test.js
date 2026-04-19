@@ -30,7 +30,7 @@ let out
 
 beforeEach(() => {
   vi.clearAllMocks()
-  out = vi.fn()
+  out = { log: vi.fn(), error: vi.fn() }
 })
 
 describe('cleanStaleSandboxes', () => {
@@ -40,7 +40,7 @@ describe('cleanStaleSandboxes', () => {
     cleanStaleSandboxes(out)
 
     expect(rmSync).toHaveBeenCalledWith('.stryker-tmp', { recursive: true, force: true })
-    expect(out).toHaveBeenCalledWith('Cleaned stale .stryker-tmp directory')
+    expect(out.log).toHaveBeenCalledWith('Cleaned stale .stryker-tmp directory')
   })
 
   it('does nothing when .stryker-tmp does not exist', () => {
@@ -49,7 +49,7 @@ describe('cleanStaleSandboxes', () => {
     cleanStaleSandboxes(out)
 
     expect(rmSync).not.toHaveBeenCalled()
-    expect(out).not.toHaveBeenCalled()
+    expect(out.log).not.toHaveBeenCalled()
   })
 })
 
@@ -60,7 +60,7 @@ describe('clearIncrementalCache', () => {
     clearIncrementalCache(undefined, out)
 
     expect(rmSync).toHaveBeenCalledWith('reports/stryker-incremental.json')
-    expect(out).toHaveBeenCalledWith('Cleared incremental cache between scoped runs')
+    expect(out.log).toHaveBeenCalledWith('Cleared incremental cache between scoped runs')
   })
 
   it('removes specified cache file', () => {
@@ -77,7 +77,7 @@ describe('clearIncrementalCache', () => {
     clearIncrementalCache(undefined, out)
 
     expect(rmSync).not.toHaveBeenCalled()
-    expect(out).not.toHaveBeenCalled()
+    expect(out.log).not.toHaveBeenCalled()
   })
 })
 
@@ -153,7 +153,7 @@ describe('runStrykerScope', () => {
 
     runStrykerScope('core', ['src/a.js'], { out })
 
-    expect(out).toHaveBeenCalledWith(
+    expect(out.log).toHaveBeenCalledWith(
       expect.stringContaining('Stryker core crashed')
     )
   })
@@ -166,7 +166,7 @@ describe('runStrykerScope', () => {
 
     runStrykerScope('core', ['src/a.js'], { out })
 
-    expect(out).toHaveBeenCalledWith(expect.stringContaining('Stryker core crashed'))
+    expect(out.log).toHaveBeenCalledWith(expect.stringContaining('Stryker core crashed'))
   })
 
   it('logs error when stryker exits with undefined status', () => {
@@ -177,7 +177,7 @@ describe('runStrykerScope', () => {
 
     runStrykerScope('core', ['src/a.js'], { out })
 
-    expect(out).toHaveBeenCalledWith(expect.stringContaining('Stryker core crashed'))
+    expect(out.log).toHaveBeenCalledWith(expect.stringContaining('Stryker core crashed'))
   })
 
   it('does not log error when stryker exits with status 1 (surviving mutants)', () => {
@@ -188,7 +188,7 @@ describe('runStrykerScope', () => {
 
     runStrykerScope('core', ['src/a.js'], { out })
 
-    expect(out).not.toHaveBeenCalledWith(expect.stringContaining('crashed'))
+    expect(out.log).not.toHaveBeenCalledWith(expect.stringContaining('crashed'))
   })
 
   it('logs scope banner to out', () => {
@@ -196,8 +196,8 @@ describe('runStrykerScope', () => {
 
     runStrykerScope('core', ['src/a.js'], { out })
 
-    expect(out).toHaveBeenCalledWith(expect.stringContaining('STRYKER'))
-    expect(out).toHaveBeenCalledWith(expect.stringContaining('CORE'))
+    expect(out.log).toHaveBeenCalledWith(expect.stringContaining('STRYKER'))
+    expect(out.log).toHaveBeenCalledWith(expect.stringContaining('CORE'))
   })
 })
 

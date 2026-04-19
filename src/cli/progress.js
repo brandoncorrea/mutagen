@@ -8,7 +8,7 @@
 import { mutationScore } from '../core/mutation-status.js'
 import { STATUS } from './shared.js'
 
-export function createProgressReporter(files, { write = text => process.stderr.write(text) } = {}) {
+export function createProgressReporter(files, { write } = {}) {
   const maxWidth = files.reduce((max, f) => Math.max(max, f.length), 0)
 
   return {

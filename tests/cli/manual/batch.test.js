@@ -38,7 +38,6 @@ function fakeWorktree() {
 beforeEach(() => {
   vi.clearAllMocks()
   vi.spyOn(console, 'error').mockImplementation(() => {})
-  vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
   existsSync.mockReturnValue(false)
   createTempCopy.mockReturnValue(fakeWorktree())
 })
@@ -237,22 +236,24 @@ describe('createManualRunner', () => {
       expect(report.survivors).toHaveLength(1)
     })
 
-    it('prints score summary to stderr when jsonOutput is a path', async () => {
+    it('prints score summary to out.error when jsonOutput is a path', async () => {
       mockFs({ [resolve('src/a.js')]: sourceCode })
       const runner = fakeRunner([
         { passed: true },
         { passed: false, killedBy: ['t.test.js'] }
       ])
 
-      const manual = createManualRunner({
+      const errors = []
+      const manual = _createManualRunner({
         mutators: testMutators, sources: ['src/a.js'],
-        createRunner: vi.fn().mockResolvedValue(runner)
+        createRunner: vi.fn().mockResolvedValue(runner),
+        out: { log: () => {}, error: msg => errors.push(msg) }
       })
       await manual.runBatch('reports/out.json', null)
 
-      const stderrOutput = process.stderr.write.mock.calls.map(c => c[0]).join('')
-      expect(stderrOutput).toContain('Score:')
-      expect(stderrOutput).toContain('reports/out.json')
+      const errorOutput = errors.join('')
+      expect(errorOutput).toContain('Score:')
+      expect(errorOutput).toContain('reports/out.json')
     })
 
     it('does not write to default report path when jsonOutput is a custom path', async () => {
@@ -274,7 +275,7 @@ describe('createManualRunner', () => {
       expect(defaultReportCalls).toHaveLength(0)
     })
 
-    it('prints auto-diff to stderr when previous report exists at output path', async () => {
+    it('prints auto-diff to out.error when previous report exists at output path', async () => {
       const id = mutationId('src/a.js', 1, '=== → !==')
       const previousReport = JSON.stringify({
         score: 0, total: 1, killed: 0, survived: 1, timedOut: 0,
@@ -290,15 +291,17 @@ describe('createManualRunner', () => {
         { passed: false, killedBy: ['t.test.js'] }
       ])
 
-      const manual = createManualRunner({
+      const errors = []
+      const manual = _createManualRunner({
         mutators: testMutators, sources: ['src/a.js'],
-        createRunner: vi.fn().mockResolvedValue(runner)
+        createRunner: vi.fn().mockResolvedValue(runner),
+        out: { log: () => {}, error: msg => errors.push(msg) }
       })
       await manual.runBatch('reports/out.json', null)
 
-      const stderrOutput = process.stderr.write.mock.calls.map(c => c[0]).join('')
-      expect(stderrOutput).toContain('Δ')
-      expect(stderrOutput).toContain('newly killed')
+      const errorOutput = errors.join('')
+      expect(errorOutput).toContain('Δ')
+      expect(errorOutput).toContain('newly killed')
     })
 
     it('does not print auto-diff when no previous report exists', async () => {
@@ -308,14 +311,16 @@ describe('createManualRunner', () => {
         { passed: false, killedBy: ['t.test.js'] }
       ])
 
-      const manual = createManualRunner({
+      const errors = []
+      const manual = _createManualRunner({
         mutators: testMutators, sources: ['src/a.js'],
-        createRunner: vi.fn().mockResolvedValue(runner)
+        createRunner: vi.fn().mockResolvedValue(runner),
+        out: { log: () => {}, error: msg => errors.push(msg) }
       })
       await manual.runBatch('reports/out.json', null)
 
-      const stderrOutput = process.stderr.write.mock.calls.map(c => c[0]).join('')
-      expect(stderrOutput).not.toContain('Δ')
+      const errorOutput = errors.join('')
+      expect(errorOutput).not.toContain('Δ')
     })
 
     it('prints auto-diff for legacy report format (--json without path)', async () => {
@@ -341,14 +346,16 @@ describe('createManualRunner', () => {
         { passed: false, killedBy: ['t.test.js'] }
       ])
 
-      const manual = createManualRunner({
+      const errors = []
+      const manual = _createManualRunner({
         mutators: testMutators, sources: ['src/a.js'],
-        createRunner: vi.fn().mockResolvedValue(runner)
+        createRunner: vi.fn().mockResolvedValue(runner),
+        out: { log: () => {}, error: msg => errors.push(msg) }
       })
       await manual.runBatch(true, null)
 
-      const stderrOutput = process.stderr.write.mock.calls.map(c => c[0]).join('')
-      expect(stderrOutput).toContain('newly killed')
+      const errorOutput = errors.join('')
+      expect(errorOutput).toContain('newly killed')
     })
 
     it('prints correct file count in batch summary', async () => {
@@ -362,7 +369,7 @@ describe('createManualRunner', () => {
       const manual = _createManualRunner({
         mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner),
-        out: msg => lines.push(msg)
+        out: { log: msg => lines.push(msg), error: () => {} }
       })
       await manual.runBatch(false, null)
 

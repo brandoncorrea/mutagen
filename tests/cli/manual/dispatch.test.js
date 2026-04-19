@@ -109,7 +109,7 @@ describe('createManualRunner', () => {
 
       const manual = _createManualRunner({
         mutators: testMutators, sources: ['src/a.js'], createRunner,
-        out: msg => lines.push(msg)
+        out: { log: msg => lines.push(msg), error: () => {} }
       })
       const code = await manual.run(['src/a.js', '--dry-run'])
 
@@ -127,7 +127,7 @@ describe('createManualRunner', () => {
 
       const manual = _createManualRunner({
         mutators: testMutators, sources: ['src/a.js'], createRunner: vi.fn(),
-        out: msg => lines.push(msg)
+        out: { log: msg => lines.push(msg), error: () => {} }
       })
       const code = await manual.run(['src/a.js', '--dry-run', '--line', '1'])
 
@@ -145,7 +145,7 @@ describe('createManualRunner', () => {
 
       const manual = _createManualRunner({
         mutators: testMutators, sources: ['src/a.js', 'src/b.js'], createRunner,
-        out: msg => lines.push(msg)
+        out: { log: msg => lines.push(msg), error: () => {} }
       })
       const code = await manual.run(['--all', '--dry-run'])
 
@@ -423,20 +423,18 @@ describe('createManualRunner', () => {
       mockFs({ [resolve('src/a.js')]: sourceCode })
       const runner = fakeRunner([{ passed: false }]) // preflight fails
 
-      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
-
-      const manual = createManualRunner({
+      const errors = []
+      const manual = _createManualRunner({
         mutators: testMutators, sources: ['src/a.js'],
-        createRunner: vi.fn().mockResolvedValue(runner)
+        createRunner: vi.fn().mockResolvedValue(runner),
+        out: { log: () => {}, error: msg => errors.push(msg) }
       })
       await manual.run(['src/a.js', '--quiet'])
 
-      const stderrOutput = stderrSpy.mock.calls.map(c => c[0]).join('')
-      expect(stderrOutput).not.toContain('NaN')
-      expect(stderrOutput).not.toContain('undefined')
-      expect(stderrOutput).toContain('(0/0) | 0 survivors')
-
-      stderrSpy.mockRestore()
+      const errorOutput = errors.join('')
+      expect(errorOutput).not.toContain('NaN')
+      expect(errorOutput).not.toContain('undefined')
+      expect(errorOutput).toContain('(0/0) | 0 survivors')
     })
 
     it('--quiet with killed mutations shows correct killed count in stats', async () => {
@@ -446,18 +444,16 @@ describe('createManualRunner', () => {
         { passed: false, killedBy: ['t.test.js'] }
       ])
 
-      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
-
-      const manual = createManualRunner({
+      const errors = []
+      const manual = _createManualRunner({
         mutators: testMutators, sources: ['src/a.js'],
-        createRunner: vi.fn().mockResolvedValue(runner)
+        createRunner: vi.fn().mockResolvedValue(runner),
+        out: { log: () => {}, error: msg => errors.push(msg) }
       })
       await manual.run(['src/a.js', '--quiet'])
 
-      const stderrOutput = stderrSpy.mock.calls.map(c => c[0]).join('')
-      expect(stderrOutput).toContain('(1/1) | 0 survivors')
-
-      stderrSpy.mockRestore()
+      const errorOutput = errors.join('')
+      expect(errorOutput).toContain('(1/1) | 0 survivors')
     })
 
     it('--quiet with surviving mutations shows correct survived count in stats', async () => {
@@ -467,18 +463,16 @@ describe('createManualRunner', () => {
         { passed: true } // survived
       ])
 
-      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
-
-      const manual = createManualRunner({
+      const errors = []
+      const manual = _createManualRunner({
         mutators: testMutators, sources: ['src/a.js'],
-        createRunner: vi.fn().mockResolvedValue(runner)
+        createRunner: vi.fn().mockResolvedValue(runner),
+        out: { log: () => {}, error: msg => errors.push(msg) }
       })
       await manual.run(['src/a.js', '--quiet'])
 
-      const stderrOutput = stderrSpy.mock.calls.map(c => c[0]).join('')
-      expect(stderrOutput).toContain('(0/1) | 1 survivors')
-
-      stderrSpy.mockRestore()
+      const errorOutput = errors.join('')
+      expect(errorOutput).toContain('(0/1) | 1 survivors')
     })
 
     it('main() calls process.exit with run() result', async () => {
@@ -512,19 +506,16 @@ describe('createManualRunner', () => {
         { passed: false }
       ])
 
-      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
-
+      const errors = []
       const manual = _createManualRunner({
         mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner),
-        out: noop
+        out: { log: () => {}, error: msg => errors.push(msg) }
       })
       const code = await manual.run(['src/a.js'])
 
-      const stderrOutput = stderrSpy.mock.calls.map(c => c[0]).join('')
-      expect(stderrOutput).not.toMatch(/Score:.*\|.*survivors/)
-
-      stderrSpy.mockRestore()
+      const errorOutput = errors.join('')
+      expect(errorOutput).not.toMatch(/Score:.*\|.*survivors/)
     })
 
     it('--quiet suppresses normal output and writes summary to stderr', async () => {
@@ -535,23 +526,21 @@ describe('createManualRunner', () => {
       ])
 
       const lines = []
-      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+      const errors = []
 
       const manual = _createManualRunner({
         mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner),
-        out: msg => lines.push(msg)
+        out: { log: msg => lines.push(msg), error: msg => errors.push(msg) }
       })
       const code = await manual.run(['src/a.js', '--quiet'])
 
       // Normal output should be suppressed
       expect(lines).toEqual([])
-      // Summary should go to stderr
-      expect(stderrSpy).toHaveBeenCalled()
-      const stderrOutput = stderrSpy.mock.calls.map(c => c[0]).join('')
-      expect(stderrOutput).toMatch(/^Score: \d+\.\d+% \(\d+\/\d+\) \| \d+ survivors \| \d+ files\n$/)
-
-      stderrSpy.mockRestore()
+      // Summary should go to out.error
+      expect(errors.length).toBeGreaterThan(0)
+      const errorOutput = errors.join('')
+      expect(errorOutput).toMatch(/^Score: \d+\.\d+% \(\d+\/\d+\) \| \d+ survivors \| \d+ files\n$/)
     })
 
     it('--progress streams dots to stderr in single-file mode', async () => {
@@ -561,20 +550,17 @@ describe('createManualRunner', () => {
         { passed: false, killedBy: ['t.test.js'] }
       ])
 
-      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
-
+      const errors = []
       const manual = _createManualRunner({
         mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner),
-        out: noop
+        out: { log: () => {}, error: msg => errors.push(msg) }
       })
       await manual.run(['src/a.js', '--progress'])
 
-      const stderrOutput = stderrSpy.mock.calls.map(c => c[0]).join('')
-      expect(stderrOutput).toContain('.')
-      expect(stderrOutput).toMatch(/\d+ files \| \d+ mutations \| \d+ killed \| \d+ survived \| [\d.]+%/)
-
-      stderrSpy.mockRestore()
+      const errorOutput = errors.join('')
+      expect(errorOutput).toContain('.')
+      expect(errorOutput).toMatch(/\d+ files \| \d+ mutations \| \d+ killed \| \d+ survived \| [\d.]+%/)
     })
 
     it('--progress shows ! for survived mutations', async () => {
@@ -584,19 +570,16 @@ describe('createManualRunner', () => {
         { passed: true } // survived
       ])
 
-      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
-
+      const errors = []
       const manual = _createManualRunner({
         mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner),
-        out: noop
+        out: { log: () => {}, error: msg => errors.push(msg) }
       })
       await manual.run(['src/a.js', '--progress'])
 
-      const stderrOutput = stderrSpy.mock.calls.map(c => c[0]).join('')
-      expect(stderrOutput).toContain('!')
-
-      stderrSpy.mockRestore()
+      const errorOutput = errors.join('')
+      expect(errorOutput).toContain('!')
     })
 
     it('--progress suppresses per-mutation verbose output', async () => {
@@ -610,14 +593,11 @@ describe('createManualRunner', () => {
       const manual = _createManualRunner({
         mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner),
-        out: msg => lines.push(msg)
+        out: { log: msg => lines.push(msg), error: () => {} }
       })
-
-      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
       await manual.run(['src/a.js', '--progress'])
 
       expect(lines).toEqual([])
-      stderrSpy.mockRestore()
     })
 
     it('--progress in batch mode shows dots per file', async () => {
@@ -630,22 +610,19 @@ describe('createManualRunner', () => {
         { passed: true }, { passed: false }
       ])
 
-      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
-
+      const errors = []
       const manual = _createManualRunner({
         mutators: testMutators, sources: ['src/a.js', 'src/b.js'],
         createRunner: vi.fn().mockResolvedValue(runner),
-        out: noop
+        out: { log: () => {}, error: msg => errors.push(msg) }
       })
       await manual.run(['--all', '--progress'])
 
-      const stderrOutput = stderrSpy.mock.calls.map(c => c[0]).join('')
-      expect(stderrOutput).toContain('src/a.js')
-      expect(stderrOutput).toContain('src/b.js')
-      expect(stderrOutput).toContain('.')
-      expect(stderrOutput).toMatch(/2 files \|/)
-
-      stderrSpy.mockRestore()
+      const errorOutput = errors.join('')
+      expect(errorOutput).toContain('src/a.js')
+      expect(errorOutput).toContain('src/b.js')
+      expect(errorOutput).toContain('.')
+      expect(errorOutput).toMatch(/2 files \|/)
     })
 
     it('--progress does not show quiet summary when --quiet is not set', async () => {
@@ -655,23 +632,20 @@ describe('createManualRunner', () => {
         { passed: false }
       ])
 
-      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
-
+      const errors = []
       const manual = _createManualRunner({
         mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner),
-        out: noop
+        out: { log: () => {}, error: msg => errors.push(msg) }
       })
       await manual.run(['src/a.js', '--progress'])
 
-      const stderrOutput = stderrSpy.mock.calls.map(c => c[0]).join('')
-      expect(stderrOutput).not.toMatch(/^Score:/)
-      expect(stderrOutput).toMatch(/\d+ mutations/)
-
-      stderrSpy.mockRestore()
+      const errorOutput = errors.join('')
+      expect(errorOutput).not.toMatch(/^Score:/)
+      expect(errorOutput).toMatch(/\d+ mutations/)
     })
 
-    it('--quiet in batch mode writes summary to stderr', async () => {
+    it('--quiet in batch mode writes summary to out.error', async () => {
       mockFs({ [resolve('src/a.js')]: sourceCode })
       const runner = fakeRunner([
         { passed: true },
@@ -679,22 +653,20 @@ describe('createManualRunner', () => {
       ])
 
       const lines = []
-      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+      const errors = []
 
       const manual = _createManualRunner({
         mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner),
-        out: msg => lines.push(msg)
+        out: { log: msg => lines.push(msg), error: msg => errors.push(msg) }
       })
       const code = await manual.run(['--all', '--quiet'])
 
       expect(lines).toEqual([])
-      expect(stderrSpy).toHaveBeenCalled()
-      const stderrOutput = stderrSpy.mock.calls.map(c => c[0]).join('')
-      expect(stderrOutput).toContain('Score:')
-      expect(stderrOutput).toContain('| 1 files')
-
-      stderrSpy.mockRestore()
+      expect(errors.length).toBeGreaterThan(0)
+      const errorOutput = errors.join('')
+      expect(errorOutput).toContain('Score:')
+      expect(errorOutput).toContain('| 1 files')
     })
 
     it('--quiet still returns correct exit code', async () => {
@@ -704,8 +676,6 @@ describe('createManualRunner', () => {
         { passed: true } // survived
       ])
 
-      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
-
       const manual = _createManualRunner({
         mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner),
@@ -714,52 +684,47 @@ describe('createManualRunner', () => {
       const code = await manual.run(['src/a.js', '--quiet'])
 
       expect(code).toBe(1) // survived, so exit 1
-      stderrSpy.mockRestore()
     })
 
-    it('--dry-run --quiet outputs just mutation count summary to stderr', async () => {
+    it('--dry-run --quiet outputs just mutation count summary to out.error', async () => {
       mockFs({ [resolve('src/a.js')]: sourceCode })
       const lines = []
-      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+      const errors = []
 
       const manual = _createManualRunner({
         mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn(),
-        out: msg => lines.push(msg)
+        out: { log: msg => lines.push(msg), error: msg => errors.push(msg) }
       })
       const code = await manual.run(['src/a.js', '--dry-run', '--quiet'])
 
       expect(lines).toEqual([])
-      expect(stderrSpy).toHaveBeenCalled()
-      const stderrOutput = stderrSpy.mock.calls.map(c => c[0]).join('')
-      expect(stderrOutput).toBe('1 mutations across 1 file\n')
+      expect(errors.length).toBeGreaterThan(0)
+      const errorOutput = errors.join('')
+      expect(errorOutput).toBe('1 mutations across 1 file\n')
       expect(code).toBe(0)
-
-      stderrSpy.mockRestore()
     })
 
-    it('--all --dry-run --quiet outputs just mutation count summary to stderr', async () => {
+    it('--all --dry-run --quiet outputs just mutation count summary to out.error', async () => {
       mockFs({
         [resolve('src/a.js')]: sourceCode,
         [resolve('src/b.js')]: 'if (x === y) {}'
       })
       const lines = []
-      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true)
+      const errors = []
 
       const manual = _createManualRunner({
         mutators: testMutators, sources: ['src/a.js', 'src/b.js'],
         createRunner: vi.fn(),
-        out: msg => lines.push(msg)
+        out: { log: msg => lines.push(msg), error: msg => errors.push(msg) }
       })
       const code = await manual.run(['--all', '--dry-run', '--quiet'])
 
       expect(lines).toEqual([])
-      expect(stderrSpy).toHaveBeenCalled()
-      const stderrOutput = stderrSpy.mock.calls.map(c => c[0]).join('')
-      expect(stderrOutput).toBe('2 mutations across 2 files\n')
+      expect(errors.length).toBeGreaterThan(0)
+      const errorOutput = errors.join('')
+      expect(errorOutput).toBe('2 mutations across 2 files\n')
       expect(code).toBe(0)
-
-      stderrSpy.mockRestore()
     })
 
     it('passes --survivors-only through to text output filtering in single mode', async () => {
@@ -773,7 +738,7 @@ describe('createManualRunner', () => {
       const manual = _createManualRunner({
         mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner),
-        out: msg => lines.push(msg)
+        out: { log: msg => lines.push(msg), error: () => {} }
       })
       await manual.run(['src/a.js', '--survivors-only'])
 
@@ -792,7 +757,7 @@ describe('createManualRunner', () => {
       const manual = _createManualRunner({
         mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner),
-        out: msg => lines.push(msg)
+        out: { log: msg => lines.push(msg), error: () => {} }
       })
       await manual.run(['--all', '--survivors-only'])
 
@@ -812,7 +777,7 @@ describe('createManualRunner', () => {
         mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner),
         timeout: 3000,
-        out: msg => lines.push(msg)
+        out: { log: msg => lines.push(msg), error: () => {} }
       })
       const code = await manual.run(['src/a.js'])
 

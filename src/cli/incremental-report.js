@@ -16,13 +16,13 @@ export function printIncrementalSummary(out, batchResult, sources, previous, cla
   const grandKilled = totalKilled + cachedCounts.killed
   const grandSurvived = totalSurvived + cachedCounts.survived
 
-  out(`\n${HEADER_SEPARATOR}`)
-  out(`INCREMENTAL SUMMARY`)
-  out(HEADER_SEPARATOR)
-  out(`Rerun: ${changedSources.length} files  |  Killed: ${totalKilled}  |  Survived: ${totalSurvived}  |  Errors: ${failures}`)
-  out(`Cached: ${unchangedSources.length} files  |  Killed: ${cachedCounts.killed}  |  Survived: ${cachedCounts.survived}`)
-  out(`Total: ${sources.length} files  |  Killed: ${grandKilled}  |  Survived: ${grandSurvived}`)
-  out(`${HEADER_SEPARATOR}\n`)
+  out.log(`\n${HEADER_SEPARATOR}`)
+  out.log(`INCREMENTAL SUMMARY`)
+  out.log(HEADER_SEPARATOR)
+  out.log(`Rerun: ${changedSources.length} files  |  Killed: ${totalKilled}  |  Survived: ${totalSurvived}  |  Errors: ${failures}`)
+  out.log(`Cached: ${unchangedSources.length} files  |  Killed: ${cachedCounts.killed}  |  Survived: ${cachedCounts.survived}`)
+  out.log(`Total: ${sources.length} files  |  Killed: ${grandKilled}  |  Survived: ${grandSurvived}`)
+  out.log(`${HEADER_SEPARATOR}\n`)
 
   return {
     totalSurvived: grandSurvived,
@@ -55,14 +55,14 @@ function countCachedMutation(results, mutation) {
 
 export function printIncrementalHeader(out, sources, classification) {
   const { changedSources, unchangedSources, changedTestFiles, testInvalidated } = classification
-  out(`\n${HEADER_SEPARATOR}`)
-  out(`MUTAGEN — INCREMENTAL MODE`)
-  out(HEADER_SEPARATOR)
-  out(`Total sources: ${sources.length}`)
-  out(`Changed/new:   ${changedSources.length}${testInvalidated.size ? ` (${testInvalidated.size} from test changes)` : ''}`)
-  out(`Cached:        ${unchangedSources.length}`)
+  out.log(`\n${HEADER_SEPARATOR}`)
+  out.log(`MUTAGEN — INCREMENTAL MODE`)
+  out.log(HEADER_SEPARATOR)
+  out.log(`Total sources: ${sources.length}`)
+  out.log(`Changed/new:   ${changedSources.length}${testInvalidated.size ? ` (${testInvalidated.size} from test changes)` : ''}`)
+  out.log(`Cached:        ${unchangedSources.length}`)
   if (changedTestFiles.length)
-    out(`Changed tests: ${changedTestFiles.length}`)
+    out.log(`Changed tests: ${changedTestFiles.length}`)
 }
 
 export function updateCachedReportHashes(reportPath, previousReport, classification) {
@@ -75,12 +75,12 @@ export function updateCachedReportHashes(reportPath, previousReport, classificat
 export function printAllCachedSummary(out, sources, previous, classification) {
   const cachedCounts = countCachedResults(previous.previousReport, classification.unchangedSources)
 
-  out(`\nNo files changed since last report. Nothing to do.`)
-  out(`\n${HEADER_SEPARATOR}`)
-  out(`INCREMENTAL SUMMARY (all cached)`)
-  out(HEADER_SEPARATOR)
-  out(`Files: ${sources.length}  |  Killed: ${cachedCounts.killed}  |  Survived: ${cachedCounts.survived}  |  Rerun: 0`)
-  out(`${HEADER_SEPARATOR}\n`)
+  out.log(`\nNo files changed since last report. Nothing to do.`)
+  out.log(`\n${HEADER_SEPARATOR}`)
+  out.log(`INCREMENTAL SUMMARY (all cached)`)
+  out.log(HEADER_SEPARATOR)
+  out.log(`Files: ${sources.length}  |  Killed: ${cachedCounts.killed}  |  Survived: ${cachedCounts.survived}  |  Rerun: 0`)
+  out.log(`${HEADER_SEPARATOR}\n`)
   return {
     totalSurvived: cachedCounts.survived,
     totalKilled: cachedCounts.killed,

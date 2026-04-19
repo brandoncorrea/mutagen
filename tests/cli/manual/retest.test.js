@@ -195,7 +195,7 @@ describe('createManualRunner --retest', () => {
 
     const lines = []
     const manual = _createManualRunner({
-      out: msg => lines.push(msg),
+      out: { log: msg => lines.push(msg), error: () => {} },
       mutators: testMutators, sources: ['src/a.js'],
       createRunner: vi.fn()
     })

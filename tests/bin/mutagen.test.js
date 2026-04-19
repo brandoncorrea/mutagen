@@ -35,7 +35,7 @@ import './fixtures/named-config.js'
 import './fixtures/default-config/mutagen.config.js'
 
 const noop = () => {}
-const silent = { out: noop, err: noop }
+const silent = { out: { log: noop, error: noop }, err: noop }
 
 function fakeWorktree() {
   const tempRoot = '/tmp/mutagen-test'
@@ -56,7 +56,7 @@ beforeEach(() => {
 describe('--version flag', () => {
   it('prints version from package.json and exits 0', async () => {
     const lines = []
-    const code = await run(['--version'], { out: msg => lines.push(msg), err: noop })
+    const code = await run(['--version'], { out: { log: msg => lines.push(msg), error: noop }, err: noop })
     expect(code).toBe(0)
     expect(lines).toHaveLength(1)
     expect(lines[0]).toMatch(/^\d+\.\d+\.\d+/)
@@ -64,14 +64,14 @@ describe('--version flag', () => {
 
   it('prints version for -v shorthand', async () => {
     const lines = []
-    const code = await run(['-v'], { out: msg => lines.push(msg), err: noop })
+    const code = await run(['-v'], { out: { log: msg => lines.push(msg), error: noop }, err: noop })
     expect(code).toBe(0)
     expect(lines[0]).toMatch(/^\d+\.\d+\.\d+/)
   })
 
   it('does not load config when --version is passed', async () => {
     const code = await run(['--version'], {
-      out: noop,
+      out: { log: noop, error: noop },
       err: noop,
       configPath: '/nonexistent/mutagen.config.js'
     })
@@ -128,7 +128,7 @@ describe('bin/mutagen CLI', () => {
   it('exits 1 with error when no config file found', async () => {
     const lines = []
     const code = await run(['src/a.js'], {
-      out: noop,
+      out: { log: noop, error: noop },
       configPath: '/nonexistent/mutagen.config.js',
       err: msg => lines.push(msg)
     })
