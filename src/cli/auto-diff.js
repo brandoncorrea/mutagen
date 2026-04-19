@@ -33,8 +33,10 @@ function buildFromLegacyFormat(report) {
   const map = new Map()
   for (const fileData of Object.values(report.files)) {
     if (!Array.isArray(fileData.mutants)) continue
-    for (const m of fileData.mutants)
-      if (m.id) map.set(m.id, isAlive(m) ? 'survived' : 'killed')
+    for (const m of fileData.mutants) {
+      if (!m.id) continue
+      map.set(m.id, isAlive(m) ? 'survived' : 'killed')
+    }
   }
   return map.size > 0 ? map : null
 }
