@@ -45,7 +45,9 @@ export const stringMethodSwaps = [
   methodNameSwap('startsWith → endsWith', 'startsWith', 'endsWith'),
   methodNameSwap('endsWith → startsWith', 'endsWith', 'startsWith'),
   methodNameSwap('indexOf → lastIndexOf', 'indexOf', 'lastIndexOf'),
-  methodNameSwap('lastIndexOf → indexOf', 'lastIndexOf', 'indexOf')
+  methodNameSwap('lastIndexOf → indexOf', 'lastIndexOf', 'indexOf'),
+  methodNameSwap('trimStart → trimEnd', 'trimStart', 'trimEnd'),
+  methodNameSwap('trimEnd → trimStart', 'trimEnd', 'trimStart')
 ]
 
 export const mathMethodSwaps = [
@@ -64,7 +66,18 @@ export const mathMethodSwaps = [
     })
   },
   staticMethodSwap('Math.round → Math.floor', 'Math', 'round', 'floor'),
-  staticMethodSwap('Math.sqrt → Math.cbrt', 'Math', 'sqrt', 'cbrt')
+  staticMethodSwap('Math.sqrt → Math.cbrt', 'Math', 'sqrt', 'cbrt'),
+  staticMethodSwap('Math.trunc → Math.floor', 'Math', 'trunc', 'floor'),
+  {
+    name: 'Math.sign → (removed)',
+    types: ['CallExpression'],
+    test: node => isStaticCall(node, 'Math', 'sign'),
+    mutate: ({ callee }) => ({
+      start: callee.start,
+      end: callee.end,
+      replacement: ''
+    })
+  }
 ]
 
 export const arrayMethodSwaps = [
@@ -126,7 +139,18 @@ export const arrayMethodSwaps = [
       end,
       replacement: ''
     })
-  }
+  },
+  {
+    name: 'flat() → (removed)',
+    types: ['CallExpression'],
+    test: node => isMemberCall(node, 'flat'),
+    mutate: ({ callee, end }) => ({
+      start: callee.object.end,
+      end,
+      replacement: ''
+    })
+  },
+  methodNameSwap('flatMap → map', 'flatMap', 'map')
 ]
 
 export const objectMethodSwaps = [
@@ -159,7 +183,9 @@ export const promiseMethodSwaps = [
   staticMethodSwap('Promise.all → Promise.race', 'Promise', 'all', 'race'),
   staticMethodSwap('Promise.race → Promise.all', 'Promise', 'race', 'all'),
   staticMethodSwap('Promise.resolve → Promise.reject', 'Promise', 'resolve', 'reject'),
-  staticMethodSwap('Promise.reject → Promise.resolve', 'Promise', 'reject', 'resolve')
+  staticMethodSwap('Promise.reject → Promise.resolve', 'Promise', 'reject', 'resolve'),
+  staticMethodSwap('Promise.allSettled → Promise.any', 'Promise', 'allSettled', 'any'),
+  staticMethodSwap('Promise.any → Promise.allSettled', 'Promise', 'any', 'allSettled')
 ]
 
 export const stringMethodMutations = [
@@ -171,7 +197,9 @@ export const typeConversions = [
   globalFnSwap('parseFloat → parseInt', 'parseFloat', 'parseInt'),
   globalFnSwap('Number → String', 'Number', 'String'),
   globalFnSwap('String → Number', 'String', 'Number'),
-  globalFnSwap('Boolean → Number', 'Boolean', 'Number')
+  globalFnSwap('Boolean → Number', 'Boolean', 'Number'),
+  globalFnSwap('encodeURIComponent → decodeURIComponent', 'encodeURIComponent', 'decodeURIComponent'),
+  globalFnSwap('decodeURIComponent → encodeURIComponent', 'decodeURIComponent', 'encodeURIComponent')
 ]
 
 export const objectMutationRemovals = [
@@ -189,6 +217,16 @@ export const objectMutationRemovals = [
     name: 'Object.seal() → identity',
     types: ['CallExpression'],
     test: node => isStaticCall(node, 'Object', 'seal') && node.arguments.length === 1,
+    mutate: (node, source) => ({
+      start: node.start,
+      end: node.end,
+      replacement: source.slice(node.arguments[0].start, node.arguments[0].end)
+    })
+  },
+  {
+    name: 'Array.from() → identity',
+    types: ['CallExpression'],
+    test: node => isStaticCall(node, 'Array', 'from') && node.arguments.length >= 1,
     mutate: (node, source) => ({
       start: node.start,
       end: node.end,

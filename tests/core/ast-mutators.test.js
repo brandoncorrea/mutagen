@@ -2351,6 +2351,128 @@ describe('ast-mutators', () => {
       expect(patch).toEqual({ start: 3, end: 18, replacement: '' })
     })
   })
+
+  // ── trimStart / trimEnd swap ──
+
+  describe('trimStart / trimEnd swap', () => {
+    it('trimStart → trimEnd swaps', () => {
+      const m = find('trimStart → trimEnd')
+      const node = callWithMethod('trimStart', 2, 11, 0, 13)
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node).replacement).toBe('trimEnd')
+    })
+
+    it('trimEnd → trimStart swaps', () => {
+      const m = find('trimEnd → trimStart')
+      const node = callWithMethod('trimEnd', 2, 9, 0, 11)
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node).replacement).toBe('trimStart')
+    })
+  })
+
+  // ── flat / flatMap ──
+
+  describe('flat / flatMap', () => {
+    it('flat() → (removed) removes .flat()', () => {
+      const m = find('flat() → (removed)')
+      const node = callWithMethod('flat', 4, 8, 0, 10)
+      node.callee.object = { end: 3 }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'arr.flat()')
+      expect(patch).toEqual({ start: 3, end: 10, replacement: '' })
+    })
+
+    it('flatMap → map swaps', () => {
+      const m = find('flatMap → map')
+      const node = callWithMethod('flatMap', 4, 11, 0, 18)
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node).replacement).toBe('map')
+    })
+  })
+
+  // ── Promise.allSettled / Promise.any ──
+
+  describe('Promise.allSettled / Promise.any', () => {
+    it('Promise.allSettled → Promise.any swaps', () => {
+      const m = find('Promise.allSettled → Promise.any')
+      const node = staticCall('Promise', 'allSettled', 0, 24, 8, 18)
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node).replacement).toBe('any')
+    })
+
+    it('Promise.any → Promise.allSettled swaps', () => {
+      const m = find('Promise.any → Promise.allSettled')
+      const node = staticCall('Promise', 'any', 0, 16, 8, 11)
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node).replacement).toBe('allSettled')
+    })
+  })
+
+  // ── encodeURIComponent / decodeURIComponent ──
+
+  describe('URI component encoding', () => {
+    it('encodeURIComponent → decodeURIComponent swaps', () => {
+      const m = find('encodeURIComponent → decodeURIComponent')
+      const node = {
+        type: 'CallExpression',
+        callee: { type: 'Identifier', name: 'encodeURIComponent', start: 0, end: 18 },
+        start: 0, end: 24
+      }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node)
+      expect(patch).toEqual({ start: 0, end: 18, replacement: 'decodeURIComponent' })
+    })
+
+    it('decodeURIComponent → encodeURIComponent swaps', () => {
+      const m = find('decodeURIComponent → encodeURIComponent')
+      const node = {
+        type: 'CallExpression',
+        callee: { type: 'Identifier', name: 'decodeURIComponent', start: 0, end: 18 },
+        start: 0, end: 24
+      }
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node).replacement).toBe('encodeURIComponent')
+    })
+  })
+
+  // ── Math.trunc / Math.sign ──
+
+  describe('Math.trunc / Math.sign', () => {
+    it('Math.trunc → Math.floor swaps', () => {
+      const m = find('Math.trunc → Math.floor')
+      const node = staticCall('Math', 'trunc', 0, 14, 5, 10)
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node).replacement).toBe('floor')
+    })
+
+    it('Math.sign → (removed) removes Math.sign callee', () => {
+      const m = find('Math.sign → (removed)')
+      const node = staticCall('Math', 'sign', 0, 12, 5, 9)
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node)
+      expect(patch).toEqual({ start: 0, end: 9, replacement: '' })
+    })
+  })
+
+  // ── Array.from removal ──
+
+  describe('Array.from removal', () => {
+    it('Array.from() → identity returns the argument', () => {
+      const m = find('Array.from() → identity')
+      const node = staticCall('Array', 'from', 0, 20, 6, 10)
+      node.arguments = [{ start: 11, end: 19 }]
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'Array.from(iterable)')
+      expect(patch).toEqual({ start: 0, end: 20, replacement: 'iterable' })
+    })
+
+    it('Array.from() skips when no arguments', () => {
+      const m = find('Array.from() → identity')
+      const node = staticCall('Array', 'from', 0, 12, 6, 10)
+      node.arguments = []
+      expect(m.test(node)).toBe(false)
+    })
+  })
 })
 
 // ── Test helpers ──
