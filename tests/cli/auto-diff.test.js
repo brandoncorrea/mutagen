@@ -253,6 +253,24 @@ describe('autoDiffSummary', () => {
     })
   })
 
+  it('skips legacy mutants without id while processing those with id', () => {
+    const previous = legacyReport({
+      'a.js': { mutants: [
+        makeMutant('m1', 'Survived'),
+        { mutatorName: 'x', status: 'Survived' }  // no id — skipped
+      ] }
+    })
+    const current = {
+      'a.js': { mutants: [
+        makeMutant('m1', 'Killed'),
+        { mutatorName: 'x', status: 'Killed' }
+      ] }
+    }
+
+    const result = autoDiffSummary(previous, current)
+    expect(result).toContain('+1 newly killed')
+  })
+
   it('skips mutants without id', () => {
     const previous = legacyReport({
       'a.js': { mutants: [{ mutatorName: 'x', status: 'Survived' }] }

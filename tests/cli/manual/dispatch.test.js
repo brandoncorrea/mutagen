@@ -727,6 +727,20 @@ describe('createManualRunner', () => {
       expect(code).toBe(0)
     })
 
+    it('--all --dry-run --quiet uses singular "file" for single source', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const errors = []
+
+      const manual = _createManualRunner({
+        mutators: testMutators, sources: ['src/a.js'],
+        createRunner: vi.fn(),
+        out: { log: () => {}, error: msg => errors.push(msg) }
+      })
+      await manual.run(['--all', '--dry-run', '--quiet'])
+
+      expect(errors.join('')).toBe('1 mutations across 1 file\n')
+    })
+
     it('passes --survivors-only through to text output filtering in single mode', async () => {
       mockFs({ [resolve('src/a.js')]: sourceCode })
       const runner = fakeRunner([

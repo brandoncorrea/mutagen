@@ -924,4 +924,32 @@ describe('createVitestRunner', () => {
     })
 
   })
+
+  describe('signal handler cleanup', () => {
+    it('removes SIGINT and SIGTERM listeners added by startVitest', async () => {
+      const mock = createMockVitest()
+      const preExisting = () => {}
+      process.on('SIGINT', preExisting)
+      process.on('SIGTERM', preExisting)
+
+      startVitest.mockImplementation(async () => {
+        process.on('SIGINT', () => {})
+        process.on('SIGTERM', () => {})
+        return mock
+      })
+
+      const before = {
+        sigint: process.listenerCount('SIGINT'),
+        sigterm: process.listenerCount('SIGTERM')
+      }
+
+      await createVitestRunner('src/a.js')
+
+      expect(process.listenerCount('SIGINT')).toBe(before.sigint)
+      expect(process.listenerCount('SIGTERM')).toBe(before.sigterm)
+
+      process.removeListener('SIGINT', preExisting)
+      process.removeListener('SIGTERM', preExisting)
+    })
+  })
 })

@@ -69,6 +69,14 @@ describe('--version flag', () => {
     expect(lines[0]).toMatch(/^\d+\.\d+\.\d+/)
   })
 
+  it('defaults out to { log, error } when not provided', async () => {
+    const spy = vi.spyOn(console, 'log').mockImplementation(noop)
+    const code = await run(['--version'], { err: noop })
+    expect(code).toBe(0)
+    expect(spy).toHaveBeenCalled()
+    spy.mockRestore()
+  })
+
   it('does not load config when --version is passed', async () => {
     const code = await run(['--version'], {
       out: { log: noop, error: noop },
