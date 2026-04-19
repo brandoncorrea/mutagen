@@ -4,16 +4,19 @@
 
 import { HEADER_SEPARATOR } from '../../core/report-data.js'
 
+export const PREFLIGHT_ABORT_MSG =
+  '\nABORT: Tests already FAILING on original source. Fix the suite first.'
+
 export async function runPreflightTests(out, runner) {
   if (runner.preflight) {
     if (runner.preflight.passed) return {}
-    out.log(`\nABORT: Tests already FAILING on original source. Fix the suite first.`)
+    out.log(PREFLIGHT_ABORT_MSG)
     return { error: true }
   }
   out.log(`\nPre-flight: running tests against original source...`)
   const preflight = await runner.run()
   if (preflight.passed) return {}
-  out.log(`\nABORT: Tests already FAILING on original source. Fix the suite first.`)
+  out.log(PREFLIGHT_ABORT_MSG)
   return { error: true }
 }
 
