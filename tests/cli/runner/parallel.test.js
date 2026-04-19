@@ -183,8 +183,8 @@ describe('runParallel', () => {
     mockFs({ [resolve('src/a.js')]: sourceCode })
     const preflightRunner = fakePoolRunner([{ passed: true }])
     const poolRun = vi.fn().mockImplementation((mutations, opts) => {
-      opts.onResult?.({ mutation: mutations[0], status: 'SURVIVED' })
-      opts.onResult?.({ mutation: mutations[0], status: 'TIMEOUT (killed)' })
+      opts.onResult?.({ mutation: mutations[0], status: 'Survived' })
+      opts.onResult?.({ mutation: mutations[0], status: 'Timeout' })
       return Promise.resolve({ killed: [], survived: [mutations[0]], timedOut: [mutations[0]] })
     })
     createPool.mockReturnValue({ run: poolRun, close: vi.fn().mockResolvedValue() })
@@ -198,8 +198,8 @@ describe('runParallel', () => {
       out: { log: msg => lines.push(msg), error: () => {} }
     })
 
-    expect(lines.some(l => l.includes('SURVIVED'))).toBe(true)
-    expect(lines.some(l => l.includes('TIMEOUT (killed)'))).toBe(true)
+    expect(lines.some(l => l.includes('Survived'))).toBe(true)
+    expect(lines.some(l => l.includes('Timeout'))).toBe(true)
   })
 
   it('prints run report after pool completes', async () => {
@@ -311,7 +311,7 @@ describe('runParallel', () => {
     mockFs({ [resolve('src/a.js')]: sourceCode })
     const preflightRunner = fakePoolRunner([{ passed: true }])
     const poolRun = vi.fn().mockImplementation((mutations, opts) => {
-      opts.onResult?.({ mutation: mutations[0], status: 'SURVIVED' })
+      opts.onResult?.({ mutation: mutations[0], status: 'Survived' })
       return { killed: [], survived: [mutations[0]], timedOut: [] }
     })
     createPool.mockReturnValue({ run: poolRun, close: vi.fn().mockResolvedValue() })
@@ -328,7 +328,7 @@ describe('runParallel', () => {
 
     const progressLines = lines.filter(l => /\[\d+\/\d+\]/.test(l))
     expect(progressLines).toHaveLength(1)
-    expect(progressLines[0]).toContain('SURVIVED')
+    expect(progressLines[0]).toContain('Survived')
   })
 
   it('filters JSON to only survivors when survivorsOnly is true', async () => {

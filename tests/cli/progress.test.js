@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { createProgressReporter, formatProgressSummary, createOrderedBuffer } from '../../src/cli/progress.js'
+import { STATUS } from '../../src/cli/shared.js'
 
 describe('createProgressReporter', () => {
   function capture() {
@@ -22,7 +23,7 @@ describe('createProgressReporter', () => {
     const reporter = createProgressReporter(['a.js'], { write })
 
     reporter.startFile('a.js')
-    reporter.dot('killed')
+    reporter.dot(STATUS.KILLED)
 
     expect(output()).toContain('.')
   })
@@ -32,7 +33,7 @@ describe('createProgressReporter', () => {
     const reporter = createProgressReporter(['a.js'], { write })
 
     reporter.startFile('a.js')
-    reporter.dot('SURVIVED')
+    reporter.dot(STATUS.SURVIVED)
 
     expect(output()).toContain('!')
   })
@@ -42,7 +43,7 @@ describe('createProgressReporter', () => {
     const reporter = createProgressReporter(['a.js'], { write })
 
     reporter.startFile('a.js')
-    reporter.dot('TIMEOUT (killed)')
+    reporter.dot(STATUS.TIMEOUT)
 
     expect(output()).toContain('T')
   })
@@ -52,7 +53,7 @@ describe('createProgressReporter', () => {
     const reporter = createProgressReporter(['a.js'], { write })
 
     reporter.startFile('a.js')
-    reporter.dot('killed (error)')
+    reporter.dot(STATUS.KILLED_ERROR)
 
     expect(output()).toBe('a.js .')
   })
@@ -62,7 +63,7 @@ describe('createProgressReporter', () => {
     const reporter = createProgressReporter(['a.js'], { write })
 
     reporter.startFile('a.js')
-    reporter.dot('killed')
+    reporter.dot(STATUS.KILLED)
     reporter.endFile()
 
     expect(output()).toBe('a.js .\n')
@@ -73,11 +74,11 @@ describe('createProgressReporter', () => {
     const reporter = createProgressReporter(['src/pool.js'], { write })
 
     reporter.startFile('src/pool.js')
-    reporter.dot('killed')
-    reporter.dot('killed')
-    reporter.dot('SURVIVED')
-    reporter.dot('killed')
-    reporter.dot('TIMEOUT (killed)')
+    reporter.dot(STATUS.KILLED)
+    reporter.dot(STATUS.KILLED)
+    reporter.dot(STATUS.SURVIVED)
+    reporter.dot(STATUS.KILLED)
+    reporter.dot(STATUS.TIMEOUT)
     reporter.endFile()
 
     expect(output()).toBe('src/pool.js ..!.T\n')
@@ -89,11 +90,11 @@ describe('createProgressReporter', () => {
     const reporter = createProgressReporter(files, { write })
 
     reporter.startFile('src/a.js')
-    reporter.dot('killed')
+    reporter.dot(STATUS.KILLED)
     reporter.endFile()
 
     reporter.startFile('src/long-name.js')
-    reporter.dot('SURVIVED')
+    reporter.dot(STATUS.SURVIVED)
     reporter.endFile()
 
     const lines = output().split('\n')
@@ -137,34 +138,34 @@ describe('createOrderedBuffer', () => {
     const dots = []
     const buffer = createOrderedBuffer(status => dots.push(status))
 
-    buffer(0, 'killed')
-    buffer(1, 'SURVIVED')
-    buffer(2, 'killed')
+    buffer(0, STATUS.KILLED)
+    buffer(1, STATUS.SURVIVED)
+    buffer(2, STATUS.KILLED)
 
-    expect(dots).toEqual(['killed', 'SURVIVED', 'killed'])
+    expect(dots).toEqual([STATUS.KILLED, STATUS.SURVIVED, STATUS.KILLED])
   })
 
   it('buffers out-of-order results and emits when gap fills', () => {
     const dots = []
     const buffer = createOrderedBuffer(status => dots.push(status))
 
-    buffer(2, 'killed')    // buffered (waiting for 0)
+    buffer(2, STATUS.KILLED)    // buffered (waiting for 0)
     expect(dots).toEqual([])
 
-    buffer(0, 'killed')    // emits 0
-    expect(dots).toEqual(['killed'])
+    buffer(0, STATUS.KILLED)    // emits 0
+    expect(dots).toEqual([STATUS.KILLED])
 
-    buffer(1, 'SURVIVED')  // emits 1 and buffered 2
-    expect(dots).toEqual(['killed', 'SURVIVED', 'killed'])
+    buffer(1, STATUS.SURVIVED)  // emits 1 and buffered 2
+    expect(dots).toEqual([STATUS.KILLED, STATUS.SURVIVED, STATUS.KILLED])
   })
 
   it('handles single mutation', () => {
     const dots = []
     const buffer = createOrderedBuffer(status => dots.push(status))
 
-    buffer(0, 'TIMEOUT (killed)')
+    buffer(0, STATUS.TIMEOUT)
 
-    expect(dots).toEqual(['TIMEOUT (killed)'])
+    expect(dots).toEqual([STATUS.TIMEOUT])
   })
 
   it('handles all results arriving in reverse order', () => {

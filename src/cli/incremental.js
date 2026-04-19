@@ -7,6 +7,7 @@ import { readFileSync, existsSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { resolve, relative } from 'node:path'
 
+import { STATUS } from '../core/mutation-status.js'
 import { tryLoadJson, writeStructuredReportFile } from '../core/report-data.js'
 import { printIncrementalHeader, updateCachedReportHashes, printAllCachedSummary, writeMergedReport, printIncrementalSummary, computeDeltas } from './incremental-report.js'
 import { printScoreLine } from './report.js'
@@ -132,7 +133,7 @@ function findTestInvalidatedSources(changedTestFiles, previousReport) {
 
 function isInvalidatedMutant({ killedBy, status }, changedTestAbs) {
   return killedBy?.some(t => changedTestAbs.has(t))
-    || status === 'Survived'
+    || status === STATUS.SURVIVED
 }
 
 function writeStructuredIncrementalReport(out, outputPath, fileCount, previous, classification, freshFileResults) {

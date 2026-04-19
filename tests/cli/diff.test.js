@@ -199,7 +199,7 @@ describe('diffReports', () => {
 
     expect(result.newMutants).toBe(1)
     expect(output()).toContain('NEW MUTANTS')
-    expect(output()).not.toContain('SURVIVED')
+    expect(output()).not.toContain('— SURVIVED')
   })
 
   it('sorts REMOVED files after positive-delta files via || 0 fallback', () => {

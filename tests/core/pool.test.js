@@ -170,7 +170,7 @@ describe('createPool', () => {
 
       expect(onResult).toHaveBeenCalledTimes(2)
       expect(onResult).toHaveBeenCalledWith(expect.objectContaining({
-        status: expect.stringMatching(/killed|SURVIVED|TIMEOUT/)
+        status: expect.stringMatching(/Killed|Survived|Timeout/)
       }))
     })
   })

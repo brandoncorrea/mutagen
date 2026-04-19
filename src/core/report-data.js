@@ -10,7 +10,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { resolve, relative, dirname } from 'node:path'
 
 import { mutationId, mutantKey } from './mutation-id.js'
-import { isKilled, isAlive } from './mutation-status.js'
+import { STATUS, isKilled, isAlive } from './mutation-status.js'
 
 export const HEADER_SEPARATOR = '═'.repeat(60)
 export const SECTION_SEPARATOR = '─'.repeat(60)
@@ -52,11 +52,11 @@ export function toJsonMutants(sourceFile, results, { survivorsOnly } = {}) {
   const relPath = relative(process.cwd(), sourceFile)
 
   const mutants = survivorsOnly
-    ? results.survived.map(m => toMutant(relPath, m, 'Survived'))
+    ? results.survived.map(m => toMutant(relPath, m, STATUS.SURVIVED))
     : [
-      ...results.killed.map(m => toMutant(relPath, m, 'Killed')),
-      ...results.survived.map(m => toMutant(relPath, m, 'Survived')),
-      ...(results.timedOut || []).map(m => toMutant(relPath, m, 'Timeout'))
+      ...results.killed.map(m => toMutant(relPath, m, STATUS.KILLED)),
+      ...results.survived.map(m => toMutant(relPath, m, STATUS.SURVIVED)),
+      ...(results.timedOut || []).map(m => toMutant(relPath, m, STATUS.TIMEOUT))
     ]
 
   return { path: relPath, mutants }
@@ -115,7 +115,7 @@ function collectStats(fileResults) {
       if (isKilled(mutant)) {
         fileKilled++
         totalKilled++
-        if (mutant.status === 'Timeout') totalTimedOut++
+        if (mutant.status === STATUS.TIMEOUT) totalTimedOut++
       } else if (isAlive(mutant)) {
         totalSurvived++
         survivors.push(toSurvivor(path, mutant))

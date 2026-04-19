@@ -6,7 +6,7 @@
 import { writeFileSync } from 'node:fs'
 
 import { mutantKey } from '../core/mutation-id.js'
-import { isKilled, isAlive } from '../core/mutation-status.js'
+import { STATUS, isKilled, isAlive } from '../core/mutation-status.js'
 import { HEADER_SEPARATOR, createReport, writeReportFile } from '../core/report-data.js'
 
 export function printIncrementalSummary(out, batchResult, sources, previous, classification) {
@@ -49,7 +49,7 @@ function countCachedResult(results, report, relPath) {
 function countCachedMutation(results, mutation) {
   if (isKilled(mutation))
     results.killed++
-  else if (mutation.status === 'Survived')
+  else if (mutation.status === STATUS.SURVIVED)
     results.survived++
 }
 
