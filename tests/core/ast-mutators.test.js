@@ -2473,6 +2473,201 @@ describe('ast-mutators', () => {
       expect(m.test(node)).toBe(false)
     })
   })
+
+  // ── if-block emptying ──
+
+  describe('if-block emptying', () => {
+    it('if body → {} empties the consequent block', () => {
+      const m = find('if body → {} (empty)')
+      const node = {
+        type: 'IfStatement',
+        test: { start: 4, end: 8 },
+        consequent: {
+          type: 'BlockStatement',
+          body: [{ type: 'ExpressionStatement' }],
+          start: 10, end: 24
+        },
+        start: 0, end: 24
+      }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'if (cond) { doStuff() }')
+      expect(patch).toEqual({ start: 10, end: 24, replacement: '{}' })
+    })
+
+    it('skips already-empty if blocks', () => {
+      const m = find('if body → {} (empty)')
+      const node = {
+        type: 'IfStatement',
+        test: { start: 4, end: 8 },
+        consequent: { type: 'BlockStatement', body: [], start: 10, end: 12 },
+        start: 0, end: 12
+      }
+      expect(m.test(node)).toBe(false)
+    })
+
+    it('skips non-block consequents (single statement)', () => {
+      const m = find('if body → {} (empty)')
+      const node = {
+        type: 'IfStatement',
+        test: { start: 4, end: 8 },
+        consequent: { type: 'ExpressionStatement', start: 10, end: 20 },
+        start: 0, end: 20
+      }
+      expect(m.test(node)).toBe(false)
+    })
+  })
+
+  // ── else-block removal ──
+
+  describe('else-block removal', () => {
+    it('else → (removed) removes the else block', () => {
+      const m = find('else → (removed)')
+      const source = 'if (x) { a() } else { b() }'
+      const node = {
+        type: 'IfStatement',
+        test: { start: 4, end: 5 },
+        consequent: { type: 'BlockStatement', body: [{}], start: 7, end: 14 },
+        alternate: { type: 'BlockStatement', body: [{}], start: 20, end: 28 },
+        start: 0, end: 28
+      }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, source)
+      expect(patch.replacement).toBe('')
+      expect(source.slice(patch.start, patch.start + 4)).toBe('else')
+      expect(patch.end).toBe(28)
+    })
+
+    it('skips when there is no alternate', () => {
+      const m = find('else → (removed)')
+      const node = {
+        type: 'IfStatement',
+        test: { start: 4, end: 5 },
+        consequent: { type: 'BlockStatement', body: [{}], start: 7, end: 14 },
+        alternate: null,
+        start: 0, end: 14
+      }
+      expect(m.test(node)).toBe(false)
+    })
+
+    it('skips else-if chains (alternate is IfStatement)', () => {
+      const m = find('else → (removed)')
+      const node = {
+        type: 'IfStatement',
+        test: { start: 4, end: 5 },
+        consequent: { type: 'BlockStatement', body: [{}], start: 7, end: 14 },
+        alternate: { type: 'IfStatement', start: 20, end: 40 },
+        start: 0, end: 40
+      }
+      expect(m.test(node)).toBe(false)
+    })
+
+    it('skips empty else blocks', () => {
+      const m = find('else → (removed)')
+      const node = {
+        type: 'IfStatement',
+        test: { start: 4, end: 5 },
+        consequent: { type: 'BlockStatement', body: [{}], start: 7, end: 14 },
+        alternate: { type: 'BlockStatement', body: [], start: 20, end: 22 },
+        start: 0, end: 22
+      }
+      expect(m.test(node)).toBe(false)
+    })
+
+    it('returns null when else keyword not found', () => {
+      const m = find('else → (removed)')
+      const node = {
+        type: 'IfStatement',
+        test: { start: 4, end: 5 },
+        consequent: { type: 'BlockStatement', body: [{}], start: 7, end: 14 },
+        alternate: { type: 'BlockStatement', body: [{}], start: 16, end: 20 },
+        start: 0, end: 20
+      }
+      expect(m.mutate(node, 'if (x) { a() } { b() }')).toBeNull()
+    })
+  })
+
+  // ── replaceAll → replace ──
+
+  describe('replaceAll → replace', () => {
+    it('replaceAll → replace swaps method', () => {
+      const m = find('replaceAll → replace')
+      const node = callWithMethod('replaceAll', 2, 12, 0, 20)
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node).replacement).toBe('replace')
+    })
+  })
+
+  // ── charAt / charCodeAt swap ──
+
+  describe('charAt / charCodeAt swap', () => {
+    it('charAt → charCodeAt swaps', () => {
+      const m = find('charAt → charCodeAt')
+      const node = callWithMethod('charAt', 2, 8, 0, 12)
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node).replacement).toBe('charCodeAt')
+    })
+
+    it('charCodeAt → charAt swaps', () => {
+      const m = find('charCodeAt → charAt')
+      const node = callWithMethod('charCodeAt', 2, 12, 0, 16)
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node).replacement).toBe('charAt')
+    })
+  })
+
+  // ── promise chain mutations ──
+
+  describe('promise chain mutations', () => {
+    it('.then → .catch swaps', () => {
+      const m = find('.then → .catch')
+      const node = callWithMethod('then', 8, 12, 0, 18)
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node).replacement).toBe('catch')
+    })
+
+    it('.catch → .then swaps', () => {
+      const m = find('.catch → .then')
+      const node = callWithMethod('catch', 8, 13, 0, 19)
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node).replacement).toBe('then')
+    })
+
+    it('.catch() → (removed) removes .catch()', () => {
+      const m = find('.catch() → (removed)')
+      const node = callWithMethod('catch', 8, 13, 0, 22)
+      node.callee.object = { end: 7 }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'promise.catch(handler)')
+      expect(patch).toEqual({ start: 7, end: 22, replacement: '' })
+    })
+
+    it('.catch() → (removed) skips when no arguments', () => {
+      const m = find('.catch() → (removed)')
+      const node = callWithMethod('catch', 8, 13, 0, 15)
+      node.arguments = []
+      expect(m.test(node)).toBe(false)
+    })
+  })
+
+  // ── Object.assign removal ──
+
+  describe('Object.assign removal', () => {
+    it('Object.assign() → identity returns the first argument', () => {
+      const m = find('Object.assign() → identity')
+      const node = staticCall('Object', 'assign', 0, 28, 7, 13)
+      node.arguments = [{ start: 14, end: 20 }, { start: 22, end: 27 }]
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'Object.assign(target, source)')
+      expect(patch).toEqual({ start: 0, end: 28, replacement: 'target' })
+    })
+
+    it('Object.assign() skips when no arguments', () => {
+      const m = find('Object.assign() → identity')
+      const node = staticCall('Object', 'assign', 0, 16, 7, 13)
+      node.arguments = []
+      expect(m.test(node)).toBe(false)
+    })
+  })
 })
 
 // ── Test helpers ──

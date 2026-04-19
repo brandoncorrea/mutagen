@@ -189,7 +189,25 @@ export const promiseMethodSwaps = [
 ]
 
 export const stringMethodMutations = [
-  methodNameSwap('replace → toString (removed)', 'replace', 'toString')
+  methodNameSwap('replace → toString (removed)', 'replace', 'toString'),
+  methodNameSwap('replaceAll → replace', 'replaceAll', 'replace'),
+  methodNameSwap('charAt → charCodeAt', 'charAt', 'charCodeAt'),
+  methodNameSwap('charCodeAt → charAt', 'charCodeAt', 'charAt')
+]
+
+export const promiseChainMutations = [
+  methodNameSwap('.then → .catch', 'then', 'catch'),
+  methodNameSwap('.catch → .then', 'catch', 'then'),
+  {
+    name: '.catch() → (removed)',
+    types: ['CallExpression'],
+    test: node => isMemberCall(node, 'catch') && node.arguments.length > 0,
+    mutate: ({ callee, end }) => ({
+      start: callee.object.end,
+      end,
+      replacement: ''
+    })
+  }
 ]
 
 export const typeConversions = [
@@ -227,6 +245,16 @@ export const objectMutationRemovals = [
     name: 'Array.from() → identity',
     types: ['CallExpression'],
     test: node => isStaticCall(node, 'Array', 'from') && node.arguments.length >= 1,
+    mutate: (node, source) => ({
+      start: node.start,
+      end: node.end,
+      replacement: source.slice(node.arguments[0].start, node.arguments[0].end)
+    })
+  },
+  {
+    name: 'Object.assign() → identity',
+    types: ['CallExpression'],
+    test: node => isStaticCall(node, 'Object', 'assign') && node.arguments.length >= 1,
     mutate: (node, source) => ({
       start: node.start,
       end: node.end,

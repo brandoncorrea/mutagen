@@ -284,3 +284,33 @@ export const errorTypeSwap = [
     })
   }
 ]
+
+export const ifBlockEmptying = [
+  {
+    name: 'if body → {} (empty)',
+    types: ['IfStatement'],
+    test: ({ consequent }) =>
+      consequent.type === 'BlockStatement' && consequent.body.length > 0,
+    mutate: ({ consequent }) => ({
+      start: consequent.start,
+      end: consequent.end,
+      replacement: '{}'
+    })
+  }
+]
+
+export const elseBlockRemoval = [
+  {
+    name: 'else → (removed)',
+    types: ['IfStatement'],
+    test: ({ alternate }) =>
+      alternate != null
+      && alternate.type === 'BlockStatement'
+      && alternate.body.length > 0,
+    mutate: ({ consequent, end }, source) => {
+      const idx = source.indexOf('else', consequent.end)
+      if (idx === -1) return null
+      return { start: idx, end, replacement: '' }
+    }
+  }
+]
