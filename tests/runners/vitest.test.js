@@ -68,7 +68,7 @@ describe('createVitestRunner', () => {
       await runner.run()
 
       expect(startVitest).toHaveBeenCalledWith(
-        'test', [], expect.objectContaining({ watch: false })
+        'test', [], expect.objectContaining({ watch: false }), {}, expect.objectContaining({ stdin: expect.anything() })
       )
       expect(mock.close).toHaveBeenCalled()
     })
@@ -118,7 +118,7 @@ describe('createVitestRunner', () => {
       await createVitestRunner('src/a.js')
 
       expect(startVitest).toHaveBeenCalledWith(
-        'test', [], expect.objectContaining({ watch: true })
+        'test', [], expect.objectContaining({ watch: true }), {}, expect.objectContaining({ stdin: expect.anything() })
       )
     })
 
@@ -326,7 +326,8 @@ describe('createVitestRunner', () => {
 
       expect(startVitest).toHaveBeenCalledWith(
         'test', [],
-        expect.objectContaining({ config: 'vitest.config.ts', root: '/app' })
+        expect.objectContaining({ config: 'vitest.config.ts', root: '/app' }),
+        {}, expect.objectContaining({ stdin: expect.anything() })
       )
     })
 
@@ -341,7 +342,7 @@ describe('createVitestRunner', () => {
       await runner.run()
 
       expect(startVitest).toHaveBeenCalledWith(
-        'test', ['test/a.test.js'], expect.any(Object)
+        'test', ['test/a.test.js'], expect.any(Object), {}, expect.objectContaining({ stdin: expect.anything() })
       )
     })
 
@@ -353,7 +354,7 @@ describe('createVitestRunner', () => {
       await runner.run()
 
       expect(startVitest).toHaveBeenCalledWith(
-        'test', [], expect.objectContaining({ bail: 1 })
+        'test', [], expect.objectContaining({ bail: 1 }), {}, expect.objectContaining({ stdin: expect.anything() })
       )
     })
   })
