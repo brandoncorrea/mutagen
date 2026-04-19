@@ -24,7 +24,7 @@ export async function createVitestRunner(sourceFile, options = {}) {
   // Warm runner: start vitest in watch mode to keep the worker pool alive
   // between mutations. watch:true is required — watch:false shuts down the
   // pool after the initial run, making subsequent runTestSpecifications fail.
-  const vitest = await startVitest('test', testFilter, { ...vitestOpts, watch: true })
+  const vitest = await startVitestClean(startVitest, testFilter, { ...vitestOpts, watch: true })
   await vitest.waitForTestRunEnd()
 
   // The initial run serves as preflight — check if tests pass.
@@ -79,6 +79,22 @@ function flushModuleState(vitest) {
     vite.moduleGraph.invalidateAll()
   }
   vitest._fsCache?.clearCache(false)
+}
+
+/**
+ * Start vitest and strip the SIGINT/SIGTERM handlers it registers.
+ * Our pool already handles cleanup — vitest's handlers just accumulate
+ * and trigger MaxListenersExceededWarning with multiple parallel instances.
+ */
+async function startVitestClean(startVitest, testFilter, opts) {
+  const sigint = process.listeners('SIGINT')
+  const sigterm = process.listeners('SIGTERM')
+  const vitest = await startVitest('test', testFilter, opts)
+  for (const l of process.listeners('SIGINT'))
+    if (!sigint.includes(l)) process.removeListener('SIGINT', l)
+  for (const l of process.listeners('SIGTERM'))
+    if (!sigterm.includes(l)) process.removeListener('SIGTERM', l)
+  return vitest
 }
 
 function createVitestOptions({ config, root }) {
@@ -136,7 +152,7 @@ function enqueueModule({ graph, queue }, moduleId) {
 function coldRunner(startVitest, testFilter, vitestOpts) {
   return {
     async run() {
-      const vitest = await startVitest('test', testFilter, { ...vitestOpts, watch: false })
+      const vitest = await startVitestClean(startVitest, testFilter, { ...vitestOpts, watch: false })
       try {
         return compileResults(vitest)
       } finally {
