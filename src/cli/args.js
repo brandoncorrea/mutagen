@@ -55,7 +55,11 @@ function incrementalOptions(argv) {
 function allOptions(argv) {
   const common = commonOptions(argv)
   if (common.error) return common
-  return { allMode: true, dryRunMode: hasFlag(argv, '--dry-run'), ...common }
+  return {
+    allMode: true,
+    dryRunMode: hasFlag(argv, '--dry-run'),
+    ...common
+  }
 }
 
 function commonOptions(argv) {
@@ -186,7 +190,7 @@ function parseTimeout(args) {
   const idx = args.indexOf('--timeout')
   if (idx < 0) return
   const value = Number(args[idx + 1])
-  if (isInvalidNumber(value) || value === 0)
+  if (isInvalidNumber(value) || !value)
     return { error: '--timeout requires a positive numeric value' }
   return value
 }

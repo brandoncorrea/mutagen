@@ -56,8 +56,8 @@ async function accumulateResults(filesToRun, options) {
   const accumulator = { totals, fileResults }
 
   try {
-    for (let i = 0; i < filesToRun.length; i++)
-      await processOneFile(resolve(filesToRun[i]), options, { reporter, workerCount, pool }, accumulator)
+    for (const fileToRun of filesToRun)
+      await processOneFile(resolve(fileToRun), options, { reporter, workerCount, pool }, accumulator)
   } finally {
     if (pool) await pool.close()
   }
@@ -103,7 +103,11 @@ async function processOneFile(
 }
 
 function createBatchReporter(filesToRun, progress, out) {
-  if (!progress) return { startFile() {}, dot: undefined, endFile() {} }
+  if (!progress)
+    return {
+      startFile() {},
+      endFile() {}
+    }
   const displayPaths = filesToRun.map(f => relative(process.cwd(), resolve(f)))
   const reporter = createProgressReporter(displayPaths, { write: out.error })
   return {

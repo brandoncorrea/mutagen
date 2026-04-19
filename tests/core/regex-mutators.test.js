@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest'
 import { regexMutations } from '../../src/core/mutators/regex.js'
 
 function find(name) {
-  const m = regexMutations.find(m => m.name === name)
-  if (!m) throw new Error(`Mutator not found: ${name}`)
-  return m
+  const mutation = regexMutations.find(m => m.name === name)
+  if (!mutation) throw new Error(`Mutator not found: ${name}`)
+  return mutation
 }
 
 function regexNode(pattern, flags, start, end) {
@@ -26,11 +26,11 @@ describe('regex mutators', () => {
     })
 
     it('every mutator has required fields', () => {
-      for (const m of regexMutations) {
-        expect(typeof m.name).toBe('string')
-        expect(Array.isArray(m.types)).toBe(true)
-        expect(typeof m.test).toBe('function')
-        expect(typeof m.mutate).toBe('function')
+      for (const mutation of regexMutations) {
+        expect(typeof mutation.name).toBe('string')
+        expect(Array.isArray(mutation.types)).toBe(true)
+        expect(typeof mutation.test).toBe('function')
+        expect(typeof mutation.mutate).toBe('function')
       }
     })
 
@@ -41,9 +41,8 @@ describe('regex mutators', () => {
     })
 
     it('all mutators target RegExpLiteral', () => {
-      for (const m of regexMutations) {
-        expect(m.types).toContain('RegExpLiteral')
-      }
+      for (const mutation of regexMutations)
+        expect(mutation.types).toContain('RegExpLiteral')
     })
   })
 

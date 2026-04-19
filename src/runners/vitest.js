@@ -94,10 +94,12 @@ async function startVitestClean(startVitest, testFilter, opts) {
   const sigint = process.listeners('SIGINT')
   const sigterm = process.listeners('SIGTERM')
   const vitest = await startVitest('test', testFilter, opts, {}, VITEST_OPTIONS)
-  for (const l of process.listeners('SIGINT'))
-    if (!sigint.includes(l)) process.removeListener('SIGINT', l)
-  for (const l of process.listeners('SIGTERM'))
-    if (!sigterm.includes(l)) process.removeListener('SIGTERM', l)
+  for (const listener of process.listeners('SIGINT'))
+    if (!sigint.includes(listener))
+      process.removeListener('SIGINT', listener)
+  for (const listener of process.listeners('SIGTERM'))
+    if (!sigterm.includes(listener))
+      process.removeListener('SIGTERM', listener)
   return vitest
 }
 

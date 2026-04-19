@@ -351,8 +351,8 @@ describe('createPool', () => {
       await pool.close()
 
       expect(runners).toHaveLength(2)
-      for (const r of runners)
-        expect(r.switchFile).toHaveBeenCalledWith('/src/b.js')
+      for (const runner of runners)
+        expect(runner.switchFile).toHaveBeenCalledWith('/src/b.js')
     })
 
     it('allows running mutations after switchFile', async () => {

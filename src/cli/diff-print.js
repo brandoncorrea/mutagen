@@ -60,8 +60,8 @@ function printFileDeltas(out, fileDeltas) {
   if (!fileDeltas.length) return
   fileDeltas.sort((a, b) => b.delta - a.delta)
   out.log(`\nPER-FILE CHANGES:`)
-  for (const d of fileDeltas)
-    printFileDelta(out, d)
+  for (const delta of fileDeltas)
+    printFileDelta(out, delta)
 }
 
 function printFileDelta(out, { label, file, after, before, delta }) {

@@ -126,7 +126,7 @@ export function matchesPattern(node, pattern) {
 }
 
 function matchesValue(nodeVal, patternVal) {
-  if (!nodeVal) return false
+  if (!nodeVal) return
   if (typeof patternVal === 'string')
     return matchesStringPattern(nodeVal, patternVal)
   if (isObject(patternVal))
@@ -139,5 +139,5 @@ function matchesStringPattern(nodeVal, patternVal) {
     return nodeVal === patternVal
   if (isObject(nodeVal) && nodeVal.type)
     return nodeVal.name === patternVal
-  return false
+  return
 }

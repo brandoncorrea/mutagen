@@ -27,8 +27,8 @@ async function onSignal(signal) {
 function onExit() {
   for (const pool of activePools) {
     pool.closed = true
-    for (const r of pool.runners)
-      try { r.close() } catch {}
+    for (const runner of pool.runners)
+      try { runner.close() } catch {}
   }
   activePools.clear()
 }
@@ -56,7 +56,8 @@ function trackPool(pool) {
 
 function untrackPool(pool) {
   activePools.delete(pool)
-  if (activePools.size === 0) removeSignalHandlers()
+  if (!activePools.size)
+    removeSignalHandlers()
 }
 
 async function cleanupAllPools() {

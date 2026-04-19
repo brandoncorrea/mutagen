@@ -61,7 +61,16 @@ export async function runRetest(runContext, parsed) {
 
   if (!report.survivors?.length) {
     out.log(`No survivors in report — nothing to retest.`)
-    return { exitCode: 0, stats: { killed: 0, survived: 0, timedOut: 0, skipped: 0, fileCount: 0 } }
+    return {
+      exitCode: 0,
+      stats: {
+        killed: 0,
+        survived: 0,
+        timedOut: 0,
+        skipped: 0,
+        fileCount: 0
+      }
+    }
   }
 
   const { files, survivorKeys } = loadRetestTargets(report)

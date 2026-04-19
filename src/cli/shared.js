@@ -10,7 +10,10 @@ export { STATUS } from '../core/mutation-status.js'
  * error → stderr (raw write semantics, caller adds newline)
  */
 export function defaultOut() {
-  return { log: console.log, error: text => process.stderr.write(text) }
+  return {
+    log: console.log,
+    error: text => process.stderr.write(text)
+  }
 }
 
 export function isString(value) {

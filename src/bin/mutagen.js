@@ -15,12 +15,13 @@ import { resolve, parse as parsePath } from 'node:path'
 import { createRequire } from 'node:module'
 import { pathToFileURL } from 'node:url'
 import { createManualRunner } from '../cli/manual.js'
+import { defaultOut } from '../cli/shared.js'
 
 const require = createRequire(import.meta.url)
 const { version } = require('../../package.json')
 
 export async function run(args, { config, configPath, out, err = console.error } = {}) {
-  if (!out) out = { log: console.log, error: text => process.stderr.write(text) }
+  if (!out) out = defaultOut()
 
   if (versionRequested(args)) {
     out.log(version)

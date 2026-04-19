@@ -25,28 +25,26 @@ export function autoDiffSummary(previousReport, currentFileResults) {
 function buildPreviousIdMap(report) {
   return buildFromLegacyFormat(report)
     || buildFromStructuredFormat(report)
-    || null
 }
 
-function buildFromLegacyFormat(report) {
-  if (!report.files) return null
+function buildFromLegacyFormat({ files }) {
+  if (!files) return
   const map = new Map()
-  for (const fileData of Object.values(report.files)) {
-    if (!Array.isArray(fileData.mutants)) continue
-    for (const m of fileData.mutants) {
-      if (!m.id) continue
-      map.set(m.id, isAlive(m) ? 'survived' : 'killed')
-    }
-  }
-  return map.size > 0 ? map : null
+  for (const { mutants } of Object.values(files))
+    if (Array.isArray(mutants))
+      for (const mutant of mutants)
+        if (mutant.id)
+          map.set(mutant.id, isAlive(mutant) ? 'survived' : 'killed')
+  if (map.size) return map
 }
 
-function buildFromStructuredFormat(report) {
-  if (!report.survivors) return null
+function buildFromStructuredFormat({ survivors }) {
+  if (!survivors) return null
   const map = new Map()
-  for (const s of report.survivors)
-    if (s.id) map.set(s.id, 'survived')
-  return map.size > 0 ? map : null
+  for (const { id } of survivors)
+    if (id)
+      map.set(id, 'survived')
+  if (map.size) return map
 }
 
 function compileSummary(prevIds, currentFileResults) {

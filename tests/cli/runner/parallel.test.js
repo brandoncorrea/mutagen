@@ -386,9 +386,9 @@ describe('runParallel', () => {
     const preflightRunner = fakePoolRunner([{ passed: true }])
     const statuses = []
     const poolRun = vi.fn().mockImplementation((mutations, opts) => {
-      for (const m of mutations) {
-        expect(m).not.toHaveProperty('_progressIndex')
-        opts.onResult?.({ mutation: m, status: 'killed' })
+      for (const mutation of mutations) {
+        expect(mutation).not.toHaveProperty('_progressIndex')
+        opts.onResult?.({ mutation, status: 'killed' })
       }
       return { killed: mutations, survived: [], timedOut: [] }
     })

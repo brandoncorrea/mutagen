@@ -9,18 +9,18 @@ describe('ast-mutators', () => {
     })
 
     it('every mutator has required fields with correct types', () => {
-      for (const m of javascript) {
-        expect(m.name, `missing name`).toBeDefined()
-        expect(typeof m.name, `name should be string: ${m.name}`).toBe('string')
-        expect(Array.isArray(m.types), `types should be array: ${m.name}`).toBe(true)
-        expect(m.types.length, `types should be non-empty: ${m.name}`).toBeGreaterThan(0)
-        expect(typeof m.test, `test should be function: ${m.name}`).toBe('function')
-        expect(typeof m.mutate, `mutate should be function: ${m.name}`).toBe('function')
+      for (const mutator of javascript) {
+        expect(mutator.name, `missing name`).toBeDefined()
+        expect(typeof mutator.name, `name should be string: ${mutator.name}`).toBe('string')
+        expect(Array.isArray(mutator.types), `types should be array: ${mutator.name}`).toBe(true)
+        expect(mutator.types.length, `types should be non-empty: ${mutator.name}`).toBeGreaterThan(0)
+        expect(typeof mutator.test, `test should be function: ${mutator.name}`).toBe('function')
+        expect(typeof mutator.mutate, `mutate should be function: ${mutator.name}`).toBe('function')
       }
     })
 
     it('mutator names are unique', () => {
-      const names = javascript.map(m => m.name)
+      const names = javascript.map(mutator => mutator.name)
       const dupes = names.filter((n, i) => names.indexOf(n) !== i)
       expect(dupes, `duplicate names: ${dupes.join(', ')}`).toHaveLength(0)
     })
@@ -38,11 +38,9 @@ describe('ast-mutators', () => {
         'AssignmentPattern', 'NewExpression',
         'ArrowFunctionExpression'
       ])
-      for (const m of javascript) {
-        for (const t of m.types) {
-          expect(valid.has(t), `${m.name}: unknown node type '${t}'`).toBe(true)
-        }
-      }
+      for (const mutator of javascript)
+        for (const type of mutator.types)
+          expect(valid.has(type), `${mutator.name}: unknown node type '${type}'`).toBe(true)
     })
   })
 
@@ -114,78 +112,92 @@ describe('ast-mutators', () => {
 
   describe('conditional expression', () => {
     it('ternary → always truthy inserts true || before consequent', () => {
-      const m = find('ternary → always truthy')
+      const mutator = find('ternary → always truthy')
       const node = {
         type: 'ConditionalExpression',
         consequent: { start: 6, end: 7 },
         start: 0, end: 12
       }
-      expect(m.test(node)).toBe(true)
-      const patch = m.mutate(node, 'cond ? b : c')
+      expect(mutator.test(node)).toBe(true)
+      const patch = mutator.mutate(node, 'cond ? b : c')
       expect(patch).toEqual({ start: 6, end: 6, replacement: 'true || ' })
     })
   })
 
   describe('method expressions', () => {
     it('toLowerCase → toUpperCase swaps method name', () => {
-      const m = find('toLowerCase → toUpperCase')
+      const mutator = find('toLowerCase → toUpperCase')
       const node = callWithMethod('toLowerCase', 2, 13, 0, 15)
-      expect(m.test(node)).toBe(true)
-      const patch = m.mutate(node, 's.toLowerCase()')
+      expect(mutator.test(node)).toBe(true)
+      const patch = mutator.mutate(node, 's.toLowerCase()')
       expect(patch.replacement).toBe('toUpperCase')
     })
 
     it('trim() → (removed) removes .trim()', () => {
-      const m = find('trim() → (removed)')
+      const mutator = find('trim() → (removed)')
       const node = callWithMethod('trim', 2, 6, 0, 8)
       node.arguments = []
       node.callee.object = { end: 1 }
-      expect(m.test(node)).toBe(true)
-      const patch = m.mutate(node, 's.trim()')
+      expect(mutator.test(node)).toBe(true)
+      const patch = mutator.mutate(node, 's.trim()')
       expect(patch).toEqual({ start: 1, end: 8, replacement: '' })
     })
 
     it('rejects computed member expressions', () => {
-      const m = find('toLowerCase → toUpperCase')
+      const mutator = find('toLowerCase → toUpperCase')
       const node = callWithMethod('toLowerCase', 2, 13, 0, 15)
       node.callee.computed = true
-      expect(m.test(node)).toBe(false)
+      expect(mutator.test(node)).toBe(false)
     })
 
     it('rejects calls with wrong method name', () => {
-      const m = find('toLowerCase → toUpperCase')
+      const mutator = find('toLowerCase → toUpperCase')
       const node = callWithMethod('toString', 2, 10, 0, 12)
-      expect(m.test(node)).toBe(false)
+      expect(mutator.test(node)).toBe(false)
     })
   })
 
   describe('update operators', () => {
     it('++ → -- for postfix', () => {
-      const m = find('++ → --')
-      const node = { type: 'UpdateExpression', operator: '++', prefix: false, argument: { start: 0, end: 1 }, start: 0, end: 3 }
-      expect(m.test(node)).toBe(true)
-      const patch = m.mutate(node, 'i++')
+      const mutator = find('++ → --')
+      const node = {
+        type: 'UpdateExpression',
+        operator: '++',
+        prefix: false,
+        argument: { start: 0, end: 1 },
+        start: 0,
+        end: 3
+      }
+      expect(mutator.test(node)).toBe(true)
+      const patch = mutator.mutate(node, 'i++')
       expect(patch).toEqual({ start: 1, end: 3, replacement: '--' })
     })
 
     it('++ → -- for prefix', () => {
-      const m = find('++ → --')
-      const node = { type: 'UpdateExpression', operator: '++', prefix: true, argument: { start: 2, end: 3 }, start: 0, end: 3 }
-      const patch = m.mutate(node, '++i')
+      const mutator = find('++ → --')
+      const node = {
+        type: 'UpdateExpression',
+        operator: '++',
+        prefix: true,
+        argument: { start: 2, end: 3 },
+        start: 0,
+        end: 3
+      }
+      const patch = mutator.mutate(node, '++i')
       expect(patch).toEqual({ start: 0, end: 2, replacement: '--' })
     })
   })
 
   describe('optional chaining', () => {
     it('?. → . replaces optional chaining', () => {
-      const m = find('?. → .')
+      const mutator = find('?. → .')
       const node = {
         type: 'MemberExpression', optional: true,
         object: { end: 3 }, property: { start: 5 },
         start: 0, end: 9
       }
-      expect(m.test(node)).toBe(true)
-      const patch = m.mutate(node, 'obj?.prop')
+      expect(mutator.test(node)).toBe(true)
+      const patch = mutator.mutate(node, 'obj?.prop')
       expect(patch.replacement).toBe('.')
       expect(patch.end - patch.start).toBe(2)
     })
@@ -193,14 +205,14 @@ describe('ast-mutators', () => {
 
   describe('negation removal', () => {
     it('!var → var removes negation', () => {
-      const m = find('!var → var')
+      const mutator = find('!var → var')
       const node = {
         type: 'UnaryExpression', operator: '!', prefix: true,
         argument: { type: 'Identifier', start: 1, end: 6 },
         start: 0, end: 6
       }
-      expect(m.test(node)).toBe(true)
-      const patch = m.mutate(node, '!ready')
+      expect(mutator.test(node)).toBe(true)
+      const patch = mutator.mutate(node, '!ready')
       expect(patch).toEqual({ start: 0, end: 1, replacement: '' })
     })
   })
