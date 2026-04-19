@@ -86,9 +86,8 @@ function flushModuleState(vitest) {
  * Our pool already handles cleanup — vitest's handlers just accumulate
  * and trigger MaxListenersExceededWarning with multiple parallel instances.
  */
-const VITEST_OPTIONS = Object.freeze({
-  stdin: new Readable({ read() {} })
-})
+/* v8 ignore next */
+const VITEST_OPTIONS = Object.freeze({ stdin: new Readable({ read() {} }) })
 
 async function startVitestClean(startVitest, testFilter, opts) {
   const sigint = process.listeners('SIGINT')
