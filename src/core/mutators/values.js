@@ -196,3 +196,36 @@ export const propertyAccessMutations = [
     })
   }
 ]
+
+export const nullUndefinedSwap = [
+  {
+    name: 'null → undefined',
+    types: ['Literal', 'NullLiteral'],
+    test: node => node.type === 'NullLiteral' || node.raw === 'null',
+    mutate: ({ start, end }) => ({ start, end, replacement: 'undefined' })
+  },
+  {
+    name: 'undefined → null',
+    types: ['Identifier'],
+    test: node => node.name === 'undefined',
+    mutate: ({ start, end }) => ({ start, end, replacement: 'null' })
+  }
+]
+
+export const emptyArrayMutation = [
+  {
+    name: '[] → [undefined]',
+    types: ['ArrayExpression'],
+    test: ({ elements }) => elements.length === 0,
+    mutate: ({ start, end }) => ({ start, end, replacement: '[undefined]' })
+  }
+]
+
+export const templateLiteralMutation = [
+  {
+    name: '`${...}` → ``',
+    types: ['TemplateLiteral'],
+    test: ({ expressions }) => expressions.length > 0,
+    mutate: ({ start, end }) => ({ start, end, replacement: '``' })
+  }
+]

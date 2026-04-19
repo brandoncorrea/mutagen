@@ -16,31 +16,36 @@
  */
 
 import {
-  equalityOperators, logicalOperators, arithmeticOperators, updateOperators,
-  assignmentMutations, bitwiseOperators, nullishCoalescing, optionalChaining,
-  negationRemoval, unaryMinusRemoval, voidRemoval
+  equalityOperators, looseEqualityOperators, logicalOperators, arithmeticOperators,
+  updateOperators, assignmentMutations, bitwiseOperators, nullishCoalescing,
+  optionalChaining, negationRemoval, unaryMinusRemoval, voidRemoval,
+  bitwiseNotRemoval, instanceofNegation, typeofRemoval
 } from './mutators/operators.js'
 
 import {
   methodExpressions, stringMethodSwaps, mathMethodSwaps, arrayMethodSwaps,
-  objectMethodSwaps, stringMethodMutations, typeConversions, promiseMethodSwaps
+  objectMethodSwaps, stringMethodMutations, typeConversions, promiseMethodSwaps,
+  objectMutationRemovals, jsonMethodSwaps
 } from './mutators/methods.js'
 
 import {
   conditionalExpressions, conditionalNegation, blockStatements,
   asyncMutations, throwRemoval, defaultParameterRemoval, newKeywordRemoval,
-  arrowShortCircuit
+  arrowShortCircuit, breakRemoval, continueRemoval, catchBlockEmptying,
+  finallyRemoval, emptyReturnRemoval, forInOfSwap, yieldRemoval, deleteRemoval
 } from './mutators/statements.js'
 
 import {
   booleanLiterals, stringLiterals, fallbackRemovals, numericBoundary,
-  spreadRemoval, propertyAccessMutations
+  spreadRemoval, propertyAccessMutations, nullUndefinedSwap,
+  emptyArrayMutation, templateLiteralMutation
 } from './mutators/values.js'
 
 import { regexMutations } from './mutators/regex.js'
 
 export const javascript = [
   ...equalityOperators,
+  ...looseEqualityOperators,
   ...logicalOperators,
   ...arithmeticOperators,
   ...booleanLiterals,
@@ -73,5 +78,21 @@ export const javascript = [
   ...defaultParameterRemoval,
   ...regexMutations,
   ...newKeywordRemoval,
-  ...arrowShortCircuit
+  ...arrowShortCircuit,
+  ...bitwiseNotRemoval,
+  ...instanceofNegation,
+  ...typeofRemoval,
+  ...breakRemoval,
+  ...continueRemoval,
+  ...catchBlockEmptying,
+  ...finallyRemoval,
+  ...emptyReturnRemoval,
+  ...forInOfSwap,
+  ...yieldRemoval,
+  ...deleteRemoval,
+  ...nullUndefinedSwap,
+  ...emptyArrayMutation,
+  ...templateLiteralMutation,
+  ...objectMutationRemovals,
+  ...jsonMethodSwaps
 ]

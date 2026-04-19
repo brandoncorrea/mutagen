@@ -132,3 +132,118 @@ export const newKeywordRemoval = [
     })
   }
 ]
+
+export const breakRemoval = [
+  {
+    name: 'break → (removed)',
+    types: ['BreakStatement'],
+    test: () => true,
+    mutate: ({ start, end }) => ({
+      start,
+      end,
+      replacement: ''
+    })
+  }
+]
+
+export const continueRemoval = [
+  {
+    name: 'continue → (removed)',
+    types: ['ContinueStatement'],
+    test: () => true,
+    mutate: ({ start, end }) => ({
+      start,
+      end,
+      replacement: ''
+    })
+  }
+]
+
+export const catchBlockEmptying = [
+  {
+    name: 'catch body → {} (empty)',
+    types: ['CatchClause'],
+    test: ({ body }) => body.body.length > 0,
+    mutate: ({ body }) => ({
+      start: body.start,
+      end: body.end,
+      replacement: '{}'
+    })
+  }
+]
+
+export const finallyRemoval = [
+  {
+    name: 'finally → (removed)',
+    types: ['TryStatement'],
+    test: ({ handler, finalizer }) => handler != null && finalizer != null,
+    mutate: ({ block, handler, finalizer }, source) => {
+      const searchFrom = (handler || block).end
+      const idx = source.indexOf('finally', searchFrom)
+      if (idx === -1) return null
+      return { start: idx, end: finalizer.end, replacement: '' }
+    }
+  }
+]
+
+export const emptyReturnRemoval = [
+  {
+    name: 'return; → (removed)',
+    types: ['ReturnStatement'],
+    test: ({ argument }) => argument == null,
+    mutate: ({ start, end }) => ({
+      start,
+      end,
+      replacement: ''
+    })
+  }
+]
+
+export const forInOfSwap = [
+  {
+    name: 'for...in → for...of',
+    types: ['ForInStatement'],
+    test: () => true,
+    mutate: ({ left, right }, source) => {
+      const idx = source.indexOf('in', left.end)
+      if (idx === -1 || idx + 2 > right.start) return null
+      return { start: idx, end: idx + 2, replacement: 'of' }
+    }
+  },
+  {
+    name: 'for...of → for...in',
+    types: ['ForOfStatement'],
+    test: () => true,
+    mutate: ({ left, right }, source) => {
+      const idx = source.indexOf('of', left.end)
+      if (idx === -1 || idx + 2 > right.start) return null
+      return { start: idx, end: idx + 2, replacement: 'in' }
+    }
+  }
+]
+
+export const yieldRemoval = [
+  {
+    name: 'yield → (removed)',
+    types: ['YieldExpression'],
+    test: ({ argument }) => argument != null,
+    mutate: ({ start, argument }) => ({
+      start,
+      end: argument.start,
+      replacement: ''
+    })
+  }
+]
+
+export const deleteRemoval = [
+  {
+    name: 'delete obj.key → true',
+    types: ['UnaryExpression'],
+    test: ({ operator, prefix }) => operator === 'delete' && prefix,
+    mutate: ({ start, end }) => ({
+      start,
+      end,
+      replacement: 'true'
+    })
+  }
+]

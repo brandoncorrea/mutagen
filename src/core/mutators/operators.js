@@ -59,7 +59,21 @@ export const assignmentMutations = [
   assignmentOpSwap('*= → /=', '*=', '/='),
   assignmentOpSwap('/= → *=', '/=', '*='),
   assignmentOpSwap('%= → +=', '%=', '+='),
-  assignmentOpSwap('**= → *=', '**=', '*=')
+  assignmentOpSwap('**= → *=', '**=', '*='),
+  assignmentOpSwap('&&= → ||=', '&&=', '||='),
+  assignmentOpSwap('||= → &&=', '||=', '&&='),
+  assignmentOpSwap('??= → ||=', '??=', '||='),
+  assignmentOpSwap('&= → |=', '&=', '|='),
+  assignmentOpSwap('|= → &=', '|=', '&='),
+  assignmentOpSwap('^= → &=', '^=', '&='),
+  assignmentOpSwap('<<= → >>=', '<<=', '>>='),
+  assignmentOpSwap('>>= → <<=', '>>=', '<<='),
+  assignmentOpSwap('>>>= → >>=', '>>>=', '>>=')
+]
+
+export const looseEqualityOperators = [
+  binaryOpSwap('== → !=', '==', '!='),
+  binaryOpSwap('!= → ==', '!=', '==')
 ]
 
 export const bitwiseOperators = [
@@ -67,7 +81,8 @@ export const bitwiseOperators = [
   binaryOpSwap('| → &', '|', '&'),
   binaryOpSwap('^ → &', '^', '&'),
   binaryOpSwap('<< → >>', '<<', '>>'),
-  binaryOpSwap('>> → <<', '>>', '<<')
+  binaryOpSwap('>> → <<', '>>', '<<'),
+  binaryOpSwap('>>> → >>', '>>>', '>>')
 ]
 
 export const nullishCoalescing = [
@@ -95,6 +110,45 @@ export const negationRemoval = [
     test: ({ operator, prefix }) => operator === '!' && prefix,
     mutate: ({ start, argument }) => ({
       start: start,
+      end: argument.start,
+      replacement: ''
+    })
+  }
+]
+
+export const bitwiseNotRemoval = [
+  {
+    name: '~x → x',
+    types: ['UnaryExpression'],
+    test: ({ operator, prefix }) => operator === '~' && prefix,
+    mutate: ({ start, argument }) => ({
+      start,
+      end: argument.start,
+      replacement: ''
+    })
+  }
+]
+
+export const instanceofNegation = [
+  {
+    name: 'x instanceof Y → !(x instanceof Y)',
+    types: ['BinaryExpression'],
+    test: node => node.operator === 'instanceof',
+    mutate: ({ start, end }, source) => ({
+      start,
+      end,
+      replacement: `!(${source.slice(start, end)})`
+    })
+  }
+]
+
+export const typeofRemoval = [
+  {
+    name: 'typeof x → x',
+    types: ['UnaryExpression'],
+    test: ({ operator, prefix }) => operator === 'typeof' && prefix,
+    mutate: ({ start, argument }) => ({
+      start,
       end: argument.start,
       replacement: ''
     })

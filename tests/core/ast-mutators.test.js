@@ -33,10 +33,14 @@ describe('ast-mutators', () => {
         'ConditionalExpression', 'ReturnStatement', 'ThrowStatement',
         'AwaitExpression', 'SpreadElement', 'ArrayExpression',
         'Literal', 'BooleanLiteral', 'NumericLiteral', 'StringLiteral',
-        'RegExpLiteral', 'ChainExpression', 'ObjectExpression',
+        'NullLiteral', 'RegExpLiteral', 'ChainExpression', 'ObjectExpression',
         'IfStatement', 'WhileStatement',
         'AssignmentPattern', 'NewExpression',
-        'ArrowFunctionExpression'
+        'ArrowFunctionExpression', 'Identifier',
+        'BreakStatement', 'ContinueStatement',
+        'CatchClause', 'TryStatement',
+        'ForInStatement', 'ForOfStatement',
+        'YieldExpression', 'TemplateLiteral'
       ])
       for (const mutator of javascript)
         for (const type of mutator.types)
@@ -1431,6 +1435,642 @@ describe('ast-mutators', () => {
         start: 0, end: 10
       }
       expect(m.test(node)).toBe(false)
+    })
+  })
+
+  // ── Loose equality operators ──
+
+  describe('loose equality operators', () => {
+    it('== → != swaps loose equality', () => {
+      const m = find('== → !=')
+      const node = binExpr('==', 4, 5, 9, 10)
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'if (a == b) {}')
+      expect(patch.replacement).toBe('!=')
+    })
+
+    it('== → != does not match ===', () => {
+      const m = find('== → !=')
+      expect(m.test(binExpr('===', 4, 5, 10, 11))).toBe(false)
+    })
+
+    it('!= → == swaps loose inequality', () => {
+      const m = find('!= → ==')
+      const node = binExpr('!=', 4, 5, 9, 10)
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'if (a != b) {}')
+      expect(patch.replacement).toBe('==')
+    })
+
+    it('!= → == does not match !==', () => {
+      const m = find('!= → ==')
+      expect(m.test(binExpr('!==', 4, 5, 10, 11))).toBe(false)
+    })
+  })
+
+  // ── Logical assignment operators ──
+
+  describe('logical assignment operators', () => {
+    it('&&= → ||= swaps logical AND assignment', () => {
+      const m = find('&&= → ||=')
+      const node = assignExpr('&&=', 0, 1, 6, 7)
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'x &&= y')
+      expect(patch.replacement).toBe('||=')
+    })
+
+    it('||= → &&= swaps logical OR assignment', () => {
+      const m = find('||= → &&=')
+      const node = assignExpr('||=', 0, 1, 6, 7)
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'x ||= y')
+      expect(patch.replacement).toBe('&&=')
+    })
+
+    it('??= → ||= swaps nullish assignment', () => {
+      const m = find('??= → ||=')
+      const node = assignExpr('??=', 0, 1, 6, 7)
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'x ??= y')
+      expect(patch.replacement).toBe('||=')
+    })
+  })
+
+  // ── Bitwise assignment operators ──
+
+  describe('bitwise assignment operators', () => {
+    it('&= → |= swaps bitwise AND assignment', () => {
+      const m = find('&= → |=')
+      const node = assignExpr('&=', 0, 1, 5, 6)
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'x &= y')
+      expect(patch.replacement).toBe('|=')
+    })
+
+    it('|= → &= swaps bitwise OR assignment', () => {
+      const m = find('|= → &=')
+      const node = assignExpr('|=', 0, 1, 5, 6)
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'x |= y')
+      expect(patch.replacement).toBe('&=')
+    })
+
+    it('^= → &= swaps bitwise XOR assignment', () => {
+      const m = find('^= → &=')
+      const node = assignExpr('^=', 0, 1, 5, 6)
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'x ^= y')
+      expect(patch.replacement).toBe('&=')
+    })
+
+    it('<<= → >>= swaps left shift assignment', () => {
+      const m = find('<<= → >>=')
+      const node = assignExpr('<<=', 0, 1, 6, 7)
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'x <<= y')
+      expect(patch.replacement).toBe('>>=')
+    })
+
+    it('>>= → <<= swaps right shift assignment', () => {
+      const m = find('>>= → <<=')
+      const node = assignExpr('>>=', 0, 1, 6, 7)
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'x >>= y')
+      expect(patch.replacement).toBe('<<=')
+    })
+
+    it('>>>= → >>= swaps unsigned right shift assignment', () => {
+      const m = find('>>>= → >>=')
+      const node = assignExpr('>>>=', 0, 1, 7, 8)
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'x >>>= y')
+      expect(patch.replacement).toBe('>>=')
+    })
+  })
+
+  // ── Unsigned right shift ──
+
+  describe('unsigned right shift', () => {
+    it('>>> → >> swaps unsigned to signed right shift', () => {
+      const m = find('>>> → >>')
+      const node = binExpr('>>>', 10, 11, 17, 18)
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'const x = a >>> b')
+      expect(patch.replacement).toBe('>>')
+    })
+
+    it('>>> → >> does not match >>', () => {
+      const m = find('>>> → >>')
+      expect(m.test(binExpr('>>', 10, 11, 15, 16))).toBe(false)
+    })
+  })
+
+  // ── Bitwise NOT removal ──
+
+  describe('bitwise NOT removal', () => {
+    it('~x → x removes bitwise NOT', () => {
+      const m = find('~x → x')
+      const node = {
+        type: 'UnaryExpression', operator: '~', prefix: true,
+        argument: { type: 'Identifier', start: 1, end: 6 },
+        start: 0, end: 6
+      }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, '~value')
+      expect(patch).toEqual({ start: 0, end: 1, replacement: '' })
+    })
+
+    it('rejects non-~ operators', () => {
+      const m = find('~x → x')
+      const node = {
+        type: 'UnaryExpression', operator: '!', prefix: true,
+        argument: { start: 1, end: 6 },
+        start: 0, end: 6
+      }
+      expect(m.test(node)).toBe(false)
+    })
+  })
+
+  // ── instanceof negation ──
+
+  describe('instanceof negation', () => {
+    it('x instanceof Y → !(x instanceof Y) wraps in negation', () => {
+      const m = find('x instanceof Y → !(x instanceof Y)')
+      const node = binExpr('instanceof', 0, 3, 15, 20)
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'obj instanceof Array')
+      expect(patch).toEqual({ start: 0, end: 20, replacement: '!(obj instanceof Array)' })
+    })
+
+    it('does not match non-instanceof operators', () => {
+      const m = find('x instanceof Y → !(x instanceof Y)')
+      expect(m.test(binExpr('===', 0, 1, 5, 6))).toBe(false)
+    })
+  })
+
+  // ── typeof removal ──
+
+  describe('typeof removal', () => {
+    it('typeof x → x removes typeof keyword', () => {
+      const m = find('typeof x → x')
+      const node = {
+        type: 'UnaryExpression', operator: 'typeof', prefix: true,
+        argument: { type: 'Identifier', start: 7, end: 12 },
+        start: 0, end: 12
+      }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'typeof value')
+      expect(patch).toEqual({ start: 0, end: 7, replacement: '' })
+    })
+
+    it('rejects non-typeof operators', () => {
+      const m = find('typeof x → x')
+      const node = {
+        type: 'UnaryExpression', operator: 'void', prefix: true,
+        argument: { start: 5, end: 10 },
+        start: 0, end: 10
+      }
+      expect(m.test(node)).toBe(false)
+    })
+  })
+
+  // ── break removal ──
+
+  describe('break removal', () => {
+    it('break → (removed) removes break statement', () => {
+      const m = find('break → (removed)')
+      const node = { type: 'BreakStatement', start: 4, end: 10 }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, '    break;')
+      expect(patch).toEqual({ start: 4, end: 10, replacement: '' })
+    })
+  })
+
+  // ── continue removal ──
+
+  describe('continue removal', () => {
+    it('continue → (removed) removes continue statement', () => {
+      const m = find('continue → (removed)')
+      const node = { type: 'ContinueStatement', start: 4, end: 13 }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, '    continue;')
+      expect(patch).toEqual({ start: 4, end: 13, replacement: '' })
+    })
+  })
+
+  // ── catch block emptying ──
+
+  describe('catch block emptying', () => {
+    it('catch body → {} empties catch block', () => {
+      const m = find('catch body → {} (empty)')
+      const node = {
+        type: 'CatchClause',
+        body: {
+          type: 'BlockStatement',
+          body: [{ type: 'ExpressionStatement' }],
+          start: 14, end: 30
+        },
+        start: 2, end: 30
+      }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node)
+      expect(patch).toEqual({ start: 14, end: 30, replacement: '{}' })
+    })
+
+    it('skips already-empty catch blocks', () => {
+      const m = find('catch body → {} (empty)')
+      const node = {
+        type: 'CatchClause',
+        body: { type: 'BlockStatement', body: [], start: 14, end: 16 },
+        start: 2, end: 16
+      }
+      expect(m.test(node)).toBe(false)
+    })
+  })
+
+  // ── finally removal ──
+
+  describe('finally removal', () => {
+    it('finally → (removed) removes finally block when catch exists', () => {
+      const m = find('finally → (removed)')
+      const source = 'try {} catch(e) {} finally { x() }'
+      const node = {
+        type: 'TryStatement',
+        block: { start: 4, end: 6 },
+        handler: { start: 7, end: 18 },
+        finalizer: { start: 27, end: 34 },
+        start: 0, end: 34
+      }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, source)
+      expect(patch.replacement).toBe('')
+      expect(source.slice(patch.start, patch.start + 7)).toBe('finally')
+      expect(patch.end).toBe(34)
+    })
+
+    it('skips when there is no catch handler', () => {
+      const m = find('finally → (removed)')
+      const node = {
+        type: 'TryStatement',
+        block: { start: 4, end: 20 },
+        handler: null,
+        finalizer: { start: 29, end: 42 },
+        start: 0, end: 42
+      }
+      expect(m.test(node)).toBe(false)
+    })
+
+    it('returns null when finally keyword not found in source', () => {
+      const m = find('finally → (removed)')
+      const node = {
+        type: 'TryStatement',
+        block: { start: 0, end: 5 },
+        handler: { start: 5, end: 10 },
+        finalizer: { start: 15, end: 20 },
+        start: 0, end: 20
+      }
+      expect(m.mutate(node, 'try {} catch {}  {}')).toBeNull()
+    })
+  })
+
+  // ── empty return removal ──
+
+  describe('empty return removal', () => {
+    it('return; → (removed) removes bare return', () => {
+      const m = find('return; → (removed)')
+      const node = {
+        type: 'ReturnStatement',
+        argument: null,
+        start: 2, end: 9
+      }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, '  return;')
+      expect(patch).toEqual({ start: 2, end: 9, replacement: '' })
+    })
+
+    it('skips return with argument', () => {
+      const m = find('return; → (removed)')
+      const node = {
+        type: 'ReturnStatement',
+        argument: { type: 'Identifier', start: 7, end: 12 },
+        start: 0, end: 12
+      }
+      expect(m.test(node)).toBe(false)
+    })
+  })
+
+  // ── for...in / for...of swap ──
+
+  describe('for...in / for...of swap', () => {
+    it('for...in → for...of swaps keyword', () => {
+      const m = find('for...in → for...of')
+      const node = {
+        type: 'ForInStatement',
+        left: { start: 5, end: 12 },
+        right: { start: 16, end: 19 },
+        start: 0, end: 25
+      }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'for (const x in obj) {}')
+      expect(patch.replacement).toBe('of')
+    })
+
+    it('for...of → for...in swaps keyword', () => {
+      const m = find('for...of → for...in')
+      const node = {
+        type: 'ForOfStatement',
+        left: { start: 5, end: 12 },
+        right: { start: 16, end: 19 },
+        start: 0, end: 25
+      }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'for (const x of arr) {}')
+      expect(patch.replacement).toBe('in')
+    })
+
+    it('for...in returns null when keyword not found', () => {
+      const m = find('for...in → for...of')
+      const node = {
+        type: 'ForInStatement',
+        left: { start: 5, end: 12 },
+        right: { start: 13, end: 16 },
+        start: 0, end: 20
+      }
+      expect(m.mutate(node, 'for (const x obj) {}')).toBeNull()
+    })
+  })
+
+  // ── yield removal ──
+
+  describe('yield removal', () => {
+    it('yield → (removed) removes yield keyword', () => {
+      const m = find('yield → (removed)')
+      const node = {
+        type: 'YieldExpression',
+        argument: { start: 6, end: 11 },
+        delegate: false,
+        start: 0, end: 11
+      }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'yield value')
+      expect(patch).toEqual({ start: 0, end: 6, replacement: '' })
+    })
+
+    it('yield → (removed) handles yield* delegation', () => {
+      const m = find('yield → (removed)')
+      const node = {
+        type: 'YieldExpression',
+        argument: { start: 7, end: 15 },
+        delegate: true,
+        start: 0, end: 15
+      }
+      const patch = m.mutate(node, 'yield* iterable')
+      expect(patch).toEqual({ start: 0, end: 7, replacement: '' })
+    })
+
+    it('skips yield without argument', () => {
+      const m = find('yield → (removed)')
+      const node = {
+        type: 'YieldExpression',
+        argument: null,
+        delegate: false,
+        start: 0, end: 5
+      }
+      expect(m.test(node)).toBe(false)
+    })
+  })
+
+  // ── delete removal ──
+
+  describe('delete removal', () => {
+    it('delete obj.key → true replaces delete expression', () => {
+      const m = find('delete obj.key → true')
+      const node = {
+        type: 'UnaryExpression', operator: 'delete', prefix: true,
+        argument: { type: 'MemberExpression', start: 7, end: 14 },
+        start: 0, end: 14
+      }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'delete obj.key')
+      expect(patch).toEqual({ start: 0, end: 14, replacement: 'true' })
+    })
+
+    it('rejects non-delete operators', () => {
+      const m = find('delete obj.key → true')
+      const node = {
+        type: 'UnaryExpression', operator: 'typeof', prefix: true,
+        argument: { start: 7, end: 12 },
+        start: 0, end: 12
+      }
+      expect(m.test(node)).toBe(false)
+    })
+  })
+
+  // ── null / undefined swap ──
+
+  describe('null / undefined swap', () => {
+    it('null → undefined replaces NullLiteral', () => {
+      const m = find('null → undefined')
+      const node = { type: 'NullLiteral', value: null, start: 10, end: 14 }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'const x = null')
+      expect(patch).toEqual({ start: 10, end: 14, replacement: 'undefined' })
+    })
+
+    it('null → undefined matches ESTree Literal with raw null', () => {
+      const m = find('null → undefined')
+      const node = { type: 'Literal', value: null, raw: 'null', start: 10, end: 14 }
+      expect(m.test(node)).toBe(true)
+    })
+
+    it('null → undefined does not match other literals', () => {
+      const m = find('null → undefined')
+      const node = { type: 'Literal', value: 0, raw: '0', start: 10, end: 11 }
+      expect(m.test(node)).toBe(false)
+    })
+
+    it('undefined → null replaces Identifier undefined', () => {
+      const m = find('undefined → null')
+      const node = { type: 'Identifier', name: 'undefined', start: 10, end: 19 }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'const x = undefined')
+      expect(patch).toEqual({ start: 10, end: 19, replacement: 'null' })
+    })
+
+    it('undefined → null does not match other identifiers', () => {
+      const m = find('undefined → null')
+      const node = { type: 'Identifier', name: 'value', start: 10, end: 15 }
+      expect(m.test(node)).toBe(false)
+    })
+  })
+
+  // ── empty array mutation ──
+
+  describe('empty array mutation', () => {
+    it('[] → [undefined] replaces empty array', () => {
+      const m = find('[] → [undefined]')
+      const node = { type: 'ArrayExpression', elements: [], start: 10, end: 12 }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'const x = []')
+      expect(patch).toEqual({ start: 10, end: 12, replacement: '[undefined]' })
+    })
+
+    it('does not match non-empty arrays', () => {
+      const m = find('[] → [undefined]')
+      const node = { type: 'ArrayExpression', elements: [{ type: 'Literal' }], start: 10, end: 13 }
+      expect(m.test(node)).toBe(false)
+    })
+  })
+
+  // ── template literal mutation ──
+
+  describe('template literal mutation', () => {
+    it('`${...}` → `` replaces template literal with empty', () => {
+      const m = find('`${...}` → ``')
+      const node = {
+        type: 'TemplateLiteral',
+        expressions: [{ type: 'Identifier', start: 7, end: 11 }],
+        quasis: [],
+        start: 5, end: 13
+      }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'foo = `hi ${name}`')
+      expect(patch).toEqual({ start: 5, end: 13, replacement: '``' })
+    })
+
+    it('does not match template literals without expressions', () => {
+      const m = find('`${...}` → ``')
+      const node = {
+        type: 'TemplateLiteral',
+        expressions: [],
+        quasis: [{ type: 'TemplateElement' }],
+        start: 5, end: 10
+      }
+      expect(m.test(node)).toBe(false)
+    })
+  })
+
+  // ── method additions ──
+
+  describe('indexOf / lastIndexOf swap', () => {
+    it('indexOf → lastIndexOf swaps search direction', () => {
+      const m = find('indexOf → lastIndexOf')
+      const node = callWithMethod('indexOf', 4, 11, 0, 15)
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node).replacement).toBe('lastIndexOf')
+    })
+
+    it('lastIndexOf → indexOf swaps search direction', () => {
+      const m = find('lastIndexOf → indexOf')
+      const node = callWithMethod('lastIndexOf', 4, 15, 0, 19)
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node).replacement).toBe('indexOf')
+    })
+  })
+
+  describe('sort removal', () => {
+    it('sort() → (removed) removes .sort()', () => {
+      const m = find('sort() → (removed)')
+      const node = callWithMethod('sort', 4, 8, 0, 10)
+      node.callee.object = { end: 3 }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'arr.sort()')
+      expect(patch).toEqual({ start: 3, end: 10, replacement: '' })
+    })
+  })
+
+  describe('reduce / reduceRight swap', () => {
+    it('reduce → reduceRight swaps method', () => {
+      const m = find('reduce → reduceRight')
+      const node = callWithMethod('reduce', 4, 10, 0, 20)
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node).replacement).toBe('reduceRight')
+    })
+
+    it('reduceRight → reduce swaps method', () => {
+      const m = find('reduceRight → reduce')
+      const node = callWithMethod('reduceRight', 4, 15, 0, 25)
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node).replacement).toBe('reduce')
+    })
+  })
+
+  describe('coercion function swaps', () => {
+    it('Number → String swaps global function', () => {
+      const m = find('Number → String')
+      const node = {
+        type: 'CallExpression',
+        callee: { type: 'Identifier', name: 'Number', start: 0, end: 6 },
+        start: 0, end: 11
+      }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node)
+      expect(patch).toEqual({ start: 0, end: 6, replacement: 'String' })
+    })
+
+    it('String → Number swaps global function', () => {
+      const m = find('String → Number')
+      const node = {
+        type: 'CallExpression',
+        callee: { type: 'Identifier', name: 'String', start: 0, end: 6 },
+        start: 0, end: 11
+      }
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node).replacement).toBe('Number')
+    })
+
+    it('Boolean → Number swaps global function', () => {
+      const m = find('Boolean → Number')
+      const node = {
+        type: 'CallExpression',
+        callee: { type: 'Identifier', name: 'Boolean', start: 0, end: 7 },
+        start: 0, end: 12
+      }
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node).replacement).toBe('Number')
+    })
+  })
+
+  describe('Object.freeze / Object.seal removal', () => {
+    it('Object.freeze() → identity returns the argument', () => {
+      const m = find('Object.freeze() → identity')
+      const node = staticCall('Object', 'freeze', 0, 20, 7, 13)
+      node.arguments = [{ start: 14, end: 19 }]
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'Object.freeze(myObj)')
+      expect(patch).toEqual({ start: 0, end: 20, replacement: 'myObj' })
+    })
+
+    it('Object.freeze() skips when no arguments', () => {
+      const m = find('Object.freeze() → identity')
+      const node = staticCall('Object', 'freeze', 0, 16, 7, 13)
+      node.arguments = []
+      expect(m.test(node)).toBe(false)
+    })
+
+    it('Object.seal() → identity returns the argument', () => {
+      const m = find('Object.seal() → identity')
+      const node = staticCall('Object', 'seal', 0, 18, 7, 11)
+      node.arguments = [{ start: 12, end: 17 }]
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'Object.seal(myObj)')
+      expect(patch).toEqual({ start: 0, end: 18, replacement: 'myObj' })
+    })
+  })
+
+  describe('JSON method swaps', () => {
+    it('JSON.parse → JSON.stringify swaps method', () => {
+      const m = find('JSON.parse → JSON.stringify')
+      const node = staticCall('JSON', 'parse', 0, 16, 5, 10)
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node).replacement).toBe('stringify')
+    })
+
+    it('JSON.stringify → JSON.parse swaps method', () => {
+      const m = find('JSON.stringify → JSON.parse')
+      const node = staticCall('JSON', 'stringify', 0, 20, 5, 14)
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node).replacement).toBe('parse')
     })
   })
 })

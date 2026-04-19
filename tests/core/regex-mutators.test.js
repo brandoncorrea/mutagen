@@ -164,6 +164,168 @@ describe('regex mutators', () => {
     })
   })
 
+  describe('? → (removed)', () => {
+    it('matches regex with ? quantifier', () => {
+      const m = find('? → (removed)')
+      const node = regexNode('a?b', '', 0, 5)
+      expect(m.test(node)).toBe(true)
+    })
+
+    it('does not match regex without ?', () => {
+      const m = find('? → (removed)')
+      const node = regexNode('abc', '', 0, 5)
+      expect(m.test(node)).toBe(false)
+    })
+
+    it('removes ? from source', () => {
+      const m = find('? → (removed)')
+      const source = 'const re = /a?b/'
+      const node = regexNode('a?b', '', 11, 16)
+      const patch = m.mutate(node, source)
+      expect(patch).toEqual({ start: 13, end: 14, replacement: '' })
+    })
+
+    it('skips ? in non-capturing group (?:)', () => {
+      const m = find('? → (removed)')
+      const node = regexNode('(?:foo)', '', 0, 9)
+      expect(m.test(node)).toBe(false)
+    })
+
+    it('skips ? in lookahead (?=)', () => {
+      const m = find('? → (removed)')
+      const node = regexNode('(?=foo)', '', 0, 9)
+      expect(m.test(node)).toBe(false)
+    })
+
+    it('skips ? in negative lookahead (?!)', () => {
+      const m = find('? → (removed)')
+      const node = regexNode('(?!foo)', '', 0, 9)
+      expect(m.test(node)).toBe(false)
+    })
+
+    it('matches non-greedy * modifier as ?', () => {
+      const m = find('? → (removed)')
+      const node = regexNode('a*?b', '', 0, 6)
+      expect(m.test(node)).toBe(true)
+    })
+
+    it('skips escaped \\?', () => {
+      const m = find('? → (removed)')
+      const node = regexNode('a\\?', '', 0, 6)
+      expect(m.test(node)).toBe(false)
+    })
+  })
+
+  describe('character class inversions', () => {
+    it('\\d → \\D matches digit shorthand', () => {
+      const m = find('\\d → \\D')
+      const node = regexNode('\\d+', '', 0, 5)
+      expect(m.test(node)).toBe(true)
+    })
+
+    it('\\d → \\D replaces d with D in source', () => {
+      const m = find('\\d → \\D')
+      const source = 'const re = /\\d+/'
+      const node = regexNode('\\d+', '', 11, 16)
+      const patch = m.mutate(node, source)
+      expect(patch).toEqual({ start: 13, end: 14, replacement: 'D' })
+    })
+
+    it('\\d → \\D does not match \\D', () => {
+      const m = find('\\d → \\D')
+      const node = regexNode('\\D+', '', 0, 5)
+      expect(m.test(node)).toBe(false)
+    })
+
+    it('\\D → \\d inverts non-digit to digit', () => {
+      const m = find('\\D → \\d')
+      const node = regexNode('\\D+', '', 0, 5)
+      expect(m.test(node)).toBe(true)
+      const source = 'const re = /\\D+/'
+      const patch = m.mutate(node, source)
+      expect(patch.replacement).toBe('d')
+    })
+
+    it('\\w → \\W inverts word to non-word', () => {
+      const m = find('\\w → \\W')
+      const node = regexNode('\\w+', '', 0, 5)
+      expect(m.test(node)).toBe(true)
+    })
+
+    it('\\W → \\w inverts non-word to word', () => {
+      const m = find('\\W → \\w')
+      const node = regexNode('\\W+', '', 0, 5)
+      expect(m.test(node)).toBe(true)
+    })
+
+    it('\\s → \\S inverts space to non-space', () => {
+      const m = find('\\s → \\S')
+      const node = regexNode('\\s+', '', 0, 5)
+      expect(m.test(node)).toBe(true)
+    })
+
+    it('\\S → \\s inverts non-space to space', () => {
+      const m = find('\\S → \\s')
+      const node = regexNode('\\S+', '', 0, 5)
+      expect(m.test(node)).toBe(true)
+    })
+
+    it('does not match escaped backslash followed by class char (\\\\d)', () => {
+      const m = find('\\d → \\D')
+      const node = regexNode('\\\\d', '', 0, 6)
+      expect(m.test(node)).toBe(false)
+    })
+  })
+
+  describe('regex flag removal', () => {
+    it('/g → (removed) matches regex with g flag', () => {
+      const m = find('/g → (removed)')
+      const node = regexNode('foo', 'g', 0, 6)
+      expect(m.test(node)).toBe(true)
+    })
+
+    it('/g → (removed) does not match regex without g flag', () => {
+      const m = find('/g → (removed)')
+      const node = regexNode('foo', 'i', 0, 6)
+      expect(m.test(node)).toBe(false)
+    })
+
+    it('/g → (removed) removes g flag from source', () => {
+      const m = find('/g → (removed)')
+      const source = 'const re = /foo/gi'
+      const node = regexNode('foo', 'gi', 11, 18)
+      const patch = m.mutate(node, source)
+      // /foo/ = 5 chars, flags start at 16, g is first flag
+      expect(patch).toEqual({ start: 16, end: 17, replacement: '' })
+    })
+
+    it('/i → (removed) removes i flag', () => {
+      const m = find('/i → (removed)')
+      const node = regexNode('foo', 'i', 0, 6)
+      expect(m.test(node)).toBe(true)
+      const source = '/foo/i'
+      const patch = m.mutate(node, source)
+      expect(patch).toEqual({ start: 5, end: 6, replacement: '' })
+    })
+
+    it('/m → (removed) removes m flag', () => {
+      const m = find('/m → (removed)')
+      const node = regexNode('foo', 'gm', 0, 7)
+      expect(m.test(node)).toBe(true)
+      const source = '/foo/gm'
+      const patch = m.mutate(node, source)
+      expect(patch).toEqual({ start: 6, end: 7, replacement: '' })
+    })
+
+    it('/i → (removed) removes i from multi-flag regex', () => {
+      const m = find('/i → (removed)')
+      const source = '/foo/gi'
+      const node = regexNode('foo', 'gi', 0, 7)
+      const patch = m.mutate(node, source)
+      expect(patch).toEqual({ start: 6, end: 7, replacement: '' })
+    })
+  })
+
   describe('defensive guard', () => {
     it('mutate returns null when pattern has no unescaped target char', () => {
       const m = find('^ → (removed)')

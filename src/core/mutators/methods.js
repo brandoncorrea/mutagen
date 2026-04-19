@@ -43,7 +43,9 @@ export const methodExpressions = [
 export const stringMethodSwaps = [
   methodNameSwap('includes → indexOf', 'includes', 'indexOf'),
   methodNameSwap('startsWith → endsWith', 'startsWith', 'endsWith'),
-  methodNameSwap('endsWith → startsWith', 'endsWith', 'startsWith')
+  methodNameSwap('endsWith → startsWith', 'endsWith', 'startsWith'),
+  methodNameSwap('indexOf → lastIndexOf', 'indexOf', 'lastIndexOf'),
+  methodNameSwap('lastIndexOf → indexOf', 'lastIndexOf', 'indexOf')
 ]
 
 export const mathMethodSwaps = [
@@ -102,7 +104,19 @@ export const arrayMethodSwaps = [
       replacement: ''
     })
   },
-  methodNameSwap('splice → slice', 'splice', 'slice')
+  methodNameSwap('splice → slice', 'splice', 'slice'),
+  {
+    name: 'sort() → (removed)',
+    types: ['CallExpression'],
+    test: node => isMemberCall(node, 'sort'),
+    mutate: ({ callee, end }) => ({
+      start: callee.object.end,
+      end,
+      replacement: ''
+    })
+  },
+  methodNameSwap('reduce → reduceRight', 'reduce', 'reduceRight'),
+  methodNameSwap('reduceRight → reduce', 'reduceRight', 'reduce')
 ]
 
 export const objectMethodSwaps = [
@@ -144,5 +158,36 @@ export const stringMethodMutations = [
 
 export const typeConversions = [
   globalFnSwap('parseInt → parseFloat', 'parseInt', 'parseFloat'),
-  globalFnSwap('parseFloat → parseInt', 'parseFloat', 'parseInt')
+  globalFnSwap('parseFloat → parseInt', 'parseFloat', 'parseInt'),
+  globalFnSwap('Number → String', 'Number', 'String'),
+  globalFnSwap('String → Number', 'String', 'Number'),
+  globalFnSwap('Boolean → Number', 'Boolean', 'Number')
+]
+
+export const objectMutationRemovals = [
+  {
+    name: 'Object.freeze() → identity',
+    types: ['CallExpression'],
+    test: node => isStaticCall(node, 'Object', 'freeze') && node.arguments.length === 1,
+    mutate: (node, source) => ({
+      start: node.start,
+      end: node.end,
+      replacement: source.slice(node.arguments[0].start, node.arguments[0].end)
+    })
+  },
+  {
+    name: 'Object.seal() → identity',
+    types: ['CallExpression'],
+    test: node => isStaticCall(node, 'Object', 'seal') && node.arguments.length === 1,
+    mutate: (node, source) => ({
+      start: node.start,
+      end: node.end,
+      replacement: source.slice(node.arguments[0].start, node.arguments[0].end)
+    })
+  }
+]
+
+export const jsonMethodSwaps = [
+  staticMethodSwap('JSON.parse → JSON.stringify', 'JSON', 'parse', 'stringify'),
+  staticMethodSwap('JSON.stringify → JSON.parse', 'JSON', 'stringify', 'parse')
 ]
