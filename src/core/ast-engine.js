@@ -99,12 +99,8 @@ function collectSkipRanges(ast, skipNodes) {
   if (!skipNodes?.length) return []
   const ranges = []
   walk(ast.program, null, (node) => {
-    for (const pattern of skipNodes) {
-      if (matchesPattern(node, pattern)) {
-        ranges.push([node.start, node.end])
-        break
-      }
-    }
+    if (skipNodes.some(pattern => matchesPattern(node, pattern)))
+      ranges.push([node.start, node.end])
   })
   return ranges
 }
