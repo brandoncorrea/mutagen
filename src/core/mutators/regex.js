@@ -4,8 +4,9 @@
  */
 
 /**
- * Find the first unescaped, non-character-class occurrence of `char` in a regex pattern.
- * Returns the index within the pattern string, or -1 if not found.
+ * Find the first unescaped, non-character-class occurrence
+ * of `char` in a regex pattern.
+ * Returns the index within the pattern, or -1 if not found.
  */
 function findUnescapedInPattern(pattern, char) {
   let inClass = false
@@ -139,9 +140,15 @@ export const regexMutations = [
     },
     mutate: ({ pattern, start }) => {
       const q = findQuantifierRange(pattern)
-      const newInner = q.inner.replace(/^\d+/, String(q.min - 1))
+      const inner = q.inner.replace(
+        /^\d+/, String(q.min - 1)
+      )
       const sourcePos = start + 1 + q.offset
-      return { start: sourcePos, end: sourcePos + q.length, replacement: `{${newInner}}` }
+      return {
+        start: sourcePos,
+        end: sourcePos + q.length,
+        replacement: `{${inner}}`
+      }
     }
   }
 ]

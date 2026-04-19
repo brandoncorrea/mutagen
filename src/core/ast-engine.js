@@ -4,7 +4,9 @@
  * by node type. Returns the same shape as the regex engine.
  *
  * Mutator interface:
- *   { name, types: string[], test(node, source, parent) → boolean, mutate(node, source, parent) → patch|null }
+ *   { name, types: string[],
+ *     test(node, source, parent) → boolean,
+ *     mutate(node, source, parent) → patch|null }
  *   patch: { start, end, replacement }
  */
 
@@ -42,7 +44,9 @@ export function generateMutations(source, mutators, targetLine, skipNodes) {
       const line = node.loc.start.line
       if (targetLine && line !== targetLine) continue
 
-      const mutatedSource = applyRangeMutation(source, result.start, result.end, result.replacement)
+      const mutatedSource = applyRangeMutation(
+        source, result.start, result.end, result.replacement
+      )
       const original = sourceLines[line - 1]
       const mutatedLine = mutatedSource.split('\n')[line - 1]
 
@@ -117,7 +121,8 @@ function isInSkipRange(node, ranges) {
  * Object values are matched recursively.
  *
  * @param {Object} node - AST node to test
- * @param {Object} pattern - pattern to match (e.g. { type: 'CallExpression', callee: { name: 'foo' } })
+ * @param {Object} pattern - pattern to match
+ *   (e.g. { type: 'CallExpression', callee: { name: 'foo' } })
  * @returns {boolean}
  */
 export function matchesPattern(node, pattern) {

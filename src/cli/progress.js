@@ -24,12 +24,18 @@ export function createProgressReporter(files, { write } = {}) {
   }
 }
 
-export function formatProgressSummary({ killed, survived, timedOut, fileCount }) {
+export function formatProgressSummary({
+  killed, survived, timedOut, fileCount
+}) {
   const effectiveKilled = killed + timedOut
   const total = effectiveKilled + survived
-  const counts = { killed: effectiveKilled, survived, noCoverage: 0, timeout: 0 }
+  const counts = {
+    killed: effectiveKilled, survived, noCoverage: 0, timeout: 0
+  }
   const score = mutationScore(counts).toFixed(1)
-  return `\n  ${fileCount} files | ${total} mutations | ${effectiveKilled} killed | ${survived} survived | ${score}%`
+  return `\n  ${fileCount} files | ${total} mutations` +
+    ` | ${effectiveKilled} killed` +
+    ` | ${survived} survived | ${score}%`
 }
 
 export function createOrderedBuffer(onDot) {

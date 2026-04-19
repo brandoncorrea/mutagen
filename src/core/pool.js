@@ -1,6 +1,7 @@
 /**
  * Worker pool manager for parallel mutation testing.
- * Distributes mutations across in-process runner instances for concurrent execution.
+ * Distributes mutations across in-process runner instances
+ * for concurrent execution.
  *
  * Runner interface:
  *   { applyMutation(source), run(), close() }
@@ -75,10 +76,10 @@ export function _resetCleanupState() {
 /**
  * Create a worker pool for parallel mutation testing.
  *
- * Uses in-process async concurrency (not worker_threads). Workers are
- * async functions that pull from a shared queue. The queue is safe to
- * share because JavaScript is single-threaded — workers only yield at
- * await boundaries, never during queue.pop().
+ * Uses in-process async concurrency (not worker_threads).
+ * Workers are async functions that pull from a shared queue.
+ * The queue is safe to share because JS is single-threaded —
+ * workers only yield at await, never during queue.pop().
  *
  * @param {Object} options
  * @param {number} options.workerCount - number of concurrent workers
@@ -154,7 +155,8 @@ async function runOne(runner, mutation, outcomes, options = {}) {
   const { timeout, onResult } = options
   try {
     runner.applyMutation(mutation.source)
-    const { passed, killedBy, coveredBy } = await withTimeout(runner.run, timeout)
+    const { passed, killedBy, coveredBy } =
+      await withTimeout(runner.run, timeout)
 
     if (passed) {
       outcomes.survived.push({ ...mutation, coveredBy })

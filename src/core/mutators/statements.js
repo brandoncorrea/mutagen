@@ -250,7 +250,10 @@ export const deleteRemoval = [
 export const staticKeywordRemoval = [
   {
     name: 'static → (removed)',
-    types: ['MethodDefinition', 'PropertyDefinition', 'ClassMethod', 'ClassProperty'],
+    types: [
+      'MethodDefinition', 'PropertyDefinition',
+      'ClassMethod', 'ClassProperty'
+    ],
     test: node => node.static === true,
     mutate: (node, source) => {
       const idx = source.indexOf('static', node.start)
@@ -264,7 +267,8 @@ export const errorTypeSwap = [
   {
     name: 'new Error → new TypeError',
     types: ['NewExpression'],
-    test: ({ callee }) => callee?.type === 'Identifier' && callee.name === 'Error',
+    test: ({ callee }) =>
+      callee?.type === 'Identifier' && callee.name === 'Error',
     mutate: ({ callee }) => ({
       start: callee.start,
       end: callee.end,
@@ -274,7 +278,9 @@ export const errorTypeSwap = [
   {
     name: 'new TypeError → new Error',
     types: ['NewExpression'],
-    test: ({ callee }) => callee?.type === 'Identifier' && callee.name === 'TypeError',
+    test: ({ callee }) =>
+      callee?.type === 'Identifier'
+      && callee.name === 'TypeError',
     mutate: ({ callee }) => ({
       start: callee.start,
       end: callee.end,

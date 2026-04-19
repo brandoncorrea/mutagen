@@ -6,7 +6,7 @@
  *   config  - path to vitest config file (for monorepo workspaces)
  *   root    - project root directory (for monorepo workspaces)
  *   testFile - specific test file to run (optional; runs all tests if omitted)
- *   warm    - attempt warm rerun (default: true). Falls back to cold if warm fails.
+ *   warm    - attempt warm rerun (default: true).
  */
 
 import { basename, parse as parsePath } from 'node:path'
@@ -167,7 +167,10 @@ function enqueueModule({ graph, queue }, moduleId) {
 function coldRunner(startVitest, testFilter, vitestOpts) {
   return {
     async run() {
-      const vitest = await startVitestClean(startVitest, testFilter, { ...vitestOpts, watch: false })
+      const vitest = await startVitestClean(
+        startVitest, testFilter,
+        { ...vitestOpts, watch: false }
+      )
       try {
         return compileResults(vitest)
       } finally {

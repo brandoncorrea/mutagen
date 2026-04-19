@@ -1,6 +1,7 @@
 /**
  * Operator-focused AST mutators.
- * Equality, logical, arithmetic, assignment, bitwise, update, unary, and void operators.
+ * Equality, logical, arithmetic, assignment, bitwise,
+ * update, unary, and void operators.
  */
 
 import { binaryOpSwap, logicalOpSwap, assignmentOpSwap } from './helpers.js'

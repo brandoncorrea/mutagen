@@ -14,14 +14,14 @@ Usage: mutagen <source-file> [options]
 Modes:
   --all              Run mutations on all configured source files
   --incremental      Skip source files that haven't changed since last report
-  --retest <file>    Re-run only survived/timed-out mutants from a previous report
+  --retest <file>    Re-run survived mutants from a report
   --diff <a> <b>     Compare two JSON reports and show regressions
 
 Options:
   --line N           Only mutate the specified line number (single-file mode)
   --json [path]      Output JSON report (to stdout, or to path if given)
   --dry-run          List mutations without running tests
-  --timeout N        Per-mutation timeout in milliseconds
+  --timeout N        Per-mutation timeout in ms
   --parallel [N]     Run mutations in parallel (default: 2 workers, max 32)
   --quiet            Suppress per-mutation output; print summary to stderr
   --progress         Show compact per-file dot notation progress on stderr
@@ -33,8 +33,11 @@ Exit codes:
   0    All mutants were killed (or dry-run/diff succeeded)
   1    Surviving mutants detected, errors occurred, or score below --min-score`
 
-const diffMessage = 'Usage: npx mutagen --diff <before.json> <after.json> [--json]'
-const retestMessage = 'Usage: npx mutagen --retest <report.json> [--json [path]] [--timeout N] [--parallel [N]] [--quiet]'
+const diffMessage =
+  'Usage: npx mutagen --diff <before.json> <after.json> [--json]'
+const retestMessage =
+  'Usage: npx mutagen --retest <report.json>' +
+  ' [--json [path]] [--timeout N] [--parallel [N]] [--quiet]'
 
 export function parseArgs(argv = process.argv.slice(2)) {
   if (argv.includes('--help') || argv.includes('-h'))
@@ -190,8 +193,10 @@ function parseNumericFlag(args, flag, { positive = false } = {}) {
   const idx = args.indexOf(flag)
   if (idx < 0) return
   const value = Number(args[idx + 1])
-  if (isInvalidNumber(value) || (positive && !value))
-    return { error: `${flag} requires a ${positive ? 'positive ' : ''}numeric value` }
+  if (isInvalidNumber(value) || (positive && !value)) {
+    const adj = positive ? 'positive ' : ''
+    return { error: `${flag} requires a ${adj}numeric value` }
+  }
   return value
 }
 

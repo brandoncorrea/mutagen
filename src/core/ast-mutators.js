@@ -1,7 +1,8 @@
 /**
  * AST-based mutation visitors.
  *
- * Each mutator targets specific ESTree/Babel node types and produces source patches.
+ * Each mutator targets specific ESTree/Babel node types
+ * and produces source patches.
  * The AST engine walks the parsed tree, calls test() for matching node types,
  * and applies mutate() patches to generate mutation objects.
  *
@@ -16,8 +17,10 @@
  */
 
 import {
-  equalityOperators, looseEqualityOperators, logicalOperators, arithmeticOperators,
-  updateOperators, assignmentMutations, bitwiseOperators, nullishCoalescing,
+  equalityOperators, looseEqualityOperators,
+  logicalOperators, arithmeticOperators,
+  updateOperators, assignmentMutations,
+  bitwiseOperators, nullishCoalescing,
   optionalChaining, negationRemoval, unaryMinusRemoval, voidRemoval,
   bitwiseNotRemoval, instanceofNegation, typeofRemoval,
   inOperatorNegation, logicalShortCircuit

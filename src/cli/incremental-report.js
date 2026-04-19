@@ -1,27 +1,50 @@
 /**
- * Incremental-mode reporting: print summaries, merge reports, count cached results.
- * Extracted from cli/incremental.js to separate hashing/classification from presentation.
+ * Incremental-mode reporting: print summaries,
+ * merge reports, count cached results.
+ * Extracted from cli/incremental.js to separate
+ * hashing/classification from presentation.
  */
 
 import { writeFileSync } from 'node:fs'
 
 import { mutantKey } from '../core/mutation-id.js'
-import { STATUS, isKilled, isAlive } from '../core/mutation-status.js'
-import { HEADER_SEPARATOR, createReport, writeReportFile } from '../core/report-data.js'
+import {
+  STATUS, isKilled, isAlive
+} from '../core/mutation-status.js'
+import {
+  HEADER_SEPARATOR, createReport, writeReportFile
+} from '../core/report-data.js'
 
-export function printIncrementalSummary(out, batchResult, sources, previous, classification) {
+export function printIncrementalSummary(
+  out, batchResult, sources, previous, classification
+) {
   const { totalSurvived, totalKilled, failures } = batchResult
   const { unchangedSources, changedSources } = classification
-  const cachedCounts = countCachedResults(previous.previousReport, unchangedSources)
+  const cachedCounts = countCachedResults(
+    previous.previousReport, unchangedSources
+  )
   const grandKilled = totalKilled + cachedCounts.killed
   const grandSurvived = totalSurvived + cachedCounts.survived
 
   out.log(`\n${HEADER_SEPARATOR}`)
   out.log(`INCREMENTAL SUMMARY`)
   out.log(HEADER_SEPARATOR)
-  out.log(`Rerun: ${changedSources.length} files  |  Killed: ${totalKilled}  |  Survived: ${totalSurvived}  |  Errors: ${failures}`)
-  out.log(`Cached: ${unchangedSources.length} files  |  Killed: ${cachedCounts.killed}  |  Survived: ${cachedCounts.survived}`)
-  out.log(`Total: ${sources.length} files  |  Killed: ${grandKilled}  |  Survived: ${grandSurvived}`)
+  out.log(
+    `Rerun: ${changedSources.length} files` +
+    `  |  Killed: ${totalKilled}` +
+    `  |  Survived: ${totalSurvived}` +
+    `  |  Errors: ${failures}`
+  )
+  out.log(
+    `Cached: ${unchangedSources.length} files` +
+    `  |  Killed: ${cachedCounts.killed}` +
+    `  |  Survived: ${cachedCounts.survived}`
+  )
+  out.log(
+    `Total: ${sources.length} files` +
+    `  |  Killed: ${grandKilled}` +
+    `  |  Survived: ${grandSurvived}`
+  )
   out.log(`${HEADER_SEPARATOR}\n`)
 
   return {
@@ -53,33 +76,53 @@ function countCachedMutation(results, mutation) {
     results.survived++
 }
 
-export function printIncrementalHeader(out, sources, classification) {
-  const { changedSources, unchangedSources, changedTestFiles, testInvalidated } = classification
+export function printIncrementalHeader(
+  out, sources, classification
+) {
+  const {
+    changedSources, unchangedSources,
+    changedTestFiles, testInvalidated
+  } = classification
   out.log(`\n${HEADER_SEPARATOR}`)
   out.log(`MUTAGEN — INCREMENTAL MODE`)
   out.log(HEADER_SEPARATOR)
   out.log(`Total sources: ${sources.length}`)
-  out.log(`Changed/new:   ${changedSources.length}${testInvalidated.size ? ` (${testInvalidated.size} from test changes)` : ''}`)
+  const testNote = testInvalidated.size
+    ? ` (${testInvalidated.size} from test changes)`
+    : ''
+  out.log(`Changed/new:   ${changedSources.length}${testNote}`)
   out.log(`Cached:        ${unchangedSources.length}`)
   if (changedTestFiles.length)
     out.log(`Changed tests: ${changedTestFiles.length}`)
 }
 
-export function updateCachedReportHashes(reportPath, previousReport, classification) {
+export function updateCachedReportHashes(
+  reportPath, previousReport, classification
+) {
   const { currentHashes, currentTestHashes } = classification
   previousReport.sourceHashes = currentHashes
   previousReport.testHashes = currentTestHashes
   writeFileSync(reportPath, JSON.stringify(previousReport, null, 2))
 }
 
-export function printAllCachedSummary(out, sources, previous, classification) {
-  const cachedCounts = countCachedResults(previous.previousReport, classification.unchangedSources)
+export function printAllCachedSummary(
+  out, sources, previous, classification
+) {
+  const cachedCounts = countCachedResults(
+    previous.previousReport,
+    classification.unchangedSources
+  )
 
   out.log(`\nNo files changed since last report. Nothing to do.`)
   out.log(`\n${HEADER_SEPARATOR}`)
   out.log(`INCREMENTAL SUMMARY (all cached)`)
   out.log(HEADER_SEPARATOR)
-  out.log(`Files: ${sources.length}  |  Killed: ${cachedCounts.killed}  |  Survived: ${cachedCounts.survived}  |  Rerun: 0`)
+  out.log(
+    `Files: ${sources.length}` +
+    `  |  Killed: ${cachedCounts.killed}` +
+    `  |  Survived: ${cachedCounts.survived}` +
+    `  |  Rerun: 0`
+  )
   out.log(`${HEADER_SEPARATOR}\n`)
   return {
     totalSurvived: cachedCounts.survived,
@@ -88,7 +131,9 @@ export function printAllCachedSummary(out, sources, previous, classification) {
   }
 }
 
-export function computeDeltas(previousReport, newFileResults, classification) {
+export function computeDeltas(
+  previousReport, newFileResults, classification
+) {
   if (!previousReport) return
 
   const { unchangedSources } = classification
@@ -129,9 +174,13 @@ function buildMutantIndex(report) {
   return index
 }
 
-export function writeMergedReport(out, { config, previous, classification, fileResults }) {
+export function writeMergedReport(
+  out, { config, previous, classification, fileResults }
+) {
   const { reportDir, reportPath } = config
-  const { unchangedSources, currentHashes, currentTestHashes } = classification
+  const {
+    unchangedSources, currentHashes, currentTestHashes
+  } = classification
   const mergedFiles = { ...fileResults }
 
   if (previous.previousReport)
@@ -140,7 +189,9 @@ export function writeMergedReport(out, { config, previous, classification, fileR
         mergedFiles[relPath] = previous.previousReport.files[relPath]
 
   const extra = { sourceHashes: currentHashes, testHashes: currentTestHashes }
-  const deltas = computeDeltas(previous.previousReport, fileResults, classification)
+  const deltas = computeDeltas(
+    previous.previousReport, fileResults, classification
+  )
   if (deltas) extra.deltas = deltas
 
   const report = createReport(mergedFiles, extra)

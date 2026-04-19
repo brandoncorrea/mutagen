@@ -12,7 +12,10 @@ function createTimeout(fn, ms) {
   return Promise.race([
     fn().finally(() => clearTimeout(timer)),
     new Promise((_, reject) => {
-      timer = setTimeout(() => reject(new Error(`Mutation timed out after ${ms}ms`)), ms)
+      timer = setTimeout(
+        () => reject(new Error(`timed out after ${ms}ms`)),
+        ms
+      )
     })
   ])
 }

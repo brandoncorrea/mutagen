@@ -20,7 +20,9 @@ import { defaultOut } from '../cli/shared.js'
 const require = createRequire(import.meta.url)
 const { version } = require('../../package.json')
 
-export async function run(args, { config, configPath, out, err = console.error } = {}) {
+export async function run(
+  args, { config, configPath, out, err = console.error } = {}
+) {
   if (!out) out = defaultOut()
 
   if (versionRequested(args)) {

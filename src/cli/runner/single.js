@@ -75,8 +75,10 @@ async function runMutations(runOptions) {
   if (preflight.error) return preflight
   out.log(`Tests pass on original source. Beginning mutations.\n`)
 
-  const mutations = retestMutations || generateMutations(original, mutationConfig, targetLine)
-  assignMutationIds(mutations, relative(process.cwd(), sourceFile))
+  const mutations = retestMutations
+    || generateMutations(original, mutationConfig, targetLine)
+  const relPath = relative(process.cwd(), sourceFile)
+  assignMutationIds(mutations, relPath)
   out.log(`Found ${mutations.length} mutation(s) to run.\n`)
 
   const outcomes = { killed: [], survived: [], timedOut: [] }

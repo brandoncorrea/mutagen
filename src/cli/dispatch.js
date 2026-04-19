@@ -76,7 +76,8 @@ function runDryRunMode(runContext, parsed) {
     const { total, fileCount } = runAllDryRun(runContext)
     if (parsed.quiet)
       runContext.out.error(
-        `${total} mutations across ${fileCount} file${fileCount !== 1 ? 's' : ''}\n`
+        `${total} mutations across ${fileCount}` +
+        ` file${fileCount !== 1 ? 's' : ''}\n`
       )
     return 0
   }

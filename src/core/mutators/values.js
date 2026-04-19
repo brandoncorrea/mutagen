@@ -255,7 +255,10 @@ export const numericOffByOne = [
   {
     name: 'n → n + 1',
     types: ['Literal', 'NumericLiteral'],
-    test: node => isNumericLiteral(node) && Number.isInteger(node.value) && node.value > 1,
+    test: node =>
+      isNumericLiteral(node)
+      && Number.isInteger(node.value)
+      && node.value > 1,
     mutate: ({ start, end, value }, source) => {
       const raw = source.slice(start, end)
       if (/^0[xXoObB]/.test(raw) || raw.includes('.')) return null
@@ -265,7 +268,10 @@ export const numericOffByOne = [
   {
     name: 'n → n - 1',
     types: ['Literal', 'NumericLiteral'],
-    test: node => isNumericLiteral(node) && Number.isInteger(node.value) && node.value > 1,
+    test: node =>
+      isNumericLiteral(node)
+      && Number.isInteger(node.value)
+      && node.value > 1,
     mutate: ({ start, end, value }, source) => {
       const raw = source.slice(start, end)
       if (/^0[xXoObB]/.test(raw) || raw.includes('.')) return null

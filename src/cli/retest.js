@@ -7,7 +7,9 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 import { generateMutations } from '../core/generate.js'
-import { HEADER_SEPARATOR, tryLoadJson, writeStructuredReportFile } from '../core/report-data.js'
+import {
+  HEADER_SEPARATOR, tryLoadJson, writeStructuredReportFile
+} from '../core/report-data.js'
 import { runSingle, runParallel } from './runner/index.js'
 import { printScoreLine } from './report.js'
 import { isString } from './shared.js'
@@ -33,13 +35,24 @@ export function loadRetestTargets(report) {
  * Filter generated mutations to only those matching previous survivors.
  * Returns matched mutations and count of survivors that no longer exist.
  */
-export function filterMutationsToSurvivors(mutations, filePath, survivorKeys) {
-  const fileSurvivors = [...survivorKeys].filter(k => k.startsWith(filePath + ':'))
-  const matched = mutations.filter(m =>
-    survivorKeys.has(survivorKey(filePath, m.line, m.name))
+export function filterMutationsToSurvivors(
+  mutations, filePath, survivorKeys
+) {
+  const prefix = filePath + ':'
+  const fileSurvivors = [...survivorKeys].filter(
+    k => k.startsWith(prefix)
   )
-  const matchedKeys = new Set(matched.map(m => survivorKey(filePath, m.line, m.name)))
-  const skipped = fileSurvivors.filter(k => !matchedKeys.has(k)).length
+  const matched = mutations.filter(m =>
+    survivorKeys.has(
+      survivorKey(filePath, m.line, m.name)
+    )
+  )
+  const matchedKeys = new Set(
+    matched.map(m => survivorKey(filePath, m.line, m.name))
+  )
+  const skipped = fileSurvivors.filter(
+    k => !matchedKeys.has(k)
+  ).length
 
   return { matched, skipped }
 }
@@ -78,18 +91,19 @@ export async function runRetest(runContext, parsed) {
   out.log(`\n${HEADER_SEPARATOR}`)
   out.log(`MUTAGEN — RETEST MODE`)
   out.log(`   Report: ${reportPath}`)
-  out.log(`   Survivors to retest: ${survivorKeys.size} across ${files.length} file(s)\n`)
+  out.log(
+    `   Survivors to retest: ${survivorKeys.size}` +
+    ` across ${files.length} file(s)\n`
+  )
 
   const result = await retestFiles(files, {
-    mutationConfig,
-    createRunner,
-    timeout,
-    survivorKeys,
-    parallel: parsed.parallel,
-    out
+    mutationConfig, createRunner, timeout,
+    survivorKeys, parallel: parsed.parallel, out
   })
 
-  writeRetestReport(out, parsed, files.length, result.fileResults)
+  writeRetestReport(
+    out, parsed, files.length, result.fileResults
+  )
   printRetestSummary(out, result)
 
   return {
@@ -121,33 +135,56 @@ async function retestFiles(files, options) {
       totalKilled += result.killed
       totalSurvived += result.survived
       totalTimedOut += result.timedOut
-      fileResults[result.fileResult.path] = { mutants: result.fileResult.mutants }
+      const { path, mutants } = result.fileResult
+      fileResults[path] = { mutants }
     }
   }
 
-  return { totalKilled, totalSurvived, totalTimedOut, totalSkipped, failures, fileResults }
+  return {
+    totalKilled, totalSurvived, totalTimedOut,
+    totalSkipped, failures, fileResults
+  }
 }
 
-async function retestOneFile(file, { mutationConfig, createRunner, timeout, survivorKeys, parallel, out }) {
+async function retestOneFile(
+  file,
+  { mutationConfig, createRunner, timeout,
+    survivorKeys, parallel, out }
+) {
   const absPath = resolve(file)
   let source
   try {
     source = readFileSync(absPath, 'utf-8')
   } catch {
     out.log(`  Skipping ${file} — file not found`)
-    const skipped = [...survivorKeys].filter(k => k.startsWith(file + ':')).length
-    return { skipped, killed: 0, survived: 0, timedOut: 0, error: false, fileResult: null }
+    const skipped = [...survivorKeys].filter(
+      k => k.startsWith(file + ':')
+    ).length
+    return {
+      skipped, killed: 0, survived: 0,
+      timedOut: 0, error: false, fileResult: null
+    }
   }
 
   const allMutations = generateMutations(source, mutationConfig)
-  const { matched, skipped } = filterMutationsToSurvivors(allMutations, file, survivorKeys)
+  const { matched, skipped } = filterMutationsToSurvivors(
+    allMutations, file, survivorKeys
+  )
 
   if (skipped)
-    out.log(`  ${file}: ${skipped} survivor(s) no longer exist (line shifted or code deleted)`)
+    out.log(
+      `  ${file}: ${skipped} survivor(s) no longer exist` +
+      ` (line shifted or code deleted)`
+    )
 
   if (!matched.length) {
-    out.log(`  ${file}: no matching mutations — all survivors gone`)
-    return { skipped, killed: 0, survived: 0, timedOut: 0, error: false, fileResult: null }
+    out.log(
+      `  ${file}: no matching mutations — all survivors gone`
+    )
+    return {
+      skipped, killed: 0, survived: 0,
+      timedOut: 0, error: false, fileResult: null
+    }
   }
 
   out.log(`  ${file}: retesting ${matched.length} mutation(s)`)
@@ -162,12 +199,17 @@ async function retestOneFile(file, { mutationConfig, createRunner, timeout, surv
     retestMutations: matched
   }
 
+  const workerCount = typeof parallel === 'number'
+    ? parallel : undefined
   const result = parallel
-    ? await runParallel({ ...opts, workerCount: typeof parallel === 'number' ? parallel : undefined })
+    ? await runParallel({ ...opts, workerCount })
     : await runSingle(opts)
 
   if (result.error)
-    return { skipped, killed: 0, survived: 0, timedOut: 0, error: true, fileResult: null }
+    return {
+      skipped, killed: 0, survived: 0,
+      timedOut: 0, error: true, fileResult: null
+    }
 
   return {
     skipped,
@@ -175,7 +217,10 @@ async function retestOneFile(file, { mutationConfig, createRunner, timeout, surv
     survived: result.survived,
     timedOut: result.timedOut || 0,
     error: false,
-    fileResult: { path: result.jsonData.path, mutants: result.jsonData.mutants }
+    fileResult: {
+      path: result.jsonData.path,
+      mutants: result.jsonData.mutants
+    }
   }
 }
 
@@ -184,15 +229,27 @@ function writeRetestReport(out, parsed, fileCount, fileResults) {
   const outputPath = isString(parsed.jsonOutput)
     ? parsed.jsonOutput
     : 'reports/mutation/retest-report.json'
-  const stats = writeStructuredReportFile(outputPath, fileResults)
+  const stats = writeStructuredReportFile(
+    outputPath, fileResults
+  )
   printScoreLine(out, stats, fileCount, outputPath)
 }
 
-function printRetestSummary(out, { totalKilled, totalSurvived, totalTimedOut, totalSkipped, failures }) {
+function printRetestSummary(
+  out,
+  { totalKilled, totalSurvived, totalTimedOut,
+    totalSkipped, failures }
+) {
   out.log(`\n${HEADER_SEPARATOR}`)
   out.log(`RETEST SUMMARY`)
   out.log(HEADER_SEPARATOR)
-  out.log(`Retested: ${totalKilled + totalSurvived}  |  Killed: ${totalKilled}  |  Still surviving: ${totalSurvived}  |  Skipped: ${totalSkipped}  |  Errors: ${failures}`)
+  out.log(
+    `Retested: ${totalKilled + totalSurvived}` +
+    `  |  Killed: ${totalKilled}` +
+    `  |  Still surviving: ${totalSurvived}` +
+    `  |  Skipped: ${totalSkipped}` +
+    `  |  Errors: ${failures}`
+  )
   if (totalTimedOut)
     out.log(`Timed out: ${totalTimedOut} (counted as killed)`)
   out.log(HEADER_SEPARATOR)
@@ -201,7 +258,10 @@ function printRetestSummary(out, { totalKilled, totalSurvived, totalTimedOut, to
   if (allKilled && !totalSkipped)
     out.log(`\nAll previous survivors are now killed!`)
   else if (allKilled)
-    out.log(`\nAll retestable survivors are now killed. ${totalSkipped} could not be retested (code changed).`)
+    out.log(
+      `\nAll retestable survivors are now killed.` +
+      ` ${totalSkipped} could not be retested (code changed).`
+    )
   out.log('')
 }
 

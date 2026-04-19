@@ -41,7 +41,11 @@ function writeSummary(out, mutations, killed, survived) {
   out.log(`\n${SECTION_SEPARATOR}`)
   out.log(`MUTATION REPORT`)
   out.log(SECTION_SEPARATOR)
-  out.log(`Total: ${mutations.length}  |  Killed: ${killed.length}  |  Survived: ${survived.length}`)
+  out.log(
+    `Total: ${mutations.length}` +
+    `  |  Killed: ${killed.length}` +
+    `  |  Survived: ${survived.length}`
+  )
 }
 
 function writeScore(out, mutations, killed) {
@@ -60,16 +64,28 @@ function writeSurvivors(out, mutations) {
     writeMutation(out, mutation)
 }
 
-export function formatQuietSummary({ killed, survived, timedOut, fileCount }) {
+export function formatQuietSummary({
+  killed, survived, timedOut, fileCount
+}) {
   const effectiveKilled = killed + timedOut
-  const counts = { killed: effectiveKilled, survived, noCoverage: 0, timeout: 0 }
+  const counts = {
+    killed: effectiveKilled, survived, noCoverage: 0, timeout: 0
+  }
   const total = totalMutants(counts)
   const score = mutationScore(counts).toFixed(1)
-  return `Score: ${score}% (${effectiveKilled}/${total}) | ${survived} survivors | ${fileCount} files`
+  return `Score: ${score}% (${effectiveKilled}/${total})` +
+    ` | ${survived} survivors | ${fileCount} files`
 }
 
-export function printScoreLine(out, { score, killed, total, survived }, fileCount, outputPath) {
-  out.error(`Score: ${score}% (${killed}/${total}) | ${survived} survivors | ${fileCount} files → ${outputPath}\n`)
+export function printScoreLine(
+  out, { score, killed, total, survived },
+  fileCount, outputPath
+) {
+  out.error(
+    `Score: ${score}% (${killed}/${total})` +
+    ` | ${survived} survivors` +
+    ` | ${fileCount} files → ${outputPath}\n`
+  )
 }
 
 export function printAutoDiffLine(out, summary) {

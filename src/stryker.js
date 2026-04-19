@@ -19,13 +19,18 @@ export function cleanStaleSandboxes(out) {
   out.log('Cleaned stale .stryker-tmp directory')
 }
 
-export function clearIncrementalCache(cacheFile = 'reports/stryker-incremental.json', out) {
+export function clearIncrementalCache(
+  cacheFile = 'reports/stryker-incremental.json', out
+) {
   if (!existsSync(cacheFile)) return
   rmSync(cacheFile)
   out.log('Cleared incremental cache between scoped runs')
 }
 
-export function runStrykerScope(name, scope, { reportDir = 'reports/mutation', strykerJson, out } = {}) {
+export function runStrykerScope(
+  name, scope,
+  { reportDir = 'reports/mutation', strykerJson, out } = {}
+) {
   const outputJson = strykerJson || `${reportDir}/report.json`
   const mutateArg = scope.join(',')
   const targetFile = `${reportDir}/${name}-report.json`
@@ -57,7 +62,10 @@ function isUnexpectedError(err) {
   return !err.status || err.status > 1
 }
 
-export function mergeReports(files, { outputPath = 'reports/mutation/report.json', out } = {}) {
+export function mergeReports(
+  files,
+  { outputPath = 'reports/mutation/report.json', out } = {}
+) {
   const merged = combineReportData(files, out)
   writeFileSync(outputPath, JSON.stringify(merged, null, 2))
 

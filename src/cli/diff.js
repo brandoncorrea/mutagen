@@ -6,7 +6,9 @@
 const SCORE_DELTA_THRESHOLD = 0.05
 
 import { mutantKey } from '../core/mutation-id.js'
-import { isKilled, isAlive, countStatuses, mutationScore } from '../core/mutation-status.js'
+import {
+  isKilled, isAlive, countStatuses, mutationScore
+} from '../core/mutation-status.js'
 import { tryLoadJson } from '../core/report-data.js'
 import { printDiffReport } from './diff-print.js'
 
@@ -15,9 +17,11 @@ import { printDiffReport } from './diff-print.js'
  * @param {string} beforeFile - path to the baseline report JSON
  * @param {string} afterFile - path to the new report JSON
  * @param {Function} [out=console.log] - output function
- * @param {boolean} [jsonOutput=false] - when true, output structured JSON instead of text
+ * @param {boolean} [jsonOutput=false] - output JSON instead
  */
-export function diffReports(beforeFile, afterFile, out, jsonOutput = false) {
+export function diffReports(
+  beforeFile, afterFile, out, jsonOutput = false
+) {
   const before = tryLoadJson(beforeFile, out)
   const after = tryLoadJson(afterFile, out)
 
@@ -29,7 +33,10 @@ export function diffReports(beforeFile, afterFile, out, jsonOutput = false) {
   if (jsonOutput)
     printJsonDiff(before, after, changes, fileDeltas, out)
   else
-    printDiffReport({ beforeFile, afterFile, before, after }, changes, fileDeltas, out)
+    printDiffReport(
+      { beforeFile, afterFile, before, after },
+      changes, fileDeltas, out
+    )
 
   return {
     newlyKilled: changes.newlyKilled.length,

@@ -9,7 +9,11 @@ import { resolve, relative } from 'node:path'
 
 import { STATUS } from '../core/mutation-status.js'
 import { tryLoadJson, writeStructuredReportFile } from '../core/report-data.js'
-import { printIncrementalHeader, updateCachedReportHashes, printAllCachedSummary, writeMergedReport, printIncrementalSummary, computeDeltas } from './incremental-report.js'
+import {
+  printIncrementalHeader, updateCachedReportHashes,
+  printAllCachedSummary, writeMergedReport,
+  printIncrementalSummary, computeDeltas
+} from './incremental-report.js'
 import { printScoreLine } from './report.js'
 import { isString } from './shared.js'
 
@@ -20,7 +24,7 @@ const HASH_PREFIX_LENGTH = 16
  *
  * @param {Object} config
  * @param {Array<string>} config.sources - all source files
- * @param {Array<string>} config.testSources - test files to track for invalidation
+ * @param {Array<string>} config.testSources - test files
  * @param {string} config.reportDir - directory for JSON reports
  * @param {string} config.reportPath - full path to the report file
  * @param {Function} config.runBatch - batch runner function
@@ -30,32 +34,57 @@ const HASH_PREFIX_LENGTH = 16
 export async function runIncremental(config, jsonOutput, timeout, out) {
   const { sources, testSources, reportPath, runBatch } = config
   const previous = loadPreviousReport(reportPath, out)
-  const classification = classifyAllSources(sources, testSources, previous)
+  const classification = classifyAllSources(
+    sources, testSources, previous
+  )
 
   printIncrementalHeader(out, sources, classification)
 
   if (!classification.changedSources.length) {
     if (isString(jsonOutput) && previous.previousReport)
-      writeStructuredIncrementalReport(out, jsonOutput, sources.length, previous, classification)
+      writeStructuredIncrementalReport(
+        out, jsonOutput, sources.length,
+        previous, classification
+      )
     else if (jsonOutput && previous.previousReport)
-      updateCachedReportHashes(config.reportPath, previous.previousReport, classification)
-    return printAllCachedSummary(out, sources, previous, classification)
+      updateCachedReportHashes(
+        config.reportPath,
+        previous.previousReport, classification
+      )
+    return printAllCachedSummary(
+      out, sources, previous, classification
+    )
   }
 
-  const batchResult = await runBatch(false, timeout, classification.changedSources)
+  const batchResult = await runBatch(
+    false, timeout, classification.changedSources
+  )
 
   if (isString(jsonOutput))
-    writeStructuredIncrementalReport(out, jsonOutput, sources.length, previous, classification, batchResult.fileResults)
+    writeStructuredIncrementalReport(
+      out, jsonOutput, sources.length,
+      previous, classification, batchResult.fileResults
+    )
   else if (jsonOutput)
-    writeMergedReport(out, { config, previous, classification, fileResults: batchResult.fileResults })
+    writeMergedReport(out, {
+      config, previous, classification,
+      fileResults: batchResult.fileResults
+    })
 
-  return printIncrementalSummary(out, batchResult, sources, previous, classification)
+  return printIncrementalSummary(
+    out, batchResult, sources, previous, classification
+  )
 }
 
 function classifyAllSources(sources, testSources, previous) {
-  const { currentTestHashes, changedTestFiles } = hashTestFiles(testSources, previous.previousTestHashes)
-  const testInvalidated = findTestInvalidatedSources(changedTestFiles, previous.previousReport)
-  const classification = classifySources(sources, previous.previousHashes, testInvalidated)
+  const { currentTestHashes, changedTestFiles } =
+    hashTestFiles(testSources, previous.previousTestHashes)
+  const testInvalidated = findTestInvalidatedSources(
+    changedTestFiles, previous.previousReport
+  )
+  const classification = classifySources(
+    sources, previous.previousHashes, testInvalidated
+  )
   return {
     ...classification,
     currentTestHashes,
@@ -64,7 +93,9 @@ function classifyAllSources(sources, testSources, previous) {
   }
 }
 
-function classifySources(sources, previousHashes, testInvalidated) {
+function classifySources(
+  sources, previousHashes, testInvalidated
+) {
   const currentHashes = {}
   const changedSources = []
   const unchangedSources = []
@@ -75,7 +106,9 @@ function classifySources(sources, previousHashes, testInvalidated) {
     const hash = hashFile(absPath)
     currentHashes[relPath] = hash
 
-    if (previousHashes[relPath] !== hash || testInvalidated.has(relPath))
+    const changed = previousHashes[relPath] !== hash
+      || testInvalidated.has(relPath)
+    if (changed)
       changedSources.push(source)
     else
       unchangedSources.push(relPath)
@@ -85,7 +118,9 @@ function classifySources(sources, previousHashes, testInvalidated) {
 }
 
 function loadPreviousReport(reportPath, out) {
-  const previousReport = existsSync(reportPath) ? tryLoadJson(reportPath, out) : undefined
+  const previousReport = existsSync(reportPath)
+    ? tryLoadJson(reportPath, out)
+    : undefined
   return {
     previousReport,
     previousHashes: previousReport?.sourceHashes || {},
@@ -119,7 +154,9 @@ function findTestInvalidatedSources(changedTestFiles, previousReport) {
   if (!changedTestFiles.length || !previousReport)
     return testInvalidated
 
-  const changedTestAbs = new Set(changedTestFiles.map(t => resolve(t)))
+  const changedTestAbs = new Set(
+    changedTestFiles.map(t => resolve(t))
+  )
   for (const [sourcePath, fileData] of Object.entries(previousReport.files)) {
     for (const mutant of fileData.mutants) {
       if (isInvalidatedMutant(mutant, changedTestAbs)) {
@@ -136,14 +173,22 @@ function isInvalidatedMutant({ killedBy, status }, changedTestAbs) {
     || status === STATUS.SURVIVED
 }
 
-function writeStructuredIncrementalReport(out, outputPath, fileCount, previous, classification, freshFileResults) {
+function writeStructuredIncrementalReport(
+  out, outputPath, fileCount,
+  previous, classification, freshFileResults
+) {
   const mergedFiles = { ...freshFileResults }
   if (previous.previousReport)
     for (const relPath of classification.unchangedSources)
       if (previous.previousReport.files[relPath])
         mergedFiles[relPath] = previous.previousReport.files[relPath]
 
-  const deltas = computeDeltas(previous.previousReport, freshFileResults || {}, classification)
-  const stats = writeStructuredReportFile(outputPath, mergedFiles, deltas)
+  const deltas = computeDeltas(
+    previous.previousReport,
+    freshFileResults || {}, classification
+  )
+  const stats = writeStructuredReportFile(
+    outputPath, mergedFiles, deltas
+  )
   printScoreLine(out, stats, fileCount, outputPath)
 }

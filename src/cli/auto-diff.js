@@ -6,10 +6,10 @@
 import { isKilled, isAlive } from '../core/mutation-status.js'
 
 /**
- * Compare current file results against a previous report object.
- * Returns a one-line summary string, or null if no comparison is possible.
+ * Compare current file results against a previous report.
+ * Returns a one-line summary, or null if no comparison possible.
  *
- * @param {Object|null} previousReport - the previously saved report (legacy or structured format)
+ * @param {Object|null} previousReport - previous report
  * @param {Object} currentFileResults - { [path]: { mutants: [...] } }
  * @returns {string|null}
  */
@@ -83,6 +83,7 @@ function formatSummary({ newlyKilled, regressions, unchangedSurvivors }) {
   return [
     `+${newlyKilled} newly killed`,
     `${regressions} regression${regressions !== 1 ? 's' : ''}`,
-    `${unchangedSurvivors} unchanged survivor${unchangedSurvivors !== 1 ? 's' : ''}`
+    `${unchangedSurvivors} unchanged` +
+    ` survivor${unchangedSurvivors !== 1 ? 's' : ''}`
   ].join(', ')
 }

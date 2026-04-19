@@ -2,10 +2,15 @@
  * Display formatting for mutation diff reports.
  */
 
-import { countStatuses, totalMutants, mutationScore, isAlive } from '../core/mutation-status.js'
+import {
+  countStatuses, totalMutants, mutationScore, isAlive
+} from '../core/mutation-status.js'
 import { HEADER_SEPARATOR } from '../core/report-data.js'
 
-export function printDiffReport({ beforeFile, afterFile, before, after }, changes, fileDeltas, out) {
+export function printDiffReport(
+  { beforeFile, afterFile, before, after },
+  changes, fileDeltas, out
+) {
   out.log(`\n${HEADER_SEPARATOR}`)
   out.log(`MUTATION DIFF`)
   out.log(`${HEADER_SEPARATOR}`)
@@ -30,9 +35,15 @@ function printDiffSummary(out, before, after) {
   const aScore = mutationScore(aCounts)
   const delta = aScore - bScore
 
-  out.log(`Overall: ${formatTenth(bScore)}% → ${formatTenth(aScore)}% (${formatSigned(delta)}%)`)
+  out.log(
+    `Overall: ${formatTenth(bScore)}%` +
+    ` → ${formatTenth(aScore)}% (${formatSigned(delta)}%)`
+  )
   out.log(`Mutations: ${bTotal} → ${aTotal}`)
-  out.log(`Killed: ${bCounts.killed} → ${aCounts.killed}  |  Survived: ${bCounts.survived} → ${aCounts.survived}`)
+  out.log(
+    `Killed: ${bCounts.killed} → ${aCounts.killed}` +
+    `  |  Survived: ${bCounts.survived} → ${aCounts.survived}`
+  )
 }
 
 function printCategory(out, label, results) {
@@ -46,7 +57,10 @@ function printNewMutants(out, newMutants) {
   if (!newMutants.length) return
   const newSurvived = newMutants.filter(isAlive)
   const newKilled = newMutants.length - newSurvived.length
-  out.log(`\n+ NEW MUTANTS: ${newMutants.length} (${newKilled} killed, ${newSurvived.length} survived)`)
+  out.log(
+    `\n+ NEW MUTANTS: ${newMutants.length}` +
+    ` (${newKilled} killed, ${newSurvived.length} survived)`
+  )
   for (const { file, line, mutatorName } of newSurvived)
     out.log(`  ${file}:${line} ${mutatorName} — SURVIVED`)
 }
@@ -70,7 +84,10 @@ function printFileDelta(out, { label, file, after, before, delta }) {
   else if (label === 'REMOVED')
     out.log(`  ${file}: REMOVED (was ${formatTenth(before)}%)`)
   else
-    out.log(`  ${file}: ${formatTenth(before)}% → ${formatTenth(after)}% (${formatSigned(delta)}%)`)
+    out.log(
+      `  ${file}: ${formatTenth(before)}%` +
+      ` → ${formatTenth(after)}% (${formatSigned(delta)}%)`
+    )
 }
 
 function formatSigned(value) {

@@ -42,7 +42,8 @@ export function tryLoadJson(path, out) {
 }
 
 export function combineReportData(reports, out) {
-  const { mergedFiles, duplicates } = deduplicateMutants(loadAllEntries(reports, out))
+  const entries = loadAllEntries(reports, out)
+  const { mergedFiles, duplicates } = deduplicateMutants(entries)
 
   if (duplicates)
     out.log(`  Deduplicated: ${duplicates} duplicate mutant(s) removed`)
@@ -69,11 +70,13 @@ export function toJsonMutants(sourceFile, results, { survivorsOnly } = {}) {
  * Returns both the full report object and summary stats.
  *
  * @param {Object} fileResults - { [path]: { mutants: [...] } }
- * @param {Object} [deltas] - incremental deltas (fixes, regressions, rerunFiles, cachedFiles)
- * @returns {{ report: Object, stats: { score: number, total: number, killed: number, survived: number, timedOut: number } }}
+ * @param {Object} [deltas] - incremental deltas
+ * @returns {{ report, stats }}
  */
 export function buildStructuredReport(fileResults, deltas) {
-  const { files, survivors, totalKilled, totalSurvived, totalTimedOut } = collectStats(fileResults)
+  const {
+    files, survivors, totalKilled, totalSurvived, totalTimedOut
+  } = collectStats(fileResults)
   const total = totalKilled + totalSurvived
   const score = total ? (totalKilled / total) * 100 : 100
 
@@ -101,11 +104,13 @@ export function buildStructuredReport(fileResults, deltas) {
  *
  * @param {string} outputPath - path to write the JSON report
  * @param {Object} fileResults - { [path]: { mutants: [...] } }
- * @param {Object} [deltas] - incremental deltas (fixes, regressions, rerunFiles, cachedFiles)
- * @returns {{ score: number, total: number, killed: number, survived: number, timedOut: number }}
+ * @param {Object} [deltas] - incremental deltas
+ * @returns {{ score, total, killed, survived, timedOut }}
  */
 export function writeStructuredReportFile(outputPath, fileResults, deltas) {
-  const { report, stats } = buildStructuredReport(fileResults, deltas)
+  const { report, stats } = buildStructuredReport(
+    fileResults, deltas
+  )
 
   const absPath = resolve(outputPath)
   mkdirSync(dirname(absPath), { recursive: true })
@@ -149,7 +154,11 @@ function collectStats(fileResults) {
     totalSurvived += tally.survived
     totalTimedOut += tally.timedOut
     survivors.push(...tally.survivors)
-    files[path] = { score: tally.score, killed: tally.killed, total: tally.total }
+    files[path] = {
+      score: tally.score,
+      killed: tally.killed,
+      total: tally.total
+    }
   }
 
   return { files, survivors, totalKilled, totalSurvived, totalTimedOut }
