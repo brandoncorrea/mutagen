@@ -172,23 +172,27 @@ function splitSpecs(specs, sourceFile) {
   const stem = parsePath(sourceFile).name
   const direct = []
   const indirect = []
-  for (const spec of specs)
-    (basename(spec.moduleId).includes(stem) ? direct : indirect).push(spec)
+  for (const spec of specs) {
+    if (basename(spec.moduleId).includes(stem))
+      direct.push(spec)
+    else
+      indirect.push(spec)
+  }
   return { direct, indirect }
 }
 
 function compileResults(vitest) {
   const results = vitest.state.getFiles()
   const passed = results.every(isPassing)
-  const killedBy = passed ? [] : failedTestFiles(results)
-  const coveredBy = allTestFiles(results)
-  return { passed, killedBy, coveredBy }
+  return {
+    passed,
+    killedBy: passed ? [] : failedTestFiles(results),
+    coveredBy: allTestFiles(results)
+  }
 }
 
 function failedTestFiles(results) {
-  return results
-    .filter(isFailing)
-    .map(f => f.filepath)
+  return allTestFiles(results.filter(isFailing))
 }
 
 function isPassing(file) {
