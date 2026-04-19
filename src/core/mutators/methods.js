@@ -116,7 +116,17 @@ export const arrayMethodSwaps = [
     })
   },
   methodNameSwap('reduce → reduceRight', 'reduce', 'reduceRight'),
-  methodNameSwap('reduceRight → reduce', 'reduceRight', 'reduce')
+  methodNameSwap('reduceRight → reduce', 'reduceRight', 'reduce'),
+  {
+    name: 'forEach() → (removed)',
+    types: ['CallExpression'],
+    test: node => isMemberCall(node, 'forEach'),
+    mutate: ({ callee, end }) => ({
+      start: callee.object.end,
+      end,
+      replacement: ''
+    })
+  }
 ]
 
 export const objectMethodSwaps = [

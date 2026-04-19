@@ -229,3 +229,47 @@ export const templateLiteralMutation = [
     mutate: ({ start, end }) => ({ start, end, replacement: '``' })
   }
 ]
+
+export const stringLiteralsAnyContext = [
+  {
+    name: "'' → 'mutant' (any context)",
+    types: ['Literal', 'StringLiteral'],
+    test: (node, source, parent) =>
+      isStringLiteral(node) && !node.value
+      && source[node.start] === "'"
+      && parent?.type !== 'ReturnStatement',
+    mutate: ({ start, end }) => ({ start, end, replacement: "'mutant'" })
+  },
+  {
+    name: '"" → "mutant" (any context)',
+    types: ['Literal', 'StringLiteral'],
+    test: (node, source, parent) =>
+      isStringLiteral(node) && !node.value
+      && source[node.start] === '"'
+      && parent?.type !== 'ReturnStatement',
+    mutate: ({ start, end }) => ({ start, end, replacement: '"mutant"' })
+  }
+]
+
+export const numericOffByOne = [
+  {
+    name: 'n → n + 1',
+    types: ['Literal', 'NumericLiteral'],
+    test: node => isNumericLiteral(node) && Number.isInteger(node.value) && node.value > 1,
+    mutate: ({ start, end, value }, source) => {
+      const raw = source.slice(start, end)
+      if (/^0[xXoObB]/.test(raw) || raw.includes('.')) return null
+      return { start, end, replacement: String(value + 1) }
+    }
+  },
+  {
+    name: 'n → n - 1',
+    types: ['Literal', 'NumericLiteral'],
+    test: node => isNumericLiteral(node) && Number.isInteger(node.value) && node.value > 1,
+    mutate: ({ start, end, value }, source) => {
+      const raw = source.slice(start, end)
+      if (/^0[xXoObB]/.test(raw) || raw.includes('.')) return null
+      return { start, end, replacement: String(value - 1) }
+    }
+  }
+]

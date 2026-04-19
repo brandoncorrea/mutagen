@@ -247,3 +247,63 @@ export const deleteRemoval = [
     })
   }
 ]
+
+export const ternaryBranchRemoval = [
+  {
+    name: 'cond ? a : b → a',
+    types: ['ConditionalExpression'],
+    test: () => true,
+    mutate: ({ start, end, consequent }, source) => ({
+      start,
+      end,
+      replacement: source.slice(consequent.start, consequent.end)
+    })
+  },
+  {
+    name: 'cond ? a : b → b',
+    types: ['ConditionalExpression'],
+    test: () => true,
+    mutate: ({ start, end, alternate }, source) => ({
+      start,
+      end,
+      replacement: source.slice(alternate.start, alternate.end)
+    })
+  }
+]
+
+export const staticKeywordRemoval = [
+  {
+    name: 'static → (removed)',
+    types: ['MethodDefinition', 'PropertyDefinition', 'ClassMethod', 'ClassProperty'],
+    test: node => node.static === true,
+    mutate: (node, source) => {
+      const bound = (node.key || node.value || { start: node.end }).start
+      const idx = source.indexOf('static', node.start)
+      if (idx === -1 || idx >= bound) return null
+      return { start: idx, end: idx + 7, replacement: '' }
+    }
+  }
+]
+
+export const errorTypeSwap = [
+  {
+    name: 'new Error → new TypeError',
+    types: ['NewExpression'],
+    test: ({ callee }) => callee?.type === 'Identifier' && callee.name === 'Error',
+    mutate: ({ callee }) => ({
+      start: callee.start,
+      end: callee.end,
+      replacement: 'TypeError'
+    })
+  },
+  {
+    name: 'new TypeError → new Error',
+    types: ['NewExpression'],
+    test: ({ callee }) => callee?.type === 'Identifier' && callee.name === 'TypeError',
+    mutate: ({ callee }) => ({
+      start: callee.start,
+      end: callee.end,
+      replacement: 'Error'
+    })
+  }
+]

@@ -89,6 +89,24 @@ function regexFlagRemoval(name, flag) {
   }
 }
 
+function findQuantifierRange(pattern) {
+  let inClass = false
+  for (let i = 0; i < pattern.length; i++) {
+    if (pattern[i] === '\\') { i++; continue }
+    if (pattern[i] === '[') { inClass = true; continue }
+    if (pattern[i] === ']') { inClass = false; continue }
+    if (!inClass && pattern[i] === '{') {
+      const close = pattern.indexOf('}', i)
+      if (close === -1) continue
+      const inner = pattern.slice(i + 1, close)
+      if (!/^\d+(?:,\d*)?$/.test(inner)) continue
+      const min = parseInt(inner, 10)
+      return { offset: i, min, inner, length: close - i + 1 }
+    }
+  }
+  return null
+}
+
 export const regexMutations = [
   regexCharMutator('^ → (removed)', '^', ''),
   regexCharMutator('$ → (removed)', '$', ''),
@@ -114,5 +132,20 @@ export const regexMutations = [
   regexClassInversion('\\S → \\s', 'S', 's'),
   regexFlagRemoval('/g → (removed)', 'g'),
   regexFlagRemoval('/i → (removed)', 'i'),
-  regexFlagRemoval('/m → (removed)', 'm')
+  regexFlagRemoval('/m → (removed)', 'm'),
+  {
+    name: '{n} → {n-1} (quantifier range)',
+    types: ['RegExpLiteral'],
+    test: node => {
+      const q = findQuantifierRange(node.pattern)
+      return q != null && q.min > 0
+    },
+    mutate: ({ pattern, start }) => {
+      const q = findQuantifierRange(pattern)
+      if (!q || q.min <= 0) return null
+      const newInner = q.inner.replace(/^\d+/, String(q.min - 1))
+      const sourcePos = start + 1 + q.offset
+      return { start: sourcePos, end: sourcePos + q.length, replacement: `{${newInner}}` }
+    }
+  }
 ]

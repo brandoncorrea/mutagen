@@ -155,6 +155,70 @@ export const typeofRemoval = [
   }
 ]
 
+export const inOperatorNegation = [
+  {
+    name: "'key' in obj → !('key' in obj)",
+    types: ['BinaryExpression'],
+    test: node => node.operator === 'in',
+    mutate: ({ start, end }, source) => ({
+      start,
+      end,
+      replacement: `!(${source.slice(start, end)})`
+    })
+  }
+]
+
+export const logicalShortCircuit = [
+  {
+    name: 'a && b → a',
+    types: ['LogicalExpression'],
+    test: node => node.operator === '&&',
+    mutate: ({ start, end, left }, source) => ({
+      start, end, replacement: source.slice(left.start, left.end)
+    })
+  },
+  {
+    name: 'a && b → b',
+    types: ['LogicalExpression'],
+    test: node => node.operator === '&&',
+    mutate: ({ start, end, right }, source) => ({
+      start, end, replacement: source.slice(right.start, right.end)
+    })
+  },
+  {
+    name: 'a || b → a',
+    types: ['LogicalExpression'],
+    test: node => node.operator === '||',
+    mutate: ({ start, end, left }, source) => ({
+      start, end, replacement: source.slice(left.start, left.end)
+    })
+  },
+  {
+    name: 'a || b → b',
+    types: ['LogicalExpression'],
+    test: node => node.operator === '||',
+    mutate: ({ start, end, right }, source) => ({
+      start, end, replacement: source.slice(right.start, right.end)
+    })
+  },
+  {
+    name: 'a ?? b → a',
+    types: ['LogicalExpression'],
+    test: node => node.operator === '??',
+    mutate: ({ start, end, left }, source) => ({
+      start, end, replacement: source.slice(left.start, left.end)
+    })
+  },
+  {
+    name: 'a ?? b → b',
+    types: ['LogicalExpression'],
+    test: node => node.operator === '??',
+    mutate: ({ start, end, right }, source) => ({
+      start, end, replacement: source.slice(right.start, right.end)
+    })
+  }
+]
+
 export const unaryMinusRemoval = [
   {
     name: 'unary -x → x',

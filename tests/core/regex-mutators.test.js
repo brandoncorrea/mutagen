@@ -326,6 +326,74 @@ describe('regex mutators', () => {
     })
   })
 
+  describe('quantifier range mutation', () => {
+    it('matches pattern with {n} quantifier', () => {
+      const m = find('{n} → {n-1} (quantifier range)')
+      const node = regexNode('a{3}', '', 0, 6)
+      expect(m.test(node)).toBe(true)
+    })
+
+    it('matches pattern with {n,m} quantifier', () => {
+      const m = find('{n} → {n-1} (quantifier range)')
+      const node = regexNode('a{2,5}', '', 0, 8)
+      expect(m.test(node)).toBe(true)
+    })
+
+    it('matches pattern with {n,} quantifier', () => {
+      const m = find('{n} → {n-1} (quantifier range)')
+      const node = regexNode('a{1,}', '', 0, 7)
+      expect(m.test(node)).toBe(true)
+    })
+
+    it('does not match {0} (cannot decrement below 0)', () => {
+      const m = find('{n} → {n-1} (quantifier range)')
+      const node = regexNode('a{0}', '', 0, 6)
+      expect(m.test(node)).toBe(false)
+    })
+
+    it('does not match {0,5}', () => {
+      const m = find('{n} → {n-1} (quantifier range)')
+      const node = regexNode('a{0,5}', '', 0, 8)
+      expect(m.test(node)).toBe(false)
+    })
+
+    it('decrements {3} to {2}', () => {
+      const m = find('{n} → {n-1} (quantifier range)')
+      const source = '/a{3}/'
+      const node = regexNode('a{3}', '', 0, 6)
+      const patch = m.mutate(node, source)
+      expect(patch).toEqual({ start: 2, end: 5, replacement: '{2}' })
+    })
+
+    it('decrements {2,5} to {1,5}', () => {
+      const m = find('{n} → {n-1} (quantifier range)')
+      const source = '/a{2,5}/'
+      const node = regexNode('a{2,5}', '', 0, 8)
+      const patch = m.mutate(node, source)
+      expect(patch).toEqual({ start: 2, end: 7, replacement: '{1,5}' })
+    })
+
+    it('decrements {1,} to {0,}', () => {
+      const m = find('{n} → {n-1} (quantifier range)')
+      const source = '/a{1,}/'
+      const node = regexNode('a{1,}', '', 0, 7)
+      const patch = m.mutate(node, source)
+      expect(patch).toEqual({ start: 2, end: 6, replacement: '{0,}' })
+    })
+
+    it('does not match patterns without quantifier ranges', () => {
+      const m = find('{n} → {n-1} (quantifier range)')
+      const node = regexNode('abc', '', 0, 5)
+      expect(m.test(node)).toBe(false)
+    })
+
+    it('skips {n,m} inside character class', () => {
+      const m = find('{n} → {n-1} (quantifier range)')
+      const node = regexNode('[{3}]', '', 0, 7)
+      expect(m.test(node)).toBe(false)
+    })
+  })
+
   describe('defensive guard', () => {
     it('mutate returns null when pattern has no unescaped target char', () => {
       const m = find('^ → (removed)')

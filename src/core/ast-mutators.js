@@ -19,7 +19,8 @@ import {
   equalityOperators, looseEqualityOperators, logicalOperators, arithmeticOperators,
   updateOperators, assignmentMutations, bitwiseOperators, nullishCoalescing,
   optionalChaining, negationRemoval, unaryMinusRemoval, voidRemoval,
-  bitwiseNotRemoval, instanceofNegation, typeofRemoval
+  bitwiseNotRemoval, instanceofNegation, typeofRemoval,
+  inOperatorNegation, logicalShortCircuit
 } from './mutators/operators.js'
 
 import {
@@ -32,13 +33,15 @@ import {
   conditionalExpressions, conditionalNegation, blockStatements,
   asyncMutations, throwRemoval, defaultParameterRemoval, newKeywordRemoval,
   arrowShortCircuit, breakRemoval, continueRemoval, catchBlockEmptying,
-  finallyRemoval, emptyReturnRemoval, forInOfSwap, yieldRemoval, deleteRemoval
+  finallyRemoval, emptyReturnRemoval, forInOfSwap, yieldRemoval, deleteRemoval,
+  ternaryBranchRemoval, staticKeywordRemoval, errorTypeSwap
 } from './mutators/statements.js'
 
 import {
   booleanLiterals, stringLiterals, fallbackRemovals, numericBoundary,
   spreadRemoval, propertyAccessMutations, nullUndefinedSwap,
-  emptyArrayMutation, templateLiteralMutation
+  emptyArrayMutation, templateLiteralMutation, stringLiteralsAnyContext,
+  numericOffByOne
 } from './mutators/values.js'
 
 import { regexMutations } from './mutators/regex.js'
@@ -94,5 +97,12 @@ export const javascript = [
   ...emptyArrayMutation,
   ...templateLiteralMutation,
   ...objectMutationRemovals,
-  ...jsonMethodSwaps
+  ...jsonMethodSwaps,
+  ...inOperatorNegation,
+  ...logicalShortCircuit,
+  ...ternaryBranchRemoval,
+  ...staticKeywordRemoval,
+  ...errorTypeSwap,
+  ...stringLiteralsAnyContext,
+  ...numericOffByOne
 ]

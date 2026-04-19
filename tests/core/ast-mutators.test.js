@@ -40,7 +40,9 @@ describe('ast-mutators', () => {
         'BreakStatement', 'ContinueStatement',
         'CatchClause', 'TryStatement',
         'ForInStatement', 'ForOfStatement',
-        'YieldExpression', 'TemplateLiteral'
+        'YieldExpression', 'TemplateLiteral',
+        'MethodDefinition', 'PropertyDefinition',
+        'ClassMethod', 'ClassProperty'
       ])
       for (const mutator of javascript)
         for (const type of mutator.types)
@@ -2071,6 +2073,312 @@ describe('ast-mutators', () => {
       const node = staticCall('JSON', 'stringify', 0, 20, 5, 14)
       expect(m.test(node)).toBe(true)
       expect(m.mutate(node).replacement).toBe('parse')
+    })
+  })
+
+  // ── in operator negation ──
+
+  describe('in operator negation', () => {
+    it("'key' in obj → !('key' in obj) wraps in negation", () => {
+      const m = find("'key' in obj → !('key' in obj)")
+      const node = binExpr('in', 0, 5, 9, 12)
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, "'key' in obj")
+      expect(patch).toEqual({ start: 0, end: 12, replacement: "!('key' in obj)" })
+    })
+
+    it('does not match non-in operators', () => {
+      const m = find("'key' in obj → !('key' in obj)")
+      expect(m.test(binExpr('===', 0, 1, 5, 6))).toBe(false)
+    })
+  })
+
+  // ── logical short-circuit removal ──
+
+  describe('logical short-circuit removal', () => {
+    it('a && b → a removes right side of AND', () => {
+      const m = find('a && b → a')
+      const node = logExpr('&&', 0, 1, 5, 6)
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'a && b')
+      expect(patch).toEqual({ start: 0, end: 6, replacement: 'a' })
+    })
+
+    it('a && b → b removes left side of AND', () => {
+      const m = find('a && b → b')
+      const node = logExpr('&&', 0, 1, 5, 6)
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'a && b')
+      expect(patch).toEqual({ start: 0, end: 6, replacement: 'b' })
+    })
+
+    it('a || b → a removes right side of OR', () => {
+      const m = find('a || b → a')
+      const node = logExpr('||', 0, 1, 5, 6)
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'a || b')
+      expect(patch).toEqual({ start: 0, end: 6, replacement: 'a' })
+    })
+
+    it('a || b → b removes left side of OR', () => {
+      const m = find('a || b → b')
+      const node = logExpr('||', 0, 1, 5, 6)
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'a || b')
+      expect(patch).toEqual({ start: 0, end: 6, replacement: 'b' })
+    })
+
+    it('a ?? b → a removes nullish fallback', () => {
+      const m = find('a ?? b → a')
+      const node = logExpr('??', 0, 1, 5, 6)
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'a ?? b')
+      expect(patch).toEqual({ start: 0, end: 6, replacement: 'a' })
+    })
+
+    it('a ?? b → b always uses fallback', () => {
+      const m = find('a ?? b → b')
+      const node = logExpr('??', 0, 1, 5, 6)
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'a ?? b')
+      expect(patch).toEqual({ start: 0, end: 6, replacement: 'b' })
+    })
+
+    it('a && b → a does not match || operator', () => {
+      const m = find('a && b → a')
+      expect(m.test(logExpr('||', 0, 1, 5, 6))).toBe(false)
+    })
+
+    it('a || b → a does not match && operator', () => {
+      const m = find('a || b → a')
+      expect(m.test(logExpr('&&', 0, 1, 5, 6))).toBe(false)
+    })
+
+    it('preserves complex expressions', () => {
+      const m = find('a && b → a')
+      const node = logExpr('&&', 0, 9, 13, 25)
+      const patch = m.mutate(node, 'isValid() && process(x)')
+      expect(patch).toEqual({ start: 0, end: 25, replacement: 'isValid()' })
+    })
+  })
+
+  // ── ternary branch removal ──
+
+  describe('ternary branch removal', () => {
+    it('cond ? a : b → a replaces ternary with consequent', () => {
+      const m = find('cond ? a : b → a')
+      const node = {
+        type: 'ConditionalExpression',
+        consequent: { start: 10, end: 19 },
+        alternate: { start: 22, end: 30 },
+        start: 0, end: 30
+      }
+      const patch = m.mutate(node, 'isAdmin ? adminView : userView')
+      expect(patch).toEqual({ start: 0, end: 30, replacement: 'adminView' })
+    })
+
+    it('cond ? a : b → b replaces ternary with alternate', () => {
+      const m = find('cond ? a : b → b')
+      const node = {
+        type: 'ConditionalExpression',
+        consequent: { start: 10, end: 19 },
+        alternate: { start: 22, end: 30 },
+        start: 0, end: 30
+      }
+      const patch = m.mutate(node, 'isAdmin ? adminView : userView')
+      expect(patch).toEqual({ start: 0, end: 30, replacement: 'userView' })
+    })
+  })
+
+  // ── static keyword removal ──
+
+  describe('static keyword removal', () => {
+    it('static → (removed) removes static keyword from method', () => {
+      const m = find('static → (removed)')
+      const node = {
+        type: 'MethodDefinition',
+        static: true,
+        key: { start: 7, end: 13 },
+        start: 0, end: 20
+      }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'static method() {}')
+      expect(patch).toEqual({ start: 0, end: 7, replacement: '' })
+    })
+
+    it('skips non-static methods', () => {
+      const m = find('static → (removed)')
+      const node = {
+        type: 'MethodDefinition',
+        static: false,
+        key: { start: 0, end: 6 },
+        start: 0, end: 13
+      }
+      expect(m.test(node)).toBe(false)
+    })
+
+    it('works with ClassProperty nodes', () => {
+      const m = find('static → (removed)')
+      const node = {
+        type: 'ClassProperty',
+        static: true,
+        key: { start: 7, end: 12 },
+        start: 0, end: 16
+      }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'static count = 0')
+      expect(patch).toEqual({ start: 0, end: 7, replacement: '' })
+    })
+
+    it('returns null when static keyword not found in source', () => {
+      const m = find('static → (removed)')
+      const node = {
+        type: 'MethodDefinition',
+        static: true,
+        key: { start: 0, end: 5 },
+        start: 0, end: 12
+      }
+      expect(m.mutate(node, 'method() {}')).toBeNull()
+    })
+  })
+
+  // ── error type swap ──
+
+  describe('error type swap', () => {
+    it('new Error → new TypeError swaps error constructor', () => {
+      const m = find('new Error → new TypeError')
+      const node = {
+        type: 'NewExpression',
+        callee: { type: 'Identifier', name: 'Error', start: 4, end: 9 },
+        start: 0, end: 20
+      }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node)
+      expect(patch).toEqual({ start: 4, end: 9, replacement: 'TypeError' })
+    })
+
+    it('new TypeError → new Error swaps back', () => {
+      const m = find('new TypeError → new Error')
+      const node = {
+        type: 'NewExpression',
+        callee: { type: 'Identifier', name: 'TypeError', start: 4, end: 13 },
+        start: 0, end: 24
+      }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node)
+      expect(patch).toEqual({ start: 4, end: 13, replacement: 'Error' })
+    })
+
+    it('does not match non-error constructors', () => {
+      const m = find('new Error → new TypeError')
+      const node = {
+        type: 'NewExpression',
+        callee: { type: 'Identifier', name: 'Map', start: 4, end: 7 },
+        start: 0, end: 10
+      }
+      expect(m.test(node)).toBe(false)
+    })
+  })
+
+  // ── string literals any context ──
+
+  describe('string literals any context', () => {
+    it("'' → 'mutant' replaces empty single-quoted string", () => {
+      const m = find("'' → 'mutant' (any context)")
+      const node = { type: 'StringLiteral', value: '', start: 10, end: 12 }
+      expect(m.test(node, "const x = ''")).toBe(true)
+      const patch = m.mutate(node)
+      expect(patch).toEqual({ start: 10, end: 12, replacement: "'mutant'" })
+    })
+
+    it('"" → "mutant" replaces empty double-quoted string', () => {
+      const m = find('"" → "mutant" (any context)')
+      const node = { type: 'StringLiteral', value: '', start: 10, end: 12 }
+      expect(m.test(node, 'const x = ""')).toBe(true)
+      const patch = m.mutate(node)
+      expect(patch).toEqual({ start: 10, end: 12, replacement: '"mutant"' })
+    })
+
+    it('skips return statement context (already covered)', () => {
+      const m = find("'' → 'mutant' (any context)")
+      const node = { type: 'StringLiteral', value: '', start: 7, end: 9 }
+      const parent = { type: 'ReturnStatement' }
+      expect(m.test(node, "return ''", parent)).toBe(false)
+    })
+
+    it('skips non-empty strings', () => {
+      const m = find("'' → 'mutant' (any context)")
+      const node = { type: 'StringLiteral', value: 'hello', start: 10, end: 17 }
+      expect(m.test(node, "const x = 'hello'")).toBe(false)
+    })
+
+    it('matches ESTree Literal with string value', () => {
+      const m = find("'' → 'mutant' (any context)")
+      const node = { type: 'Literal', value: '', start: 10, end: 12 }
+      expect(m.test(node, "const x = ''")).toBe(true)
+    })
+  })
+
+  // ── numeric off-by-one ──
+
+  describe('numeric off-by-one', () => {
+    it('n → n + 1 increments integer > 1', () => {
+      const m = find('n → n + 1')
+      const node = { type: 'NumericLiteral', value: 5, start: 10, end: 11 }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'const x = 5')
+      expect(patch).toEqual({ start: 10, end: 11, replacement: '6' })
+    })
+
+    it('n → n - 1 decrements integer > 1', () => {
+      const m = find('n → n - 1')
+      const node = { type: 'NumericLiteral', value: 10, start: 10, end: 12 }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'const x = 10')
+      expect(patch).toEqual({ start: 10, end: 12, replacement: '9' })
+    })
+
+    it('skips 0 and 1 (covered by numericBoundary)', () => {
+      const m = find('n → n + 1')
+      expect(m.test({ type: 'NumericLiteral', value: 0 })).toBe(false)
+      expect(m.test({ type: 'NumericLiteral', value: 1 })).toBe(false)
+    })
+
+    it('skips floating point numbers', () => {
+      const m = find('n → n + 1')
+      expect(m.test({ type: 'NumericLiteral', value: 3.14 })).toBe(false)
+    })
+
+    it('skips hex literals', () => {
+      const m = find('n → n + 1')
+      const node = { type: 'NumericLiteral', value: 255, start: 10, end: 14 }
+      expect(m.mutate(node, 'const x = 0xFF')).toBeNull()
+    })
+
+    it('handles large numbers', () => {
+      const m = find('n → n + 1')
+      const node = { type: 'NumericLiteral', value: 1000, start: 10, end: 14 }
+      const patch = m.mutate(node, 'const x = 1000')
+      expect(patch).toEqual({ start: 10, end: 14, replacement: '1001' })
+    })
+
+    it('matches ESTree Literal type', () => {
+      const m = find('n → n + 1')
+      const node = { type: 'Literal', value: 42, start: 10, end: 12 }
+      expect(m.test(node)).toBe(true)
+    })
+  })
+
+  // ── forEach removal ──
+
+  describe('forEach removal', () => {
+    it('forEach() → (removed) removes .forEach()', () => {
+      const m = find('forEach() → (removed)')
+      const node = callWithMethod('forEach', 4, 11, 0, 18)
+      node.callee.object = { end: 3 }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'arr.forEach(fn)')
+      expect(patch).toEqual({ start: 3, end: 18, replacement: '' })
     })
   })
 })
