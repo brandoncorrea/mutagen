@@ -63,11 +63,11 @@ function allOptions(argv) {
 }
 
 function commonOptions(argv) {
-  const timeout = parseTimeout(argv)
+  const timeout = parseNumericFlag(argv, '--timeout', { positive: true })
   if (timeout?.error) return timeout
   const parallel = parseParallel(argv)
   if (parallel?.error) return parallel
-  const minScore = parseMinScore(argv)
+  const minScore = parseNumericFlag(argv, '--min-score')
   if (minScore?.error) return minScore
   return {
     timeout,
@@ -98,7 +98,7 @@ function retestOptions(argv) {
   const next = argv[idx + 1]
   if (!next || next.startsWith('--'))
     return { error: retestMessage }
-  const timeout = parseTimeout(argv)
+  const timeout = parseNumericFlag(argv, '--timeout', { positive: true })
   if (timeout?.error) return timeout
   const parallel = parseParallel(argv)
   if (parallel?.error) return parallel
@@ -145,13 +145,13 @@ function argsToOptions(args) {
       if (isInvalidNumber(targetLine))
         return { error: '--line requires a numeric value' }
     } else if (arg === '--timeout') {
-      timeout = Number(args[++i])
-      if (isInvalidNumber(timeout) || timeout === 0)
-        return { error: '--timeout requires a positive numeric value' }
+      timeout = parseNumericFlag(args, '--timeout', { positive: true })
+      if (timeout?.error) return timeout
+      i++
     } else if (arg === '--min-score') {
-      minScore = Number(args[++i])
-      if (isInvalidNumber(minScore))
-        return { error: '--min-score requires a numeric value' }
+      minScore = parseNumericFlag(args, '--min-score')
+      if (minScore?.error) return minScore
+      i++
     } else if (arg === '--parallel') {
       parallel = parseParallelValue(args, i)
       if (parallel?.error) return parallel
@@ -186,21 +186,12 @@ function parseParallelValue(args, idx) {
   return value
 }
 
-function parseTimeout(args) {
-  const idx = args.indexOf('--timeout')
+function parseNumericFlag(args, flag, { positive = false } = {}) {
+  const idx = args.indexOf(flag)
   if (idx < 0) return
   const value = Number(args[idx + 1])
-  if (isInvalidNumber(value) || !value)
-    return { error: '--timeout requires a positive numeric value' }
-  return value
-}
-
-function parseMinScore(args) {
-  const idx = args.indexOf('--min-score')
-  if (idx < 0) return
-  const value = Number(args[idx + 1])
-  if (isInvalidNumber(value))
-    return { error: '--min-score requires a numeric value' }
+  if (isInvalidNumber(value) || (positive && !value))
+    return { error: `${flag} requires a ${positive ? 'positive ' : ''}numeric value` }
   return value
 }
 
