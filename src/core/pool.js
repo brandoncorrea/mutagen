@@ -132,16 +132,9 @@ async function closePool(pool) {
 
 async function ensureRunners(pool, { createRunner, workerCount }) {
   if (pool.runners.length) return
-  raiseMaxListeners(workerCount)
   const runners = Array.from({ length: workerCount }, createRunner)
   const created = await Promise.all(runners)
   pool.runners.push(...created)
-}
-
-function raiseMaxListeners(workerCount) {
-  const needed = workerCount + 5
-  if (process.getMaxListeners() < needed)
-    process.setMaxListeners(needed)
 }
 
 async function runMutationsParallel(runners, mutations, outcomes, options) {
