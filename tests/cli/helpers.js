@@ -24,10 +24,10 @@ export function hashOf(content) {
 }
 
 export function fakeRunner(results) {
-  const queue = [...results]
+  let callCount = 0
   return {
     run: vi.fn().mockImplementation(() =>
-      Promise.resolve(queue.shift() || { passed: true })),
+      Promise.resolve(results[callCount++] || { passed: true })),
     close: vi.fn().mockResolvedValue(undefined)
   }
 }
@@ -42,10 +42,10 @@ export function mockFs(readFileSync, files) {
 }
 
 export function fakePoolRunner(results = []) {
-  const queue = [...results]
+  let callCount = 0
   return {
     run: vi.fn().mockImplementation(() =>
-      Promise.resolve(queue.shift() || { passed: true })),
+      Promise.resolve(results[callCount++] || { passed: true })),
     close: vi.fn().mockResolvedValue(undefined),
     applyMutation: vi.fn()
   }
