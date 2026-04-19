@@ -15,7 +15,7 @@ import { mutantKey, mutationId, assignMutationIds } from '../../src/core/mutatio
 import { countStatuses, totalMutants, mutationScore } from '../../src/core/mutation-status.js'
 import {
   toJsonMutants, createReport, writeReportFile, tryLoadJson,
-  combineReportData, writeStructuredReportFile
+  combineReportData, writeStructuredReportFile, buildStructuredReport
 } from '../../src/core/report-data.js'
 
 describe('mutationId', () => {
@@ -586,6 +586,87 @@ describe('combineReportData', () => {
   it('returns empty files for empty input', () => {
     const merged = combineReportData([], { log: () => {}, error: () => {} })
     expect(Object.keys(merged.files)).toHaveLength(0)
+  })
+})
+
+describe('buildStructuredReport', () => {
+  it('returns report and stats from file results', () => {
+    const { report, stats } = buildStructuredReport({
+      'a.js': { mutants: [{ status: 'Killed', mutatorName: 'x', description: 'a → b' }] }
+    })
+
+    expect(stats.killed).toBe(1)
+    expect(stats.survived).toBe(0)
+    expect(stats.total).toBe(1)
+    expect(report.killed).toBe(1)
+    expect(report.files['a.js'].killed).toBe(1)
+  })
+
+  it('computes score as percentage of killed over total', () => {
+    const { report, stats } = buildStructuredReport({
+      'a.js': { mutants: [
+        { status: 'Killed', mutatorName: 'x' },
+        { status: 'Survived', mutatorName: 'y' }
+      ]}
+    })
+
+    expect(stats.score).toBe(50)
+    expect(report.score).toBe(50)
+    expect(stats.total).toBe(2)
+  })
+
+  it('defaults score to 100% when no mutants exist', () => {
+    const { report, stats } = buildStructuredReport({})
+
+    expect(stats.score).toBe(100)
+    expect(report.score).toBe(100)
+  })
+
+  it('includes deltas when provided', () => {
+    const deltas = { fixes: [], regressions: [] }
+    const { report } = buildStructuredReport({}, deltas)
+
+    expect(report.deltas).toEqual(deltas)
+  })
+
+  it('omits deltas when not provided', () => {
+    const { report } = buildStructuredReport({})
+
+    expect(report).not.toHaveProperty('deltas')
+  })
+
+  it('collects survivors with stable mutation IDs', () => {
+    const { report } = buildStructuredReport({
+      'a.js': { mutants: [{ status: 'Survived', mutatorName: 'x', location: { start: { line: 5 } } }] }
+    })
+
+    expect(report.survivors).toHaveLength(1)
+    expect(report.survivors[0].id).toBe(mutationId('a.js', 5, 'x'))
+  })
+
+  it('counts timeout mutants as killed and tracks timedOut separately', () => {
+    const { stats } = buildStructuredReport({
+      'a.js': { mutants: [{ status: 'Timeout', mutatorName: 'x' }] }
+    })
+
+    expect(stats.killed).toBe(1)
+    expect(stats.timedOut).toBe(1)
+  })
+
+  it('per-file score defaults to 100% when mutants array is empty', () => {
+    const { report } = buildStructuredReport({
+      'a.js': { mutants: [] }
+    })
+
+    expect(report.files['a.js'].score).toBe(100)
+  })
+
+  it('is pure — does not perform I/O', () => {
+    vi.clearAllMocks()
+    buildStructuredReport({ 'a.js': { mutants: [{ status: 'Killed', mutatorName: 'x' }] } })
+
+    expect(writeFileSync).not.toHaveBeenCalled()
+    expect(mkdirSync).not.toHaveBeenCalled()
   })
 })
 

@@ -65,6 +65,37 @@ export function toJsonMutants(sourceFile, results, { survivorsOnly } = {}) {
 }
 
 /**
+ * Pure computation: build a structured report from file results.
+ * Returns both the full report object and summary stats.
+ *
+ * @param {Object} fileResults - { [path]: { mutants: [...] } }
+ * @param {Object} [deltas] - incremental deltas (fixes, regressions, rerunFiles, cachedFiles)
+ * @returns {{ report: Object, stats: { score: number, total: number, killed: number, survived: number, timedOut: number } }}
+ */
+export function buildStructuredReport(fileResults, deltas) {
+  const { files, survivors, totalKilled, totalSurvived, totalTimedOut } = collectStats(fileResults)
+  const total = totalKilled + totalSurvived
+  const score = total ? (totalKilled / total) * 100 : 100
+
+  const stats = {
+    score: round1(score),
+    total,
+    killed: totalKilled,
+    survived: totalSurvived,
+    timedOut: totalTimedOut
+  }
+
+  const report = {
+    ...stats,
+    files,
+    survivors,
+    ...(deltas && { deltas })
+  }
+
+  return { report, stats }
+}
+
+/**
  * Build a structured report from file results and write to outputPath.
  * Returns computed stats for callers that need to display a summary.
  *
@@ -74,32 +105,35 @@ export function toJsonMutants(sourceFile, results, { survivorsOnly } = {}) {
  * @returns {{ score: number, total: number, killed: number, survived: number, timedOut: number }}
  */
 export function writeStructuredReportFile(outputPath, fileResults, deltas) {
-  const { files, survivors, totalKilled, totalSurvived, totalTimedOut } = collectStats(fileResults)
-  const total = totalKilled + totalSurvived
-  const score = total ? (totalKilled / total) * 100 : 100
-
-  const report = {
-    score: round1(score),
-    total,
-    killed: totalKilled,
-    survived: totalSurvived,
-    timedOut: totalTimedOut,
-    files,
-    survivors,
-    ...(deltas && { deltas })
-  }
+  const { report, stats } = buildStructuredReport(fileResults, deltas)
 
   const absPath = resolve(outputPath)
   mkdirSync(dirname(absPath), { recursive: true })
   writeFileSync(absPath, JSON.stringify(report, null, 2))
 
-  return {
-    score: round1(score),
-    total,
-    killed: totalKilled,
-    survived: totalSurvived,
-    timedOut: totalTimedOut
+  return stats
+}
+
+function tallyFileMutants(path, mutants) {
+  let killed = 0
+  let timedOut = 0
+  let survived = 0
+  const survivors = []
+
+  for (const mutant of mutants) {
+    if (isKilled(mutant)) {
+      killed++
+      if (mutant.status === STATUS.TIMEOUT) timedOut++
+    } else if (isAlive(mutant)) {
+      survived++
+      survivors.push(toSurvivor(path, mutant))
+    }
   }
+
+  const total = mutants.length
+  const score = total ? (killed / total) * 100 : 100
+
+  return { killed, survived, timedOut, survivors, score: round1(score), total }
 }
 
 function collectStats(fileResults) {
@@ -110,23 +144,12 @@ function collectStats(fileResults) {
   const survivors = []
 
   for (const [path, fileData] of Object.entries(fileResults)) {
-    const mutants = fileData.mutants
-    let fileKilled = 0
-
-    for (const mutant of mutants) {
-      if (isKilled(mutant)) {
-        fileKilled++
-        totalKilled++
-        if (mutant.status === STATUS.TIMEOUT) totalTimedOut++
-      } else if (isAlive(mutant)) {
-        totalSurvived++
-        survivors.push(toSurvivor(path, mutant))
-      }
-    }
-
-    const fileTotal = mutants.length
-    const fileScore = fileTotal ? (fileKilled / fileTotal) * 100 : 100
-    files[path] = { score: round1(fileScore), killed: fileKilled, total: fileTotal }
+    const tally = tallyFileMutants(path, fileData.mutants)
+    totalKilled += tally.killed
+    totalSurvived += tally.survived
+    totalTimedOut += tally.timedOut
+    survivors.push(...tally.survivors)
+    files[path] = { score: tally.score, killed: tally.killed, total: tally.total }
   }
 
   return { files, survivors, totalKilled, totalSurvived, totalTimedOut }
