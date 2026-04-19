@@ -177,9 +177,8 @@ export const finallyRemoval = [
     name: 'finally → (removed)',
     types: ['TryStatement'],
     test: ({ handler, finalizer }) => handler != null && finalizer != null,
-    mutate: ({ block, handler, finalizer }, source) => {
-      const searchFrom = (handler || block).end
-      const idx = source.indexOf('finally', searchFrom)
+    mutate: ({ handler, finalizer }, source) => {
+      const idx = source.indexOf('finally', handler.end)
       if (idx === -1) return null
       return { start: idx, end: finalizer.end, replacement: '' }
     }
@@ -204,9 +203,9 @@ export const forInOfSwap = [
     name: 'for...in → for...of',
     types: ['ForInStatement'],
     test: () => true,
-    mutate: ({ left, right }, source) => {
+    mutate: ({ left }, source) => {
       const idx = source.indexOf('in', left.end)
-      if (idx === -1 || idx + 2 > right.start) return null
+      if (idx === -1) return null
       return { start: idx, end: idx + 2, replacement: 'of' }
     }
   },
@@ -214,9 +213,9 @@ export const forInOfSwap = [
     name: 'for...of → for...in',
     types: ['ForOfStatement'],
     test: () => true,
-    mutate: ({ left, right }, source) => {
+    mutate: ({ left }, source) => {
       const idx = source.indexOf('of', left.end)
-      if (idx === -1 || idx + 2 > right.start) return null
+      if (idx === -1) return null
       return { start: idx, end: idx + 2, replacement: 'in' }
     }
   }
@@ -254,9 +253,8 @@ export const staticKeywordRemoval = [
     types: ['MethodDefinition', 'PropertyDefinition', 'ClassMethod', 'ClassProperty'],
     test: node => node.static === true,
     mutate: (node, source) => {
-      const bound = (node.key || node.value || { start: node.end }).start
       const idx = source.indexOf('static', node.start)
-      if (idx === -1 || idx >= bound) return null
+      if (idx === -1) return null
       return { start: idx, end: idx + 7, replacement: '' }
     }
   }

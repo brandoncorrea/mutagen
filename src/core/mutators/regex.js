@@ -67,7 +67,6 @@ function regexClassInversion(name, from, to) {
     test: node => findEscapeClass(node.pattern, from) !== -1,
     mutate: ({ pattern, start }) => {
       const offset = findEscapeClass(pattern, from)
-      if (offset === -1) return null
       const charPos = start + 1 + offset + 1
       return { start: charPos, end: charPos + 1, replacement: to }
     }
@@ -82,7 +81,6 @@ function regexFlagRemoval(name, flag) {
     mutate: ({ pattern, flags, start }) => {
       const flagsStart = start + 1 + pattern.length + 1
       const flagOffset = flags.indexOf(flag)
-      if (flagOffset === -1) return null
       const sourcePos = flagsStart + flagOffset
       return { start: sourcePos, end: sourcePos + 1, replacement: '' }
     }
@@ -119,7 +117,6 @@ export const regexMutations = [
     test: node => findQuantifierQuestion(node.pattern) !== -1,
     mutate: ({ pattern, start }) => {
       const offset = findQuantifierQuestion(pattern)
-      if (offset === -1) return null
       const sourcePos = start + 1 + offset
       return { start: sourcePos, end: sourcePos + 1, replacement: '' }
     }
@@ -142,7 +139,6 @@ export const regexMutations = [
     },
     mutate: ({ pattern, start }) => {
       const q = findQuantifierRange(pattern)
-      if (!q || q.min <= 0) return null
       const newInner = q.inner.replace(/^\d+/, String(q.min - 1))
       const sourcePos = start + 1 + q.offset
       return { start: sourcePos, end: sourcePos + q.length, replacement: `{${newInner}}` }

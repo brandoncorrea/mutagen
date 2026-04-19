@@ -214,6 +214,12 @@ describe('regex mutators', () => {
       const node = regexNode('a\\?', '', 0, 6)
       expect(m.test(node)).toBe(false)
     })
+
+    it('skips ? inside character class [?]', () => {
+      const m = find('? → (removed)')
+      const node = regexNode('[?]', '', 0, 5)
+      expect(m.test(node)).toBe(false)
+    })
   })
 
   describe('character class inversions', () => {
@@ -390,6 +396,24 @@ describe('regex mutators', () => {
     it('skips {n,m} inside character class', () => {
       const m = find('{n} → {n-1} (quantifier range)')
       const node = regexNode('[{3}]', '', 0, 7)
+      expect(m.test(node)).toBe(false)
+    })
+
+    it('skips escaped \\{ and finds real quantifier after it', () => {
+      const m = find('{n} → {n-1} (quantifier range)')
+      const node = regexNode('\\{a{2}', '', 0, 8)
+      expect(m.test(node)).toBe(true)
+    })
+
+    it('skips unclosed { without crashing', () => {
+      const m = find('{n} → {n-1} (quantifier range)')
+      const node = regexNode('a{', '', 0, 4)
+      expect(m.test(node)).toBe(false)
+    })
+
+    it('skips non-numeric brace content like {abc}', () => {
+      const m = find('{n} → {n-1} (quantifier range)')
+      const node = regexNode('a{abc}', '', 0, 8)
       expect(m.test(node)).toBe(false)
     })
   })

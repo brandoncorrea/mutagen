@@ -1788,6 +1788,17 @@ describe('ast-mutators', () => {
       expect(patch.replacement).toBe('in')
     })
 
+    it('for...of returns null when keyword not found', () => {
+      const m = find('for...of → for...in')
+      const node = {
+        type: 'ForOfStatement',
+        left: { start: 5, end: 12 },
+        right: { start: 13, end: 16 },
+        start: 0, end: 20
+      }
+      expect(m.mutate(node, 'for (const x arr) {}')).toBeNull()
+    })
+
     it('for...in returns null when keyword not found', () => {
       const m = find('for...in → for...of')
       const node = {
@@ -2319,8 +2330,14 @@ describe('ast-mutators', () => {
       expect(m.test({ type: 'NumericLiteral', value: 3.14 })).toBe(false)
     })
 
-    it('skips hex literals', () => {
+    it('skips hex literals in n + 1', () => {
       const m = find('n → n + 1')
+      const node = { type: 'NumericLiteral', value: 255, start: 10, end: 14 }
+      expect(m.mutate(node, 'const x = 0xFF')).toBeNull()
+    })
+
+    it('skips hex literals in n - 1', () => {
+      const m = find('n → n - 1')
       const node = { type: 'NumericLiteral', value: 255, start: 10, end: 14 }
       expect(m.mutate(node, 'const x = 0xFF')).toBeNull()
     })
