@@ -64,7 +64,6 @@ function compileSummary(prevIds, currentFileResults) {
 }
 
 function summarizeMutant(summary, prevIds, mutant) {
-  if (!mutant.id) return
   const prev = prevIds.get(mutant.id)
   if (prev === 'survived') {
     if (isKilled(mutant))
