@@ -142,17 +142,16 @@ async function runIncrementalMode(runContext, jsonOutput, timeout) {
 }
 
 async function runBatchMode(runContext, jsonOutput, timeout) {
-  const result = await runBatch(runContext, jsonOutput, timeout, undefined)
-  const { totalSurvived, totalKilled, totalTimedOut, failures, fileResults }
-    = result
+  const result = await runBatch(runContext, jsonOutput, timeout)
+  const { totalSurvived, failures } = result
   const exitCode = (totalSurvived + failures) ? 1 : 0
   return {
     exitCode,
     stats: {
-      killed: totalKilled,
-      survived: totalSurvived,
-      timedOut: totalTimedOut,
-      fileCount: Object.keys(fileResults).length
+      killed: result.totalKilled,
+      survived: result.totalSurvived,
+      timedOut: result.totalTimedOut,
+      fileCount: Object.keys(result.fileResults).length
     }
   }
 }
@@ -174,8 +173,8 @@ async function runSingleMode(runContext, parsed, timeout) {
     out: runContext.out,
     onProgress: progress?.dot
   }
-  const { error, survived, killed, timedOut } =
-    await getSingleRunResult(runContext, runOptions)
+  const result = await getSingleRunResult(runContext, runOptions)
+  const { error, survived, killed, timedOut } = result
   if (progress) progress.endFile()
   return {
     exitCode: error || survived ? 1 : 0,

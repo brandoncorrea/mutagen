@@ -79,7 +79,6 @@ export function buildStructuredReport(fileResults, deltas) {
   } = collectStats(fileResults)
   const total = totalKilled + totalSurvived
   const score = total ? (totalKilled / total) * 100 : 100
-
   const stats = {
     score: round1(score),
     total,
@@ -88,14 +87,15 @@ export function buildStructuredReport(fileResults, deltas) {
     timedOut: totalTimedOut
   }
 
-  const report = {
-    ...stats,
-    files,
-    survivors,
-    ...(deltas && { deltas })
+  return {
+    report: {
+      ...stats,
+      files,
+      survivors,
+      ...(deltas && { deltas })
+    },
+    stats
   }
-
-  return { report, stats }
 }
 
 /**
@@ -108,60 +108,70 @@ export function buildStructuredReport(fileResults, deltas) {
  * @returns {{ score, total, killed, survived, timedOut }}
  */
 export function writeStructuredReportFile(outputPath, fileResults, deltas) {
-  const { report, stats } = buildStructuredReport(
-    fileResults, deltas
-  )
-
+  const { report, stats } = buildStructuredReport(fileResults, deltas)
   const absPath = resolve(outputPath)
   mkdirSync(dirname(absPath), { recursive: true })
   writeFileSync(absPath, JSON.stringify(report, null, 2))
-
   return stats
 }
 
 function tallyFileMutants(path, mutants) {
-  let killed = 0
-  let timedOut = 0
-  let survived = 0
-  const survivors = []
-
-  for (const mutant of mutants) {
-    if (isKilled(mutant)) {
-      killed++
-      if (mutant.status === STATUS.TIMEOUT) timedOut++
-    } else if (isAlive(mutant)) {
-      survived++
-      survivors.push(toSurvivor(path, mutant))
-    }
+  const tallies = {
+    killed: 0,
+    timedOut: 0,
+    survived: 0,
+    survivors: []
   }
 
-  const total = mutants.length
-  const score = total ? (killed / total) * 100 : 100
+  for (const mutant of mutants)
+    tallyMutant(tallies, path, mutant)
 
-  return { killed, survived, timedOut, survivors, score: round1(score), total }
+  const total = mutants.length
+  const score = total ? (tallies.killed / total) * 100 : 100
+  return {
+    ...tallies,
+    score: round1(score),
+    total
+  }
+}
+
+function tallyMutant(tallies, path, mutant) {
+  if (isKilled(mutant)) {
+    tallies.killed++
+    if (mutant.status === STATUS.TIMEOUT)
+      tallies.timedOut++
+  } else if (isAlive(mutant)) {
+    tallies.survived++
+    tallies.survivors.push(toSurvivor(path, mutant))
+  }
 }
 
 function collectStats(fileResults) {
-  let totalKilled = 0
-  let totalSurvived = 0
-  let totalTimedOut = 0
-  const files = {}
-  const survivors = []
-
-  for (const [path, fileData] of Object.entries(fileResults)) {
-    const tally = tallyFileMutants(path, fileData.mutants)
-    totalKilled += tally.killed
-    totalSurvived += tally.survived
-    totalTimedOut += tally.timedOut
-    survivors.push(...tally.survivors)
-    files[path] = {
-      score: tally.score,
-      killed: tally.killed,
-      total: tally.total
-    }
+  const stats = {
+    totalKilled: 0,
+    totalSurvived: 0,
+    totalTimedOut: 0,
+    files: {},
+    survivors: []
   }
 
-  return { files, survivors, totalKilled, totalSurvived, totalTimedOut }
+  for (const entry of Object.entries(fileResults))
+    collectStat(stats, entry)
+
+  return stats
+}
+
+function collectStat(stats, [path, fileData]) {
+  const tally = tallyFileMutants(path, fileData.mutants)
+  stats.totalKilled += tally.killed
+  stats.totalSurvived += tally.survived
+  stats.totalTimedOut += tally.timedOut
+  stats.survivors.push(...tally.survivors)
+  stats.files[path] = {
+    score: tally.score,
+    killed: tally.killed,
+    total: tally.total
+  }
 }
 
 function toSurvivor(file, mutation) {
@@ -183,8 +193,7 @@ function round1(n) {
 }
 
 function extractDescription(description, index) {
-  if (!description) return ''
-  return description.split(' → ')[index] || ''
+  return description?.split(' → ')[index] || ''
 }
 
 function loadAllEntries(reports, out) {

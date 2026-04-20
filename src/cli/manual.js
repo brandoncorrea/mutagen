@@ -33,13 +33,6 @@ export function createManualRunner(config) {
   const {
     mutators,
     skipNodes,
-    sources: explicitSources,
-    include,
-    exclude,
-    cwd,
-    testSources: explicitTestSources = [],
-    testInclude,
-    testExclude,
     createRunner,
     reportDir = 'reports/mutation',
     reportFile = 'manual-report.json',
@@ -47,15 +40,8 @@ export function createManualRunner(config) {
     out = defaultOut()
   } = config
 
-  const sources = explicitSources?.length ? explicitSources
-    : include ? resolveGlobs({ include, exclude, cwd })
-    : []
-
-  const testSources = explicitTestSources.length ? explicitTestSources
-    : testInclude
-      ? resolveGlobs({ include: testInclude, exclude: testExclude, cwd })
-      : []
-
+  const sources = resolveSources(config)
+  const testSources = resolveTestSources(config)
   const mutationConfig = prepareMutationConfig({ mutators, skipNodes })
   const reportPath = `${reportDir}/${reportFile}`
 
@@ -82,7 +68,22 @@ export function createManualRunner(config) {
     },
     run: argv => run(runContext, argv),
     async main() {
-      process.exit(await run(runContext))
+      process.exit(await run(runContext, process.argv))
     }
   }
+}
+
+function resolveTestSources({ testSources, testInclude, testExclude, cwd }) {
+  return resolveSources({
+    cwd,
+    include: testInclude,
+    exclude: testExclude,
+    sources: testSources
+  })
+}
+
+function resolveSources({ sources, include, exclude, cwd }) {
+  return sources?.length ? sources
+    : include ? resolveGlobs({ include, exclude, cwd })
+    : []
 }

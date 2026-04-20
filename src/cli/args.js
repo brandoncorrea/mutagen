@@ -39,7 +39,7 @@ const retestMessage =
   'Usage: npx mutagen --retest <report.json>' +
   ' [--json [path]] [--timeout N] [--parallel [N]] [--quiet]'
 
-export function parseArgs(argv = process.argv.slice(2)) {
+export function parseArgs(argv) {
   if (argv.includes('--help') || argv.includes('-h'))
     return { help: usageMessage }
   return argv.includes('--incremental') ? incrementalOptions(argv)

@@ -185,20 +185,6 @@ describe('parseArgs', () => {
     })
   })
 
-  describe('default argv from process.argv', () => {
-    it('uses process.argv.slice(2) when no argv argument provided', () => {
-      const original = process.argv
-      try {
-        process.argv = ['node', 'script.js', '--incremental', '--json']
-        const result = parseArgs()
-        expect(result.incrementalMode).toBe(true)
-        expect(result.jsonOutput).toBe(true)
-      } finally {
-        process.argv = original
-      }
-    })
-  })
-
   describe('--parallel flag', () => {
     it('parses --parallel with a numeric value in --all mode', () => {
       const result = parseArgs(['--all', '--parallel', '4'])

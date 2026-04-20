@@ -96,25 +96,30 @@ function classifyAllSources(sources, testSources, previous) {
 function classifySources(
   sources, previousHashes, testInvalidated
 ) {
-  const currentHashes = {}
-  const changedSources = []
-  const unchangedSources = []
-
-  for (const source of sources) {
-    const absPath = resolve(source)
-    const relPath = relative(process.cwd(), absPath)
-    const hash = hashFile(absPath)
-    currentHashes[relPath] = hash
-
-    const changed = previousHashes[relPath] !== hash
-      || testInvalidated.has(relPath)
-    if (changed)
-      changedSources.push(source)
-    else
-      unchangedSources.push(relPath)
+  const classification = {
+    currentHashes: {},
+    changedSources: [],
+    unchangedSources: []
   }
 
-  return { currentHashes, changedSources, unchangedSources }
+  for (const source of sources)
+    classifySource(classification, source, previousHashes, testInvalidated)
+
+  return classification
+}
+
+function classifySource(classification, source, previousHashes, testInvalidated) {
+  const absPath = resolve(source)
+  const relPath = relative(process.cwd(), absPath)
+  const hash = hashFile(absPath)
+  classification.currentHashes[relPath] = hash
+
+  const changed = previousHashes[relPath] !== hash
+    || testInvalidated.has(relPath)
+  if (changed)
+    classification.changedSources.push(source)
+  else
+    classification.unchangedSources.push(relPath)
 }
 
 function loadPreviousReport(reportPath, out) {
@@ -129,17 +134,22 @@ function loadPreviousReport(reportPath, out) {
 }
 
 function hashTestFiles(testSources, previousTestHashes) {
-  const currentTestHashes = {}
-  const changedTestFiles = []
-  for (const testFile of testSources) {
-    const absPath = resolve(testFile)
-    const relPath = relative(process.cwd(), absPath)
-    const hash = hashFile(absPath)
-    currentTestHashes[relPath] = hash
-    if (previousTestHashes[relPath] !== hash)
-      changedTestFiles.push(relPath)
+  const result = {
+    currentTestHashes: {},
+    changedTestFiles: []
   }
-  return { currentTestHashes, changedTestFiles }
+  for (const testFile of testSources)
+    hashTestFile(result, previousTestHashes, testFile)
+  return result
+}
+
+function hashTestFile(result, previousTestHashes, testFile) {
+  const absPath = resolve(testFile)
+  const relPath = relative(process.cwd(), absPath)
+  const hash = hashFile(absPath)
+  result.currentTestHashes[relPath] = hash
+  if (previousTestHashes[relPath] !== hash)
+    result.changedTestFiles.push(relPath)
 }
 
 function hashFile(filePath) {

@@ -188,7 +188,10 @@ export function writeMergedReport(
       if (previous.previousReport.files[relPath])
         mergedFiles[relPath] = previous.previousReport.files[relPath]
 
-  const extra = { sourceHashes: currentHashes, testHashes: currentTestHashes }
+  const extra = {
+    sourceHashes: currentHashes,
+    testHashes: currentTestHashes
+  }
   const deltas = computeDeltas(
     previous.previousReport, fileResults, classification
   )

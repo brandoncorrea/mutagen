@@ -89,9 +89,9 @@ async function runAfterPreflight(preflightRunner, options) {
 }
 
 async function executeWithPool(mutations, options) {
-  if (options.pool)
-    return await runWithExternalPool(options.pool, mutations, options)
-  return await runWithNewPool(mutations, options)
+  return options.pool
+    ? await runWithExternalPool(options.pool, mutations, options)
+    : await runWithNewPool(mutations, options)
 }
 
 async function runWithExternalPool(pool, mutations, options) {
@@ -133,21 +133,25 @@ async function createRunnerWithOptions(options) {
       }
     },
     async switchFile(newSourceFile) {
-      writeFileSync(state.tempSource, readFileSync(state.sourceFile, 'utf-8'))
-      state.sourceFile = newSourceFile
-      state.tempSource = tempCopy.resolve(newSourceFile)
-      if (state.runner.switchFile)
-        return await state.runner.switchFile(state.tempSource)
-      await state.runner.close()
-      state.runner = await createRunner(
-        state.tempSource, { root: tempCopy.root }
-      )
+      await doSwitchFile(state, tempCopy, createRunner, newSourceFile)
     },
     async close() {
       await state.runner.close()
       tempCopy.cleanup()
     }
   }
+}
+
+async function doSwitchFile(state, tempCopy, createRunner, newSourceFile) {
+  writeFileSync(state.tempSource, readFileSync(state.sourceFile, 'utf-8'))
+  state.sourceFile = newSourceFile
+  state.tempSource = tempCopy.resolve(newSourceFile)
+  if (state.runner.switchFile)
+    return await state.runner.switchFile(state.tempSource)
+  await state.runner.close()
+  state.runner = await createRunner(
+    state.tempSource, { root: tempCopy.root }
+  )
 }
 
 async function runPool(

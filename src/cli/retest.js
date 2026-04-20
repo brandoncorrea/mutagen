@@ -146,11 +146,15 @@ async function retestFiles(files, options) {
   }
 }
 
-async function retestOneFile(
-  file,
-  { mutationConfig, createRunner, timeout,
-    survivorKeys, parallel, out }
-) {
+async function retestOneFile(file, options) {
+  const {
+    mutationConfig,
+    createRunner,
+    timeout,
+    survivorKeys,
+    parallel,
+    out
+  } = options
   const absPath = resolve(file)
   let source
   try {
@@ -161,8 +165,12 @@ async function retestOneFile(
       key => key.startsWith(file + ':')
     ).length
     return {
-      skipped, killed: 0, survived: 0,
-      timedOut: 0, error: false, fileResult: null
+      skipped,
+      killed: 0,
+      survived: 0,
+      timedOut: 0,
+      error: false,
+      fileResult: null
     }
   }
 
@@ -199,29 +207,43 @@ async function retestOneFile(
     retestMutations: matched
   }
 
-  const workerCount = typeof parallel === 'number'
-    ? parallel : undefined
-  const result = parallel
-    ? await runParallel({ ...opts, workerCount })
-    : await runSingle(opts)
-
+  const result = await runResult(parallel, opts)
   if (result.error)
-    return {
-      skipped, killed: 0, survived: 0,
-      timedOut: 0, error: true, fileResult: null
-    }
+    return toErrorResult(skipped)
+  return toRestestResult(result, skipped)
+}
 
+function toErrorResult(skipped) {
   return {
     skipped,
-    killed: result.killed,
-    survived: result.survived,
-    timedOut: result.timedOut || 0,
+    killed: 0,
+    survived: 0,
+    timedOut: 0,
+    error: true,
+    fileResult: null
+  }
+}
+
+function toRestestResult({ killed, survived, timedOut, jsonData }, skipped) {
+  return {
+    skipped,
+    killed,
+    survived,
+    timedOut: timedOut || 0,
     error: false,
     fileResult: {
-      path: result.jsonData.path,
-      mutants: result.jsonData.mutants
+      path: jsonData.path,
+      mutants: jsonData.mutants
     }
   }
+}
+
+async function runResult(parallel, options) {
+  const workerCount = typeof parallel === 'number'
+    ? parallel : undefined
+  return parallel
+    ? await runParallel({ ...options, workerCount })
+    : await runSingle(options)
 }
 
 function writeRetestReport(out, parsed, fileCount, fileResults) {
@@ -268,4 +290,3 @@ function printRetestSummary(
 function survivorKey(file, line, name) {
   return `${file}:${line}:${name}`
 }
-

@@ -36,8 +36,8 @@ function printDiffSummary(out, before, after) {
   const delta = aScore - bScore
 
   out.log(
-    `Overall: ${formatTenth(bScore)}%` +
-    ` → ${formatTenth(aScore)}% (${formatSigned(delta)}%)`
+    `Overall: ${bScore.toFixed(1)}%` +
+    ` → ${aScore.toFixed(1)}% (${formatSigned(delta)}%)`
   )
   out.log(`Mutations: ${bTotal} → ${aTotal}`)
   out.log(
@@ -66,8 +66,8 @@ function printNewMutants(out, newMutants) {
 }
 
 function printRemovedMutants(out, removedMutants) {
-  if (!removedMutants.length) return
-  out.log(`\n- REMOVED MUTANTS: ${removedMutants.length}`)
+  if (removedMutants.length)
+    out.log(`\n- REMOVED MUTANTS: ${removedMutants.length}`)
 }
 
 function printFileDeltas(out, fileDeltas) {
@@ -80,21 +80,17 @@ function printFileDeltas(out, fileDeltas) {
 
 function printFileDelta(out, { label, file, after, before, delta }) {
   if (label === 'NEW')
-    out.log(`  ${file}: NEW (${formatTenth(after)}%)`)
+    out.log(`  ${file}: NEW (${after.toFixed(1)}%)`)
   else if (label === 'REMOVED')
-    out.log(`  ${file}: REMOVED (was ${formatTenth(before)}%)`)
+    out.log(`  ${file}: REMOVED (was ${before.toFixed(1)}%)`)
   else
     out.log(
-      `  ${file}: ${formatTenth(before)}%` +
-      ` → ${formatTenth(after)}% (${formatSigned(delta)}%)`
+      `  ${file}: ${before.toFixed(1)}%` +
+      ` → ${after.toFixed(1)}% (${delta.toFixed(1)}%)`
     )
 }
 
 function formatSigned(value) {
   const sign = value >= 0 ? '+' : ''
-  return `${sign}${formatTenth(value)}`
-}
-
-function formatTenth(value) {
-  return value.toFixed(1)
+  return `${sign}${value.toFixed(1)}`
 }

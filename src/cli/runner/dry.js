@@ -9,21 +9,27 @@ import { generateMutations } from '../../core/generate.js'
 import { assignMutationIds } from '../../core/mutation-id.js'
 
 export function dryRun(sourceFile, mutationConfig, targetLine, out) {
-  const source = readFileSync(sourceFile, 'utf-8')
-  const mutations = generateMutations(source, mutationConfig, targetLine)
+  const mutations = loadMutationsFromSource(sourceFile, mutationConfig, targetLine)
   const relPath = relative(process.cwd(), sourceFile)
   assignMutationIds(mutations, relPath)
 
   out.log(`\nDRY RUN — ${relPath}`)
   out.log(`   Found ${mutations.length} mutation(s)\n`)
 
-  const byLine = mutationsByLine(mutations)
-  const mutationLines = Object.entries(byLine)
-  for (const [line, entries] of mutationLines)
+  for (const [line, entries] of mutationLineEntries(mutations))
     out.log(`  L${line}: ${entries.map(formatEntry).join(', ')}`)
 
   out.log(`\n  Total: ${mutations.length} mutations`)
   return mutations.length
+}
+
+function loadMutationsFromSource(sourceFile, mutationConfig, targetLine) {
+  const source = readFileSync(sourceFile, 'utf-8')
+  return generateMutations(source, mutationConfig, targetLine)
+}
+
+function mutationLineEntries(mutations) {
+  return Object.entries(mutationsByLine(mutations))
 }
 
 function formatEntry(entry) {
