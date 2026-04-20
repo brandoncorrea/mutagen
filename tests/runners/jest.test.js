@@ -17,7 +17,9 @@ function fakeProcess(stdout, exitCode = 0) {
   proc.stdout.on.mockImplementation((event, cb) => {
     if (event === 'data') cb(stdout)
   })
-  proc.stderr.on.mockImplementation(() => {})
+  proc.stderr.on.mockImplementation((event, cb) => {
+    if (event === 'data') cb('')
+  })
   proc.on.mockImplementation((event, cb) => {
     if (event === 'close') cb(exitCode)
   })
