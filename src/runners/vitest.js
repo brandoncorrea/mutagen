@@ -12,6 +12,8 @@
 import { basename, parse as parsePath } from 'node:path'
 import { Readable } from 'node:stream'
 
+export const BAIL_ON_FIRST_FAILURE = 1
+
 export async function createVitestRunner(sourceFile, options = {}) {
   const { testFile, warm = true } = options
   const { startVitest } = await import('vitest/node')
@@ -116,7 +118,7 @@ async function startVitestClean(startVitest, testFilter, opts) {
 function createVitestOptions({ config, root }) {
   return {
     reporters: [{ onFinished() {} }],
-    bail: 1,
+    bail: BAIL_ON_FIRST_FAILURE,
     ...(config && { config }),
     ...(root && { root })
   }

@@ -4,7 +4,7 @@ vi.mock('vitest/node', () => ({
   startVitest: vi.fn()
 }))
 
-import { createVitestRunner } from '../../src/runners/vitest.js'
+import { createVitestRunner, BAIL_ON_FIRST_FAILURE } from '../../src/runners/vitest.js'
 import { startVitest } from 'vitest/node'
 
 function createMockModuleGraph() {
@@ -354,7 +354,7 @@ describe('createVitestRunner', () => {
       await runner.run()
 
       expect(startVitest).toHaveBeenCalledWith(
-        'test', [], expect.objectContaining({ bail: 1 }), {}, expect.objectContaining({ stdin: expect.anything() })
+        'test', [], expect.objectContaining({ bail: BAIL_ON_FIRST_FAILURE }), {}, expect.objectContaining({ stdin: expect.anything() })
       )
     })
   })
