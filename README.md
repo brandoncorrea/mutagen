@@ -172,6 +172,22 @@ const runner = createManualRunner({
 runner.main()
 ```
 
+For Jest projects:
+
+```js
+import { createManualRunner, mutators, createJestRunner } from '@bwawan/mutagen'
+
+const runner = createManualRunner({
+  mutators: [...mutators.javascript],
+  include: ['src/**/*.js'],
+  createRunner: sourceFile => createJestRunner(sourceFile, {
+    config: 'jest.config.js'
+  })
+})
+
+runner.main()
+```
+
 ## Runner interface
 
 The `createRunner` callback receives a source file path and returns a runner object:
@@ -203,6 +219,38 @@ createVitestRunner(sourceFile, {
   testFile: 'tests/specific.test.js',
   warm: true   // default: warm rerun, falls back to cold
 })
+```
+
+## Jest runner
+
+Built-in adapter for Jest (cold mode). Works with any Jest-compatible setup including `next/jest`:
+
+```js
+import { createJestRunner } from '@bwawan/mutagen'
+
+createJestRunner(sourceFile)
+
+// With options
+createJestRunner(sourceFile, {
+  config: 'jest.config.js',
+  root: 'frontend'
+})
+```
+
+### Next.js projects (next/jest)
+
+```js
+// mutagen.config.js
+import { mutators, createJestRunner } from '@bwawan/mutagen'
+
+export default {
+  mutators: [...mutators.javascript],
+  include: ['src/**/*.js', 'src/**/*.tsx'],
+  exclude: ['**/*.test.*'],
+  createRunner: sourceFile => createJestRunner(sourceFile, {
+    config: 'jest.config.js'
+  })
+}
 ```
 
 ## Mutator format (AST)

@@ -13,8 +13,9 @@ describe('public API (index.js)', () => {
     // Built-in mutators
     'mutators',
 
-    // Runner
+    // Runners
     'createVitestRunner',
+    'createJestRunner',
 
     // CLI harness
     'createManualRunner',

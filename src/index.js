@@ -7,8 +7,9 @@ export { matchesPattern } from './core/ast-engine.js'
 // Built-in AST mutators
 export * as mutators from './core/ast-mutators.js'
 
-// Runner
+// Runners
 export { createVitestRunner } from './runners/vitest.js'
+export { createJestRunner } from './runners/jest.js'
 
 // CLI harness
 export { createManualRunner } from './cli/manual.js'
