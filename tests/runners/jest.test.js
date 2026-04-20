@@ -136,4 +136,130 @@ describe('createJestRunner', () => {
     const runner = await createJestRunner('src/foo.js')
     await expect(runner.close()).resolves.toBeUndefined()
   })
+
+  it('does not include --config when config option omitted', async () => {
+    const json = JSON.stringify({ success: true, testResults: [] })
+    fakeProcess(json)
+
+    const runner = await createJestRunner('src/foo.js')
+    await runner.run()
+
+    const args = spawn.mock.calls[0][1]
+    expect(args).not.toContain('--config')
+  })
+
+  it('does not set cwd when root option omitted', async () => {
+    const json = JSON.stringify({ success: true, testResults: [] })
+    fakeProcess(json)
+
+    const runner = await createJestRunner('src/foo.js')
+    await runner.run()
+
+    const opts = spawn.mock.calls[0][2]
+    expect(opts.cwd).toBeUndefined()
+  })
+
+  it('passes both config and root together', async () => {
+    const json = JSON.stringify({ success: true, testResults: [] })
+    fakeProcess(json)
+
+    const runner = await createJestRunner('src/foo.js', {
+      config: '/app/jest.config.js',
+      root: '/app/project'
+    })
+    await runner.run()
+
+    expect(spawn).toHaveBeenCalledWith(
+      'npx',
+      expect.arrayContaining(['--config', '/app/jest.config.js']),
+      expect.objectContaining({ cwd: '/app/project' })
+    )
+  })
+
+  it('configures stdio to ignore stdin and pipe stdout/stderr', async () => {
+    const json = JSON.stringify({ success: true, testResults: [] })
+    fakeProcess(json)
+
+    const runner = await createJestRunner('src/foo.js')
+    await runner.run()
+
+    const opts = spawn.mock.calls[0][2]
+    expect(opts.stdio).toEqual(['ignore', 'pipe', 'pipe'])
+  })
+
+  describe('error handling', () => {
+    it('rejects when spawn emits error', async () => {
+      const proc = {
+        stdout: { on: vi.fn(), setEncoding: vi.fn() },
+        stderr: { on: vi.fn(), setEncoding: vi.fn() },
+        on: vi.fn(),
+        kill: vi.fn()
+      }
+
+      proc.stdout.on.mockImplementation(() => {})
+      proc.stderr.on.mockImplementation(() => {})
+      proc.on.mockImplementation((event, cb) => {
+        if (event === 'error') cb(new Error('spawn ENOENT'))
+      })
+
+      spawn.mockReturnValue(proc)
+
+      const runner = await createJestRunner('src/foo.js')
+      await expect(runner.run()).rejects.toThrow('spawn ENOENT')
+    })
+
+    it('rejects with parse error when stdout is invalid JSON', async () => {
+      fakeProcess('not valid json at all')
+
+      const runner = await createJestRunner('src/foo.js')
+      await expect(runner.run()).rejects.toThrow()
+    })
+
+    it('rejects with parse error when stdout is empty', async () => {
+      fakeProcess('')
+
+      const runner = await createJestRunner('src/foo.js')
+      await expect(runner.run()).rejects.toThrow()
+    })
+  })
+
+  describe('timeout handling', () => {
+    it('run() blocks when process never closes (caller can timeout externally)', async () => {
+      const proc = {
+        stdout: { on: vi.fn(), setEncoding: vi.fn() },
+        stderr: { on: vi.fn(), setEncoding: vi.fn() },
+        on: vi.fn(),
+        kill: vi.fn()
+      }
+
+      // Process never emits 'close' or 'error'
+      proc.stdout.on.mockImplementation(() => {})
+      proc.stderr.on.mockImplementation(() => {})
+      proc.on.mockImplementation(() => {})
+
+      spawn.mockReturnValue(proc)
+
+      const runner = await createJestRunner('src/foo.js')
+
+      const result = await Promise.race([
+        runner.run(),
+        new Promise(resolve => setTimeout(() => resolve('BLOCKED'), 50))
+      ])
+
+      expect(result).toBe('BLOCKED')
+    })
+  })
+
+  describe('multiple runs', () => {
+    it('spawns a fresh process for each run() call', async () => {
+      const json = JSON.stringify({ success: true, testResults: [] })
+      fakeProcess(json)
+
+      const runner = await createJestRunner('src/foo.js')
+      await runner.run()
+      await runner.run()
+
+      expect(spawn).toHaveBeenCalledTimes(2)
+    })
+  })
 })
