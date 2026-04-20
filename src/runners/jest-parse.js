@@ -5,13 +5,23 @@
  * @returns {{ passed: boolean, killedBy: string[], coveredBy: string[] }}
  */
 export function parseJestOutput(jsonString) {
-  const data = JSON.parse(jsonString)
-  const results = data.testResults || []
-  const failed = results.filter(r => r.status === 'failed')
-  const passed = failed.length === 0
+  const results = parseTestResults(jsonString)
+  const failed = results.filter(isFailure)
   return {
-    passed,
-    killedBy: failed.map(r => r.testFilePath),
-    coveredBy: results.map(r => r.testFilePath)
+    passed: !failed.length,
+    killedBy: getTestPaths(failed),
+    coveredBy: getTestPaths(results)
   }
+}
+
+function parseTestResults(jsonString) {
+  return JSON.parse(jsonString).testResults || []
+}
+
+function isFailure(result) {
+  return result.status === 'failed'
+}
+
+function getTestPaths(results) {
+  return results.map(r => r.testFilePath)
 }
