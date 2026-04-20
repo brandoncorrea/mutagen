@@ -133,7 +133,7 @@ async function createRunnerWithOptions(options) {
       }
     },
     async switchFile(newSourceFile) {
-      await doSwitchFile(state, tempCopy, createRunner, newSourceFile)
+      await switchRunnerToFile(state, tempCopy, createRunner, newSourceFile)
     },
     async close() {
       await state.runner.close()
@@ -142,7 +142,7 @@ async function createRunnerWithOptions(options) {
   }
 }
 
-async function doSwitchFile(state, tempCopy, createRunner, newSourceFile) {
+async function switchRunnerToFile(state, tempCopy, createRunner, newSourceFile) {
   writeFileSync(state.tempSource, readFileSync(state.sourceFile, 'utf-8'))
   state.sourceFile = newSourceFile
   state.tempSource = tempCopy.resolve(newSourceFile)

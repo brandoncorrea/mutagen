@@ -16,7 +16,8 @@ export function dryRun(sourceFile, mutationConfig, targetLine, out) {
   out.log(`\nDRY RUN — ${relPath}`)
   out.log(`   Found ${mutations.length} mutation(s)\n`)
 
-  for (const [line, entries] of mutationLineEntries(mutations))
+  const byLine = mutationsByLine(mutations)
+  for (const [line, entries] of Object.entries(byLine))
     out.log(`  L${line}: ${entries.map(formatEntry).join(', ')}`)
 
   out.log(`\n  Total: ${mutations.length} mutations`)
@@ -26,10 +27,6 @@ export function dryRun(sourceFile, mutationConfig, targetLine, out) {
 function loadMutationsFromSource(sourceFile, mutationConfig, targetLine) {
   const source = readFileSync(sourceFile, 'utf-8')
   return generateMutations(source, mutationConfig, targetLine)
-}
-
-function mutationLineEntries(mutations) {
-  return Object.entries(mutationsByLine(mutations))
 }
 
 function formatEntry(entry) {

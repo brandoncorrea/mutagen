@@ -210,7 +210,7 @@ async function retestOneFile(file, options) {
   const result = await runResult(parallel, opts)
   if (result.error)
     return toErrorResult(skipped)
-  return toRestestResult(result, skipped)
+  return toRetestResult(result, skipped)
 }
 
 function toErrorResult(skipped) {
@@ -224,7 +224,7 @@ function toErrorResult(skipped) {
   }
 }
 
-function toRestestResult({ killed, survived, timedOut, jsonData }, skipped) {
+function toRetestResult({ killed, survived, timedOut, jsonData }, skipped) {
   return {
     skipped,
     killed,
