@@ -30,7 +30,7 @@ function fakeWorktree() {
     root: tempRoot,
     resolve: vi.fn(path => path.replace(resolve('.'), tempRoot)),
     unresolve: vi.fn(path => path.startsWith(tempRoot) ? path.replace(tempRoot, resolve('.')) : path),
-    mapPaths: vi.fn(paths => paths?.map(p => p.startsWith(tempRoot) ? p.replace(tempRoot, resolve(".")) : p)),
+    mapPaths: vi.fn(paths => paths?.map(path => path.startsWith(tempRoot) ? path.replace(tempRoot, resolve(".")) : path)),
     cleanup: vi.fn()
   }
 }
@@ -61,7 +61,7 @@ describe('createManualRunner', () => {
       })
       await manual.runBatch(false, null)
 
-      const progressLines = lines.filter(l => /\[\d+\/\d+\]/.test(l))
+      const progressLines = lines.filter(line => /\[\d+\/\d+\]/.test(line))
       expect(progressLines[0]).toMatch(/\[1\//)
       expect(progressLines[1]).toMatch(/\[2\//)
     })
@@ -83,7 +83,7 @@ describe('createManualRunner', () => {
       })
       await manual.runBatch(false, null)
 
-      const progressLines = lines.filter(l => /\[\d+\/\d+\]/.test(l))
+      const progressLines = lines.filter(line => /\[\d+\/\d+\]/.test(line))
       for (const line of progressLines)
         expect(line).toMatch(/\/2\]/)
     })
@@ -102,10 +102,10 @@ describe('createManualRunner', () => {
       const result = await manual.runBatch(true, null)
 
       const reportCalls = writeFileSync.mock.calls.filter(
-        ([p]) => p.includes('manual-report.json')
+        ([path]) => path.includes('manual-report.json')
       )
       const report = JSON.parse(reportCalls[0][1])
-      const killedMutant = Object.values(report.files)[0].mutants.find(m => m.status === 'Killed')
+      const killedMutant = Object.values(report.files)[0].mutants.find(mutant => mutant.status === 'Killed')
       expect(killedMutant.killedBy).toEqual(['spec-a.js'])
     })
 

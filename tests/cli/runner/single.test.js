@@ -31,7 +31,7 @@ function fakeWorktree() {
     root: tempRoot,
     resolve: vi.fn((path) => path.replace(resolve('.'), tempRoot)),
     unresolve: vi.fn((path) => path.startsWith(tempRoot) ? path.replace(tempRoot, resolve('.')) : path),
-    mapPaths: vi.fn(paths => paths?.map(p => p.startsWith(tempRoot) ? p.replace(tempRoot, resolve(".")) : p)),
+    mapPaths: vi.fn(paths => paths?.map(path => path.startsWith(tempRoot) ? path.replace(tempRoot, resolve(".")) : path)),
     cleanup: vi.fn()
   }
 }
@@ -194,7 +194,7 @@ describe('--survivors-only output filtering', () => {
       out
     })
 
-    const perMutationLines = lines.filter(l => l.match(/^\[\d+\/\d+\]/))
+    const perMutationLines = lines.filter(line => line.match(/^\[\d+\/\d+\]/))
     expect(perMutationLines).toHaveLength(0)
   })
 
@@ -217,7 +217,7 @@ describe('--survivors-only output filtering', () => {
       out
     })
 
-    const perMutationLines = lines.filter(l => l.match(/^\[\d+\/\d+\]/))
+    const perMutationLines = lines.filter(line => line.match(/^\[\d+\/\d+\]/))
     expect(perMutationLines).toHaveLength(1)
     expect(perMutationLines[0]).toContain('Survived')
   })
@@ -331,7 +331,7 @@ describe('runSingle', () => {
       out: { log: msg => lines.push(msg), error: () => {} }
     })
 
-    expect(lines.some(l => l.includes('Timeout'))).toBe(false)
+    expect(lines.some(line => line.includes('Timeout'))).toBe(false)
   })
 
   it('suppresses error report with survivorsOnly', async () => {
@@ -352,7 +352,7 @@ describe('runSingle', () => {
       out: { log: msg => lines.push(msg), error: () => {} }
     })
 
-    const progressLines = lines.filter(l => /^\[\d+\/\d+\]/.test(l))
+    const progressLines = lines.filter(line => /^\[\d+\/\d+\]/.test(line))
     expect(progressLines).toHaveLength(0)
   })
 
@@ -420,6 +420,6 @@ describe('runSingle', () => {
 
     expect(result.error).toBe(true)
     expect(runner.run).not.toHaveBeenCalled()
-    expect(lines.some(l => l.includes('ABORT'))).toBe(true)
+    expect(lines.some(line => line.includes('ABORT'))).toBe(true)
   })
 })

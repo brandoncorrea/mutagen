@@ -109,7 +109,7 @@ describe('ast-engine generateMutations', () => {
     const source = 'if (a === true) {}'
     const mutations = generateMutations(source, [equalityMutator, boolMutator])
     expect(mutations).toHaveLength(2)
-    const names = mutations.map(m => m.name)
+    const names = mutations.map(mutation => mutation.name)
     expect(names).toContain('=== → !==')
     expect(names).toContain('true → false')
   })

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { regexMutations } from '../../src/core/mutators/regex.js'
 
 function find(name) {
-  const mutation = regexMutations.find(m => m.name === name)
+  const mutation = regexMutations.find(mut => mut.name === name)
   if (!mutation) throw new Error(`Mutator not found: ${name}`)
   return mutation
 }
@@ -35,7 +35,7 @@ describe('regex mutators', () => {
     })
 
     it('mutator names are unique', () => {
-      const names = regexMutations.map(m => m.name)
+      const names = regexMutations.map(mutation => mutation.name)
       const dupes = names.filter((n, i) => names.indexOf(n) !== i)
       expect(dupes).toHaveLength(0)
     })

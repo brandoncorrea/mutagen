@@ -175,7 +175,7 @@ describe('runParallel', () => {
       out: { log: msg => lines.push(msg), error: () => {} }
     })
 
-    const progressLines = lines.filter(l => /\[\d+\/\d+\]/.test(l))
+    const progressLines = lines.filter(line => /\[\d+\/\d+\]/.test(line))
     expect(progressLines.length).toBeGreaterThan(0)
   })
 
@@ -198,8 +198,8 @@ describe('runParallel', () => {
       out: { log: msg => lines.push(msg), error: () => {} }
     })
 
-    expect(lines.some(l => l.includes('Survived'))).toBe(true)
-    expect(lines.some(l => l.includes('Timeout'))).toBe(true)
+    expect(lines.some(line => line.includes('Survived'))).toBe(true)
+    expect(lines.some(line => line.includes('Timeout'))).toBe(true)
   })
 
   it('prints run report after pool completes', async () => {
@@ -221,7 +221,7 @@ describe('runParallel', () => {
       out: { log: msg => lines.push(msg), error: () => {} }
     })
 
-    const reportLines = lines.filter(l => l.includes('MUTATION REPORT') || l.includes('Killed'))
+    const reportLines = lines.filter(line => line.includes('MUTATION REPORT') || line.includes('Killed'))
     expect(reportLines.length).toBeGreaterThan(0)
   })
 
@@ -303,7 +303,7 @@ describe('runParallel', () => {
       out: { log: msg => lines.push(msg), error: () => {} }
     })
 
-    const progressLines = lines.filter(l => /\[\d+\/\d+\]/.test(l))
+    const progressLines = lines.filter(line => /\[\d+\/\d+\]/.test(line))
     expect(progressLines).toHaveLength(0)
   })
 
@@ -326,7 +326,7 @@ describe('runParallel', () => {
       out: { log: msg => lines.push(msg), error: () => {} }
     })
 
-    const progressLines = lines.filter(l => /\[\d+\/\d+\]/.test(l))
+    const progressLines = lines.filter(line => /\[\d+\/\d+\]/.test(line))
     expect(progressLines).toHaveLength(1)
     expect(progressLines[0]).toContain('Survived')
   })

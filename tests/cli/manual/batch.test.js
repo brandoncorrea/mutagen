@@ -109,7 +109,7 @@ describe('createManualRunner', () => {
       await manual.runBatch(true, null)
 
       const reportCalls = writeFileSync.mock.calls.filter(
-        ([p]) => p.includes('manual-report.json')
+        ([path]) => path.includes('manual-report.json')
       )
       expect(reportCalls).toHaveLength(1)
 
@@ -133,7 +133,7 @@ describe('createManualRunner', () => {
       await manual.runBatch(false, null)
 
       // Mutation writes should go to temp path, not original
-      const srcWrites = writeFileSync.mock.calls.filter(([p]) => p === src)
+      const srcWrites = writeFileSync.mock.calls.filter(([path]) => path === src)
       expect(srcWrites).toHaveLength(0)
     })
 
@@ -199,7 +199,7 @@ describe('createManualRunner', () => {
       await manual.runBatch('reports/custom.json', null)
 
       const reportCalls = writeFileSync.mock.calls.filter(
-        ([p]) => p === resolve('reports/custom.json')
+        ([path]) => path === resolve('reports/custom.json')
       )
       expect(reportCalls).toHaveLength(1)
 
@@ -227,7 +227,7 @@ describe('createManualRunner', () => {
       await manual.runBatch('reports/out.json', null)
 
       const reportCalls = writeFileSync.mock.calls.filter(
-        ([p]) => p === resolve('reports/out.json')
+        ([path]) => path === resolve('reports/out.json')
       )
       const report = JSON.parse(reportCalls[0][1])
       expect(report.total).toBe(1)
@@ -270,7 +270,7 @@ describe('createManualRunner', () => {
       await manual.runBatch('reports/custom.json', null)
 
       const defaultReportCalls = writeFileSync.mock.calls.filter(
-        ([p]) => p.includes('manual-report.json')
+        ([path]) => path.includes('manual-report.json')
       )
       expect(defaultReportCalls).toHaveLength(0)
     })

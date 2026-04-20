@@ -31,7 +31,7 @@ describe('dryRun', () => {
     const lines = []
     dryRun(resolve('src/a.js'), mutationConfig, null, { log: msg => lines.push(msg), error: () => {} })
 
-    const mutationLines = lines.filter(l => /^\s+L\d+:/.test(l))
+    const mutationLines = lines.filter(line => /^\s+L\d+:/.test(line))
     expect(mutationLines.length).toBeGreaterThan(0)
     for (const line of mutationLines)
       expect(line).toContain('=== → !==')

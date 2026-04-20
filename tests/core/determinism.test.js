@@ -61,9 +61,9 @@ function sortByName(arr) {
 
 function outcomeSnapshot(outcomes) {
   return {
-    killed: sortByName(outcomes.killed).map(m => m.name),
-    survived: sortByName(outcomes.survived).map(m => m.name),
-    timedOut: sortByName(outcomes.timedOut).map(m => m.name)
+    killed: sortByName(outcomes.killed).map(mutant => mutant.name),
+    survived: sortByName(outcomes.survived).map(mutant => mutant.name),
+    timedOut: sortByName(outcomes.timedOut).map(mutant => mutant.name)
   }
 }
 
@@ -119,9 +119,9 @@ describe('result determinism across parallelism levels', () => {
     const r2 = await runWithWorkers(2)
     const r4 = await runWithWorkers(4)
 
-    const killedBy1 = sortByName(r1.killed).map(m => ({ name: m.name, killedBy: m.killedBy }))
-    const killedBy2 = sortByName(r2.killed).map(m => ({ name: m.name, killedBy: m.killedBy }))
-    const killedBy4 = sortByName(r4.killed).map(m => ({ name: m.name, killedBy: m.killedBy }))
+    const killedBy1 = sortByName(r1.killed).map(mutant => ({ name: mutant.name, killedBy: mutant.killedBy }))
+    const killedBy2 = sortByName(r2.killed).map(mutant => ({ name: mutant.name, killedBy: mutant.killedBy }))
+    const killedBy4 = sortByName(r4.killed).map(mutant => ({ name: mutant.name, killedBy: mutant.killedBy }))
 
     expect(killedBy1).toEqual(killedBy2)
     expect(killedBy2).toEqual(killedBy4)

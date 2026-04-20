@@ -27,7 +27,7 @@ describe('printDiffReport', () => {
       changes, [], out
     )
 
-    const categoryLine = lines.find(l => l.includes('NEWLY KILLED'))
+    const categoryLine = lines.find(line => line.includes('NEWLY KILLED'))
     expect(categoryLine).toContain('(2)')
   })
 })

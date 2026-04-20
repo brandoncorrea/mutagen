@@ -178,7 +178,7 @@ describe('createManualRunner --retest', () => {
     await manual.run(['--retest', 'reports/latest.json', '--json', 'reports/retest-out.json'])
 
     const reportCalls = writeFileSync.mock.calls.filter(
-      ([p]) => p === resolve('reports/retest-out.json')
+      ([path]) => path === resolve('reports/retest-out.json')
     )
     expect(reportCalls).toHaveLength(1)
     const report = JSON.parse(reportCalls[0][1])
@@ -201,7 +201,7 @@ describe('createManualRunner --retest', () => {
     })
     const exitCode = await manual.run(['--retest', 'reports/latest.json'])
 
-    expect(lines.some(l => l.includes('Skipping') && l.includes('not found'))).toBe(true)
+    expect(lines.some(line => line.includes('Skipping') && line.includes('not found'))).toBe(true)
     expect(exitCode).toBe(0)
   })
 
@@ -244,7 +244,7 @@ describe('createManualRunner --retest', () => {
     await manual.run(['--retest', 'reports/latest.json', '--json'])
 
     const defaultCalls = writeFileSync.mock.calls.filter(
-      ([p]) => p === resolve('reports/mutation/retest-report.json')
+      ([path]) => path === resolve('reports/mutation/retest-report.json')
     )
     expect(defaultCalls).toHaveLength(1)
   })

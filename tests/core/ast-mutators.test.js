@@ -2964,9 +2964,9 @@ describe('ast-mutators', () => {
 // ── Test helpers ──
 
 function find(name) {
-  const m = javascript.find(m => m.name === name)
-  if (!m) throw new Error(`Mutator not found: ${name}`)
-  return m
+  const mutator = javascript.find(mut => mut.name === name)
+  if (!mutator) throw new Error(`Mutator not found: ${name}`)
+  return mutator
 }
 
 function binExpr(operator, leftStart, leftEnd, rightStart, rightEnd) {

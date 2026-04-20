@@ -121,7 +121,7 @@ describe('createManualRunner', () => {
       const result = await manual.runIncremental(true, null)
 
       expect(result.totalSurvived).toBe(1)
-      const reportCalls = writeFileSync.mock.calls.filter(([p]) => p === reportPath)
+      const reportCalls = writeFileSync.mock.calls.filter(([path]) => path === reportPath)
       expect(reportCalls).toHaveLength(1)
       const report = JSON.parse(reportCalls[0][1])
       expect(report.files['src/a.js']).toBeDefined()
@@ -148,7 +148,7 @@ describe('createManualRunner', () => {
       })
       await manual.runIncremental(true, null)
 
-      const reportCalls = writeFileSync.mock.calls.filter(([p]) => p === reportPath)
+      const reportCalls = writeFileSync.mock.calls.filter(([path]) => path === reportPath)
       expect(reportCalls).toHaveLength(1)
 
       const report = JSON.parse(reportCalls[0][1])
@@ -176,7 +176,7 @@ describe('createManualRunner', () => {
       })
       await manual.runIncremental(false, null)
 
-      const reportCalls = writeFileSync.mock.calls.filter(([p]) => p === reportPath)
+      const reportCalls = writeFileSync.mock.calls.filter(([path]) => path === reportPath)
       expect(reportCalls).toHaveLength(0)
     })
 
@@ -207,7 +207,7 @@ describe('createManualRunner', () => {
       })
       await manual.runIncremental(true, null)
 
-      const reportCalls = writeFileSync.mock.calls.filter(([p]) => p === reportPath)
+      const reportCalls = writeFileSync.mock.calls.filter(([path]) => path === reportPath)
       const report = JSON.parse(reportCalls[0][1])
 
       expect(report.files['src/a.js']).toBeDefined()
@@ -248,7 +248,7 @@ describe('createManualRunner', () => {
       await manual.runIncremental(true, null)
 
       const reportCalls = writeFileSync.mock.calls.filter(
-        ([p]) => p === reportPath
+        ([path]) => path === reportPath
       )
       expect(reportCalls).toHaveLength(1)
 
@@ -297,7 +297,7 @@ describe('createManualRunner', () => {
       })
       await manual.runIncremental(true, null)
 
-      const reportCalls = writeFileSync.mock.calls.filter(([p]) => p === reportPath)
+      const reportCalls = writeFileSync.mock.calls.filter(([path]) => path === reportPath)
       const report = JSON.parse(reportCalls[0][1])
       expect(report.files['src/a.js']).toBeDefined()
       expect(report.files['src/b.js']).toBeUndefined()
@@ -450,7 +450,7 @@ describe('createManualRunner', () => {
       await manual.runIncremental('reports/custom.json', null)
 
       const customCalls = writeFileSync.mock.calls.filter(
-        ([p]) => p === resolve('reports/custom.json')
+        ([path]) => path === resolve('reports/custom.json')
       )
       expect(customCalls).toHaveLength(1)
 
@@ -464,7 +464,7 @@ describe('createManualRunner', () => {
 
       // Should not write to default report path
       const defaultCalls = writeFileSync.mock.calls.filter(
-        ([p]) => p === reportPath
+        ([path]) => path === reportPath
       )
       expect(defaultCalls).toHaveLength(0)
 
@@ -512,7 +512,7 @@ describe('createManualRunner', () => {
       await manual.runIncremental('reports/merged.json', null)
 
       const reportCalls = writeFileSync.mock.calls.filter(
-        ([p]) => p === resolve('reports/merged.json')
+        ([path]) => path === resolve('reports/merged.json')
       )
       expect(reportCalls).toHaveLength(1)
 
@@ -561,7 +561,7 @@ describe('createManualRunner', () => {
       })
       await manual.runIncremental(true, null)
 
-      const reportCalls = writeFileSync.mock.calls.filter(([p]) => p === reportPath)
+      const reportCalls = writeFileSync.mock.calls.filter(([path]) => path === reportPath)
       const report = JSON.parse(reportCalls[0][1])
       expect(report.files['src/a.js']).toBeDefined()
       expect(report.files['src/b.js']).toBeDefined()
@@ -599,7 +599,7 @@ describe('createManualRunner', () => {
       await manual.runIncremental('reports/custom.json', null)
 
       const customCalls = writeFileSync.mock.calls.filter(
-        ([p]) => p === resolve('reports/custom.json')
+        ([path]) => path === resolve('reports/custom.json')
       )
       expect(customCalls).toHaveLength(1)
       const report = JSON.parse(customCalls[0][1])
@@ -635,7 +635,7 @@ describe('createManualRunner', () => {
       await manual.runIncremental('reports/custom.json', null)
 
       const customCalls = writeFileSync.mock.calls.filter(
-        ([p]) => p === resolve('reports/custom.json')
+        ([path]) => path === resolve('reports/custom.json')
       )
       expect(customCalls).toHaveLength(1)
     })

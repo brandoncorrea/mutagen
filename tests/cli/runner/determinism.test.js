@@ -159,8 +159,8 @@ describe('runSingle vs runParallel result determinism', () => {
     expect(seqResult.jsonData.mutants.length).toBe(parResult.jsonData.mutants.length)
 
     // Same mutant IDs (sorted, since parallel order may differ)
-    const seqIds = seqResult.jsonData.mutants.map(m => m.id).sort()
-    const parIds = parResult.jsonData.mutants.map(m => m.id).sort()
+    const seqIds = seqResult.jsonData.mutants.map(mutant => mutant.id).sort()
+    const parIds = parResult.jsonData.mutants.map(mutant => mutant.id).sort()
     expect(seqIds).toEqual(parIds)
   })
 

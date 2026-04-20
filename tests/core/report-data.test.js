@@ -208,12 +208,12 @@ describe('toJsonMutants', () => {
     const output = toJsonMutants('/project/src/foo.js', results)
     expect(output.mutants).toHaveLength(2)
 
-    const killed = output.mutants.find(m => m.status === 'Killed')
+    const killed = output.mutants.find(mutant => mutant.status === 'Killed')
     expect(killed.mutatorName).toBe('=== → !==')
     expect(killed.location.start.line).toBe(5)
     expect(killed.killedBy).toEqual(['/tests/a.test.js'])
 
-    const survived = output.mutants.find(m => m.status === 'Survived')
+    const survived = output.mutants.find(mutant => mutant.status === 'Survived')
     expect(survived.mutatorName).toBe('+ → -')
     expect(survived.killedBy).toBeUndefined()
   })

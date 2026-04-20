@@ -35,9 +35,9 @@ describe('printIncrementalSummary', () => {
 
     printIncrementalSummary(out, batchResult, sources, previous, classification)
 
-    const cachedLine = lines.find(l => l.startsWith('Cached:'))
+    const cachedLine = lines.find(line => line.startsWith('Cached:'))
     expect(cachedLine).toContain('1 files')
-    const totalLine = lines.find(l => l.startsWith('Total:'))
+    const totalLine = lines.find(line => line.startsWith('Total:'))
     expect(totalLine).toContain('3 files')
   })
 })
@@ -55,9 +55,9 @@ describe('printIncrementalHeader', () => {
 
     printIncrementalHeader(out, sources, classification)
 
-    const totalLine = lines.find(l => l.startsWith('Total sources:'))
+    const totalLine = lines.find(line => line.startsWith('Total sources:'))
     expect(totalLine).toContain('4')
-    const cachedLine = lines.find(l => l.startsWith('Cached:'))
+    const cachedLine = lines.find(line => line.startsWith('Cached:'))
     expect(cachedLine).toMatch(/3$/)
   })
 })
@@ -71,7 +71,7 @@ describe('printAllCachedSummary', () => {
 
     printAllCachedSummary(out, sources, previous, classification)
 
-    const filesLine = lines.find(l => l.startsWith('Files:'))
+    const filesLine = lines.find(line => line.startsWith('Files:'))
     expect(filesLine).toContain('2')
   })
 })

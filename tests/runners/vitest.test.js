@@ -782,7 +782,7 @@ describe('createVitestRunner', () => {
       await createVitestRunner('src/a.js')
 
       const opts = startVitest.mock.calls[0][2]
-      const plugin = opts.plugins?.find(p => p.name === 'mutagen-mutant')
+      const plugin = opts.plugins?.find(plugin => plugin.name === 'mutagen-mutant')
       expect(plugin).toBeUndefined()
     })
   })
@@ -807,7 +807,7 @@ describe('createVitestRunner', () => {
   describe('async correctness (await mutation guards)', () => {
     function deferred() {
       let resolve
-      const promise = new Promise(r => { resolve = r })
+      const promise = new Promise(resolveFn => { resolve = resolveFn })
       return { promise, resolve }
     }
 
@@ -822,9 +822,9 @@ describe('createVitestRunner', () => {
       startVitest.mockResolvedValue(mock)
 
       let runnerCreated = false
-      const promise = createVitestRunner('src/a.js').then(r => {
+      const promise = createVitestRunner('src/a.js').then(result => {
         runnerCreated = true
-        return r
+        return result
       })
       await flushMicrotasks()
       expect(runnerCreated).toBe(false)
@@ -848,9 +848,9 @@ describe('createVitestRunner', () => {
       const runner = await createVitestRunner('src/a.js')
 
       let runDone = false
-      const runPromise = runner.run().then(r => {
+      const runPromise = runner.run().then(result => {
         runDone = true
-        return r
+        return result
       })
 
       await flushMicrotasks()
@@ -893,9 +893,9 @@ describe('createVitestRunner', () => {
       const runner = await createVitestRunner('src/a.js', { warm: false })
 
       let runDone = false
-      const runPromise = runner.run().then(r => {
+      const runPromise = runner.run().then(result => {
         runDone = true
-        return r
+        return result
       })
 
       await flushMicrotasks()

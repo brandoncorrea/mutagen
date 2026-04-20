@@ -85,7 +85,7 @@ describe('incremental deltas', () => {
       await manual.runIncremental('reports/out.json', null)
 
       const calls = writeFileSync.mock.calls.filter(
-        ([p]) => p === resolve('reports/out.json')
+        ([path]) => path === resolve('reports/out.json')
       )
       expect(calls).toHaveLength(1)
       const report = JSON.parse(calls[0][1])
@@ -140,7 +140,7 @@ describe('incremental deltas', () => {
       await manual.runIncremental('reports/out.json', null)
 
       const calls = writeFileSync.mock.calls.filter(
-        ([p]) => p === resolve('reports/out.json')
+        ([path]) => path === resolve('reports/out.json')
       )
       const report = JSON.parse(calls[0][1])
 
@@ -187,7 +187,7 @@ describe('incremental deltas', () => {
       await manual.runIncremental('reports/out.json', null)
 
       const calls = writeFileSync.mock.calls.filter(
-        ([p]) => p === resolve('reports/out.json')
+        ([path]) => path === resolve('reports/out.json')
       )
       const report = JSON.parse(calls[0][1])
 
@@ -242,7 +242,7 @@ describe('incremental deltas', () => {
       await manual.runIncremental('reports/out.json', null)
 
       const calls = writeFileSync.mock.calls.filter(
-        ([p]) => p === resolve('reports/out.json')
+        ([path]) => path === resolve('reports/out.json')
       )
       const report = JSON.parse(calls[0][1])
 
@@ -286,7 +286,7 @@ describe('incremental deltas', () => {
       await manual.runIncremental('reports/out.json', null)
 
       const calls = writeFileSync.mock.calls.filter(
-        ([p]) => p === resolve('reports/out.json')
+        ([path]) => path === resolve('reports/out.json')
       )
       const report = JSON.parse(calls[0][1])
 
@@ -333,7 +333,7 @@ describe('incremental deltas', () => {
       })
       await manual.runIncremental(true, null)
 
-      const calls = writeFileSync.mock.calls.filter(([p]) => p === reportPath)
+      const calls = writeFileSync.mock.calls.filter(([path]) => path === reportPath)
       expect(calls).toHaveLength(1)
       const report = JSON.parse(calls[0][1])
 
