@@ -247,7 +247,19 @@ export const stringMethodMutations = [
   methodNameSwap('replace → toString (removed)', 'replace', 'toString'),
   methodNameSwap('replaceAll → replace', 'replaceAll', 'replace'),
   methodNameSwap('charAt → charCodeAt', 'charAt', 'charCodeAt'),
-  methodNameSwap('charCodeAt → charAt', 'charCodeAt', 'charAt')
+  methodNameSwap('charCodeAt → charAt', 'charCodeAt', 'charAt'),
+  methodNameSwap('toString → valueOf', 'toString', 'valueOf'),
+  methodNameSwap('valueOf → toString', 'valueOf', 'toString'),
+  {
+    name: 'toString() → (removed)',
+    types: ['CallExpression'],
+    test: node => isMemberCall(node, 'toString') && !node.arguments.length,
+    mutate: ({ callee, end }) => ({
+      start: callee.object.end,
+      end,
+      replacement: ''
+    })
+  }
 ]
 
 export const promiseChainMutations = [
@@ -336,6 +348,19 @@ export const objectMutationRemovals = [
       replacement: source.slice(
         node.arguments[0].start, node.arguments[0].end
       )
+    })
+  },
+  {
+    name: 'structuredClone() → identity',
+    types: ['CallExpression'],
+    test: node =>
+      node.callee?.type === 'Identifier'
+      && node.callee.name === 'structuredClone'
+      && node.arguments.length >= 1,
+    mutate: (node, source) => ({
+      start: node.start,
+      end: node.end,
+      replacement: source.slice(node.arguments[0].start, node.arguments[0].end)
     })
   }
 ]

@@ -39,7 +39,7 @@ import {
   arrowShortCircuit, breakRemoval, continueRemoval, catchBlockEmptying,
   finallyRemoval, emptyReturnRemoval, forInOfSwap, yieldRemoval, deleteRemoval,
   staticKeywordRemoval, errorTypeSwap, ifBlockEmptying, elseBlockRemoval,
-  loopBodyEmptying
+  loopBodyEmptying, switchMutations
 } from './mutators/statements.js'
 
 import {
@@ -114,5 +114,6 @@ export const javascript = [
   ...loopBodyEmptying,
   ...promiseChainMutations,
   ...mapSetMethodSwaps,
-  ...miscMethodMutations
+  ...miscMethodMutations,
+  ...switchMutations
 ]

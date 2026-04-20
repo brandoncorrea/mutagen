@@ -351,3 +351,26 @@ export const loopBodyEmptying = [
     })
   }
 ]
+
+export const switchMutations = [
+  {
+    name: 'switch(expr) → switch(true)',
+    types: ['SwitchStatement'],
+    test: () => true,
+    mutate: ({ discriminant }) => ({
+      start: discriminant.start,
+      end: discriminant.end,
+      replacement: 'true'
+    })
+  },
+  {
+    name: 'case body → break (empty)',
+    types: ['SwitchCase'],
+    test: ({ consequent }) => consequent.length > 0,
+    mutate: ({ consequent }) => ({
+      start: consequent[0].start,
+      end: consequent[consequent.length - 1].end,
+      replacement: 'break;'
+    })
+  }
+]

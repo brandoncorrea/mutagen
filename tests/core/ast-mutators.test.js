@@ -42,6 +42,7 @@ describe('ast-mutators', () => {
         'ForInStatement', 'ForOfStatement',
         'YieldExpression', 'TemplateLiteral',
         'ForStatement', 'DoWhileStatement',
+        'SwitchStatement', 'SwitchCase',
         'MethodDefinition', 'PropertyDefinition',
         'ClassMethod', 'ClassProperty'
       ])
@@ -2824,6 +2825,138 @@ describe('ast-mutators', () => {
       expect(m.test(node)).toBe(true)
       const patch = m.mutate(node, 'arr.join(",")')
       expect(patch).toEqual({ start: 3, end: 13, replacement: '' })
+    })
+  })
+
+  // ── switch mutations ──
+
+  describe('switch mutations', () => {
+    it('switch(expr) → switch(true) replaces discriminant', () => {
+      const m = find('switch(expr) → switch(true)')
+      const node = {
+        type: 'SwitchStatement',
+        discriminant: { start: 7, end: 13 },
+        cases: [],
+        start: 0, end: 30
+      }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'switch(action) { case "a": break; }')
+      expect(patch).toEqual({ start: 7, end: 13, replacement: 'true' })
+    })
+
+    it('case body → break empties case consequent', () => {
+      const m = find('case body → break (empty)')
+      const node = {
+        type: 'SwitchCase',
+        test: { type: 'Literal', value: 1, start: 5, end: 6 },
+        consequent: [
+          { type: 'ExpressionStatement', start: 8, end: 16 },
+          { type: 'BreakStatement', start: 17, end: 23 }
+        ],
+        start: 0, end: 23
+      }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node)
+      expect(patch).toEqual({ start: 8, end: 23, replacement: 'break;' })
+    })
+
+    it('case body skips empty cases', () => {
+      const m = find('case body → break (empty)')
+      const node = {
+        type: 'SwitchCase',
+        test: { type: 'Literal', value: 1, start: 5, end: 6 },
+        consequent: [],
+        start: 0, end: 7
+      }
+      expect(m.test(node)).toBe(false)
+    })
+
+    it('case body works with default case', () => {
+      const m = find('case body → break (empty)')
+      const node = {
+        type: 'SwitchCase',
+        test: null,
+        consequent: [
+          { type: 'ExpressionStatement', start: 9, end: 20 }
+        ],
+        start: 0, end: 20
+      }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node)
+      expect(patch).toEqual({ start: 9, end: 20, replacement: 'break;' })
+    })
+  })
+
+  // ── toString / valueOf ──
+
+  describe('toString / valueOf mutations', () => {
+    it('toString → valueOf swaps', () => {
+      const m = find('toString → valueOf')
+      const node = callWithMethod('toString', 4, 12, 0, 14)
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node).replacement).toBe('valueOf')
+    })
+
+    it('valueOf → toString swaps', () => {
+      const m = find('valueOf → toString')
+      const node = callWithMethod('valueOf', 4, 11, 0, 13)
+      expect(m.test(node)).toBe(true)
+      expect(m.mutate(node).replacement).toBe('toString')
+    })
+
+    it('toString() → (removed) removes .toString()', () => {
+      const m = find('toString() → (removed)')
+      const node = callWithMethod('toString', 4, 12, 0, 14)
+      node.arguments = []
+      node.callee.object = { end: 3 }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'num.toString()')
+      expect(patch).toEqual({ start: 3, end: 14, replacement: '' })
+    })
+
+    it('toString() → (removed) skips when has arguments', () => {
+      const m = find('toString() → (removed)')
+      const node = callWithMethod('toString', 4, 12, 0, 16)
+      expect(m.test(node)).toBe(false)
+    })
+  })
+
+  // ── structuredClone removal ──
+
+  describe('structuredClone removal', () => {
+    it('structuredClone() → identity returns the argument', () => {
+      const m = find('structuredClone() → identity')
+      const node = {
+        type: 'CallExpression',
+        callee: { type: 'Identifier', name: 'structuredClone', start: 0, end: 15 },
+        arguments: [{ start: 16, end: 19 }],
+        start: 0, end: 20
+      }
+      expect(m.test(node)).toBe(true)
+      const patch = m.mutate(node, 'structuredClone(obj)')
+      expect(patch).toEqual({ start: 0, end: 20, replacement: 'obj' })
+    })
+
+    it('structuredClone() skips when no arguments', () => {
+      const m = find('structuredClone() → identity')
+      const node = {
+        type: 'CallExpression',
+        callee: { type: 'Identifier', name: 'structuredClone', start: 0, end: 15 },
+        arguments: [],
+        start: 0, end: 17
+      }
+      expect(m.test(node)).toBe(false)
+    })
+
+    it('does not match other global functions', () => {
+      const m = find('structuredClone() → identity')
+      const node = {
+        type: 'CallExpression',
+        callee: { type: 'Identifier', name: 'parseInt', start: 0, end: 8 },
+        arguments: [{ start: 9, end: 14 }],
+        start: 0, end: 15
+      }
+      expect(m.test(node)).toBe(false)
     })
   })
 })
