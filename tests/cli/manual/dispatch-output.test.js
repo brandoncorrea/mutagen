@@ -414,7 +414,7 @@ describe('createManualRunner', () => {
       })
       await manual.run(['src/a.js', '--survivors-only'])
 
-      const perMutationLines = lines.filter(l => l.match(/^\[\d+\/\d+\]/))
+      const perMutationLines = lines.filter(line => line.match(/^\[\d+\/\d+\]/))
       expect(perMutationLines).toHaveLength(0)
     })
 
@@ -433,7 +433,7 @@ describe('createManualRunner', () => {
       })
       await manual.run(['--all', '--survivors-only'])
 
-      const perMutationLines = lines.filter(l => l.match(/^\[\d+\/\d+\]/))
+      const perMutationLines = lines.filter(line => line.match(/^\[\d+\/\d+\]/))
       expect(perMutationLines).toHaveLength(0)
     })
   })

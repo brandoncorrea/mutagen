@@ -275,7 +275,7 @@ describe('createVitestRunner', () => {
       await createVitestRunner('src/a.js')
 
       const opts = startVitest.mock.calls[0][2]
-      const plugin = opts.plugins?.find(p => p.name === 'mutagen-mutant')
+      const plugin = opts.plugins?.find(plug => plug.name === 'mutagen-mutant')
       expect(plugin).toBeUndefined()
     })
   })

@@ -60,6 +60,11 @@ export function makeMutant(id, mutatorName, status, line = 1) {
   return { id, mutatorName, status, location: { start: { line } }, replacement: '' }
 }
 
+export function capture() {
+  const lines = []
+  return { out: { log: msg => lines.push(msg), error: () => {} }, lines }
+}
+
 export function setupPool(createPool, results = { killed: [], survived: [], timedOut: [] }) {
   const poolRun = vi.fn().mockResolvedValue(results)
   const poolClose = vi.fn().mockResolvedValue()

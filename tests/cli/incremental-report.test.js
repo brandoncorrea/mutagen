@@ -15,10 +15,7 @@ import {
   printAllCachedSummary
 } from '../../src/cli/incremental-report.js'
 
-function capture() {
-  const lines = []
-  return { out: { log: msg => lines.push(msg), error: () => {} }, lines }
-}
+import { capture } from './helpers.js'
 
 beforeEach(() => { vi.clearAllMocks() })
 
