@@ -55,11 +55,11 @@ export function toJsonMutants(sourceFile, results, { survivorsOnly } = {}) {
   const relPath = relative(process.cwd(), sourceFile)
 
   const mutants = survivorsOnly
-    ? results.survived.map(m => toMutant(relPath, m, STATUS.SURVIVED))
+    ? results.survived.map(mutation => toMutant(relPath, mutation, STATUS.SURVIVED))
     : [
-      ...results.killed.map(m => toMutant(relPath, m, STATUS.KILLED)),
-      ...results.survived.map(m => toMutant(relPath, m, STATUS.SURVIVED)),
-      ...(results.timedOut || []).map(m => toMutant(relPath, m, STATUS.TIMEOUT))
+      ...results.killed.map(mutation => toMutant(relPath, mutation, STATUS.KILLED)),
+      ...results.survived.map(mutation => toMutant(relPath, mutation, STATUS.SURVIVED)),
+      ...(results.timedOut || []).map(mutation => toMutant(relPath, mutation, STATUS.TIMEOUT))
     ]
 
   return { path: relPath, mutants }
@@ -189,7 +189,7 @@ function extractDescription(description, index) {
 
 function loadAllEntries(reports, out) {
   return reports
-    .map(f => tryLoadJson(f, out))
+    .map(filePath => tryLoadJson(filePath, out))
     .filter(Boolean)
     .flatMap(({ files }) => Object.entries(files))
 }

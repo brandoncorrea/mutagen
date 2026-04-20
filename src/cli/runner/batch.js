@@ -135,7 +135,7 @@ function createBatchReporter(filesToRun, progress, out) {
       endFile() {}
     }
   const displayPaths = filesToRun.map(
-    f => relative(process.cwd(), resolve(f))
+    filePath => relative(process.cwd(), resolve(filePath))
   )
   const reporter = createProgressReporter(
     displayPaths, { write: out.error }

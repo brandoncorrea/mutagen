@@ -160,7 +160,7 @@ async function runPool(
     ? createOrderedBuffer(onProgress)
     : null
   const progressIndex = orderedEmit
-    ? new Map(mutations.map((m, i) => [m, i]))
+    ? new Map(mutations.map((mutation, index) => [mutation, index]))
     : null
 
   function onResult({ mutation, status }) {

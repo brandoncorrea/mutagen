@@ -40,18 +40,18 @@ export function filterMutationsToSurvivors(
 ) {
   const prefix = filePath + ':'
   const fileSurvivors = [...survivorKeys].filter(
-    k => k.startsWith(prefix)
+    key => key.startsWith(prefix)
   )
-  const matched = mutations.filter(m =>
+  const matched = mutations.filter(mutation =>
     survivorKeys.has(
-      survivorKey(filePath, m.line, m.name)
+      survivorKey(filePath, mutation.line, mutation.name)
     )
   )
   const matchedKeys = new Set(
-    matched.map(m => survivorKey(filePath, m.line, m.name))
+    matched.map(mutation => survivorKey(filePath, mutation.line, mutation.name))
   )
   const skipped = fileSurvivors.filter(
-    k => !matchedKeys.has(k)
+    key => !matchedKeys.has(key)
   ).length
 
   return { matched, skipped }
@@ -158,7 +158,7 @@ async function retestOneFile(
   } catch {
     out.log(`  Skipping ${file} — file not found`)
     const skipped = [...survivorKeys].filter(
-      k => k.startsWith(file + ':')
+      key => key.startsWith(file + ':')
     ).length
     return {
       skipped, killed: 0, survived: 0,

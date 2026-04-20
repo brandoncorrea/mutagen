@@ -85,7 +85,7 @@ function walk(node, parent, visitor) {
     if (WALK_SKIP_KEYS.has(key)) continue
     const child = node[key]
     if (Array.isArray(child))
-      child.forEach(c => walk(c, node, visitor))
+      child.forEach(childNode => walk(childNode, node, visitor))
     else if (isObject(child) && child.type)
       walk(child, node, visitor)
   }

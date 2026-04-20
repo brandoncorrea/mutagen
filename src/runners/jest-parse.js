@@ -23,5 +23,5 @@ function isFailure(result) {
 }
 
 function getTestPaths(results) {
-  return results.map(r => r.testFilePath)
+  return results.map(result => result.testFilePath)
 }

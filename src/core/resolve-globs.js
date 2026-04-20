@@ -6,7 +6,7 @@ export function resolveGlobs({ include, exclude = [], cwd = process.cwd() }) {
   const isExcluded = exclude.length ? picomatch(exclude) : () => false
 
   return readdirSync(cwd, { recursive: true })
-    .map(e => e.replace(/\\/g, '/'))
-    .filter(e => isIncluded(e) && !isExcluded(e))
+    .map(entry => entry.replace(/\\/g, '/'))
+    .filter(entry => isIncluded(entry) && !isExcluded(entry))
     .sort()
 }

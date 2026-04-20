@@ -214,5 +214,5 @@ export function scoreExitCode({ killed, survived, timedOut }, minScore) {
 
 function filterChanged(sources) {
   const changed = new Set(gitChangedFiles())
-  return sources.filter(s => changed.has(s))
+  return sources.filter(source => changed.has(source))
 }

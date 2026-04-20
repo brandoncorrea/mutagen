@@ -63,7 +63,7 @@ function untrackPool(pool) {
 
 async function cleanupAllPools() {
   const pools = [...activePools]
-  await Promise.all(pools.map(p => closePool(p).catch(() => {})))
+  await Promise.all(pools.map(pool => closePool(pool).catch(() => {})))
 }
 
 export { cleanupAllPools as _cleanupAllPools }
@@ -95,7 +95,7 @@ export function createPool(poolOptions) {
       return await runPool(pool, mutations, poolOptions, options)
     },
     async switchFile(sourceFile) {
-      await Promise.all(pool.runners.map(r => r.switchFile(sourceFile)))
+      await Promise.all(pool.runners.map(runner => runner.switchFile(sourceFile)))
     },
     async close() {
       await closePool(pool)
@@ -124,9 +124,9 @@ async function closePool(pool) {
   if (pool.closed) return
   pool.closed = true
   untrackPool(pool)
-  await Promise.all(pool.runners.map(r =>
+  await Promise.all(pool.runners.map(runner =>
     Promise.race([
-      r.close(),
+      runner.close(),
       new Promise(resolve => setTimeout(resolve, CLOSE_TIMEOUT))
     ])
   ))

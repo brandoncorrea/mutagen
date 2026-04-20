@@ -4,7 +4,7 @@ export function gitChangedFiles({ cwd } = {}) {
   try {
     return gitDiff(cwd)
       .split('\n')
-      .map(f => f.replace(/\\/g, '/'))
+      .map(filePath => filePath.replace(/\\/g, '/'))
       .filter(Boolean)
   } catch {
     return []

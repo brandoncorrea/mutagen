@@ -131,7 +131,7 @@ async function findRelatedSpecs(vitest, sourceFile) {
   // Walk importers recursively to find all test files
   const testFiles = new Set()
   const allSpecs = await vitest.globTestSpecifications()
-  const testPaths = new Set(allSpecs.map(s => s.moduleId))
+  const testPaths = new Set(allSpecs.map(spec => spec.moduleId))
 
   const visited = new Set()
   const queue = [sourceFile]
@@ -145,7 +145,7 @@ async function findRelatedSpecs(vitest, sourceFile) {
   }
 
   if (testFiles.size)
-    return allSpecs.filter(s => testFiles.has(s.moduleId))
+    return allSpecs.filter(spec => testFiles.has(spec.moduleId))
 }
 
 function visitSourceFile(state, id) {
@@ -219,5 +219,5 @@ function isFailing(file) {
 }
 
 function allTestFiles(results) {
-  return results.map(f => f.filepath)
+  return results.map(file => file.filepath)
 }

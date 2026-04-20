@@ -155,7 +155,7 @@ function findTestInvalidatedSources(changedTestFiles, previousReport) {
     return testInvalidated
 
   const changedTestAbs = new Set(
-    changedTestFiles.map(t => resolve(t))
+    changedTestFiles.map(testFile => resolve(testFile))
   )
   for (const [sourcePath, fileData] of Object.entries(previousReport.files)) {
     for (const mutant of fileData.mutants) {
@@ -169,7 +169,7 @@ function findTestInvalidatedSources(changedTestFiles, previousReport) {
 }
 
 function isInvalidatedMutant({ killedBy, status }, changedTestAbs) {
-  return killedBy?.some(t => changedTestAbs.has(t))
+  return killedBy?.some(testPath => changedTestAbs.has(testPath))
     || status === STATUS.SURVIVED
 }
 
