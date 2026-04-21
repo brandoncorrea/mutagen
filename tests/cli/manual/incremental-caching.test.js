@@ -122,8 +122,8 @@ describe('createManualRunner', () => {
 
       expect(result.totalSurvived).toBe(1)
       const reportCalls = writeFileSync.mock.calls.filter(([path]) => path === reportPath)
-      expect(reportCalls).toHaveLength(1)
-      const report = JSON.parse(reportCalls[0][1])
+      expect(reportCalls.length).toBeGreaterThanOrEqual(1)
+      const report = JSON.parse(reportCalls.at(-1)[1])
       expect(report.files['src/a.js']).toBeDefined()
     })
 
@@ -250,9 +250,9 @@ describe('createManualRunner', () => {
       const reportCalls = writeFileSync.mock.calls.filter(
         ([path]) => path === reportPath
       )
-      expect(reportCalls).toHaveLength(1)
+      expect(reportCalls.length).toBeGreaterThanOrEqual(1)
 
-      const report = JSON.parse(reportCalls[0][1])
+      const report = JSON.parse(reportCalls.at(-1)[1])
       // src/a.js cached, src/b.js rerun
       expect(report.files['src/a.js'].mutants).toHaveLength(1)
       expect(report.files['src/b.js']).toBeDefined()
@@ -452,9 +452,9 @@ describe('createManualRunner', () => {
       const customCalls = writeFileSync.mock.calls.filter(
         ([path]) => path === resolve('reports/custom.json')
       )
-      expect(customCalls).toHaveLength(1)
+      expect(customCalls.length).toBeGreaterThanOrEqual(1)
 
-      const report = JSON.parse(customCalls[0][1])
+      const report = JSON.parse(customCalls.at(-1)[1])
       expect(report).toHaveProperty('score')
       expect(report).toHaveProperty('total')
       expect(report).toHaveProperty('killed')
@@ -514,9 +514,9 @@ describe('createManualRunner', () => {
       const reportCalls = writeFileSync.mock.calls.filter(
         ([path]) => path === resolve('reports/merged.json')
       )
-      expect(reportCalls).toHaveLength(1)
+      expect(reportCalls.length).toBeGreaterThanOrEqual(1)
 
-      const report = JSON.parse(reportCalls[0][1])
+      const report = JSON.parse(reportCalls.at(-1)[1])
       // a.js cached: 1 killed + 1 survived; b.js fresh: 1 killed
       expect(report.killed).toBe(2)
       expect(report.survived).toBe(1)

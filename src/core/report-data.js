@@ -29,7 +29,7 @@ export function createReport(files, extra) {
 export function writeReportFile(reportDir, reportPath, report, out) {
   mkdirSync(reportDir, { recursive: true })
   writeFileSync(reportPath, JSON.stringify(report, null, 2))
-  out.log(`JSON report: ${reportPath}`)
+  out?.log(`JSON report: ${reportPath}`)
 }
 
 export function tryLoadJson(path, out) {
@@ -107,11 +107,12 @@ export function buildStructuredReport(fileResults, deltas) {
  * @param {Object} [deltas] - incremental deltas
  * @returns {{ score, total, killed, survived, timedOut }}
  */
-export function writeStructuredReportFile(outputPath, fileResults, deltas) {
+export function writeStructuredReportFile(outputPath, fileResults, deltas, extra) {
   const { report, stats } = buildStructuredReport(fileResults, deltas)
   const absPath = resolve(outputPath)
   mkdirSync(dirname(absPath), { recursive: true })
-  writeFileSync(absPath, JSON.stringify(report, null, 2))
+  const output = extra ? { ...report, ...extra } : report
+  writeFileSync(absPath, JSON.stringify(output, null, 2))
   return stats
 }
 

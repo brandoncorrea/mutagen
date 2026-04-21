@@ -393,6 +393,16 @@ describe('writeReportFile', () => {
     )
     expect(out.log).toHaveBeenCalledWith('JSON report: reports/mutation/report.json')
   })
+
+  it('does not throw when out is omitted', () => {
+    const report = { schemaVersion: '1', files: {} }
+
+    expect(() =>
+      writeReportFile('reports', 'reports/report.json', report)
+    ).not.toThrow()
+
+    expect(writeFileSync).toHaveBeenCalled()
+  })
 })
 
 describe('tryLoadJson', () => {
@@ -773,6 +783,31 @@ describe('writeStructuredReportFile', () => {
 
     const written = JSON.parse(writeFileSync.mock.calls[0][1])
     expect(written).not.toHaveProperty('deltas')
+  })
+
+  it('includes extra fields in written report when provided', () => {
+    const extra = {
+      sourceHashes: { 'a.js': 'abc123' },
+      testHashes: { 't.js': 'def456' }
+    }
+    writeStructuredReportFile('out.json', {
+      'a.js': { mutants: [{ status: 'Killed', mutatorName: 'x' }] }
+    }, undefined, extra)
+
+    const written = JSON.parse(writeFileSync.mock.calls[0][1])
+    expect(written.sourceHashes).toEqual({ 'a.js': 'abc123' })
+    expect(written.testHashes).toEqual({ 't.js': 'def456' })
+    expect(written.killed).toBe(1)
+  })
+
+  it('omits extra fields when not provided', () => {
+    writeStructuredReportFile('out.json', {
+      'a.js': { mutants: [{ status: 'Killed', mutatorName: 'x' }] }
+    })
+
+    const written = JSON.parse(writeFileSync.mock.calls[0][1])
+    expect(written).not.toHaveProperty('sourceHashes')
+    expect(written).not.toHaveProperty('testHashes')
   })
 
   it('handles mutants without location', () => {

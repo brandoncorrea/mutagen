@@ -8,7 +8,9 @@ import { createHash } from 'node:crypto'
 import { resolve, relative } from 'node:path'
 
 import { STATUS } from '../core/mutation-status.js'
-import { tryLoadJson, writeStructuredReportFile } from '../core/report-data.js'
+import {
+  createReport, writeReportFile, tryLoadJson, writeStructuredReportFile
+} from '../core/report-data.js'
 import {
   printIncrementalHeader, updateCachedReportHashes,
   printAllCachedSummary, writeMergedReport,
@@ -56,8 +58,12 @@ export async function runIncremental(config, jsonOutput, timeout, out) {
     )
   }
 
+  const onFileComplete = buildProgressWriter(
+    jsonOutput, config, previous, classification
+  )
   const batchResult = await runBatch(
-    false, timeout, classification.changedSources
+    false, timeout, classification.changedSources,
+    { onFileComplete }
   )
 
   if (isString(jsonOutput))
@@ -187,18 +193,52 @@ function writeStructuredIncrementalReport(
   out, outputPath, fileCount,
   previous, classification, freshFileResults
 ) {
-  const mergedFiles = { ...freshFileResults }
-  if (previous.previousReport)
-    for (const relPath of classification.unchangedSources)
-      if (previous.previousReport.files[relPath])
-        mergedFiles[relPath] = previous.previousReport.files[relPath]
-
+  const mergedFiles = mergeCachedFiles(
+    freshFileResults || {}, previous, classification
+  )
   const deltas = computeDeltas(
     previous.previousReport,
     freshFileResults || {}, classification
   )
+  const hashes = {
+    sourceHashes: classification.currentHashes,
+    testHashes: classification.currentTestHashes
+  }
   const stats = writeStructuredReportFile(
-    outputPath, mergedFiles, deltas
+    outputPath, mergedFiles, deltas, hashes
   )
   printScoreLine(out, stats, fileCount, outputPath)
+}
+
+function buildProgressWriter(jsonOutput, config, previous, classification) {
+  if (!jsonOutput) return undefined
+
+  const { currentHashes, currentTestHashes } = classification
+  const hashes = {
+    sourceHashes: currentHashes,
+    testHashes: currentTestHashes
+  }
+  const cached = mergeCachedFiles({}, previous, classification)
+
+  if (isString(jsonOutput))
+    return (freshFileResults) =>
+      writeStructuredReportFile(
+        jsonOutput, { ...cached, ...freshFileResults }, undefined, hashes
+      )
+
+  return (freshFileResults) => {
+    const report = createReport(
+      { ...cached, ...freshFileResults }, hashes
+    )
+    writeReportFile(config.reportDir, config.reportPath, report)
+  }
+}
+
+function mergeCachedFiles(freshFileResults, previous, classification) {
+  const merged = { ...freshFileResults }
+  if (previous.previousReport)
+    for (const relPath of classification.unchangedSources)
+      if (previous.previousReport.files[relPath])
+        merged[relPath] = previous.previousReport.files[relPath]
+  return merged
 }

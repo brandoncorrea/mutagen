@@ -124,7 +124,8 @@ async function runIncrementalMode(runContext, jsonOutput, timeout) {
     testSources: runContext.testSources,
     reportDir: runContext.reportDir,
     reportPath: runContext.reportPath,
-    runBatch: runBatch.bind(null, runContext)
+    runBatch: (jsonOutput, timeout, sources, options) =>
+      runBatch({ ...runContext, ...options }, jsonOutput, timeout, sources)
   }
   const { totalSurvived, totalKilled = 0, failures } = await runIncremental(
     incrementalConfig, jsonOutput, timeout, runContext.out

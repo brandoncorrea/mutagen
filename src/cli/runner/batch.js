@@ -23,7 +23,7 @@ import { autoDiffSummary } from '../auto-diff.js'
 export async function runBatch(runContext, jsonOutput, timeout, sourcesToRun) {
   const {
     mutationConfig, createRunner, reportDir, reportPath,
-    sources, survivorsOnly, progress, out
+    sources, survivorsOnly, progress, out, onFileComplete
   } = runContext
   const filesToRun = sourcesToRun || sources
 
@@ -33,7 +33,8 @@ export async function runBatch(runContext, jsonOutput, timeout, sourcesToRun) {
 
   const result = await accumulateResults(filesToRun, {
     mutationConfig, createRunner, timeout,
-    parallel: runContext.parallel, survivorsOnly, progress, out
+    parallel: runContext.parallel, survivorsOnly, progress, out,
+    onFileComplete
   })
 
   if (isString(jsonOutput)) {
@@ -79,11 +80,13 @@ async function accumulateResults(filesToRun, options) {
   const accumulator = { totals, fileResults }
 
   try {
-    for (const fileToRun of filesToRun)
+    for (const fileToRun of filesToRun) {
       await processOneFile(
         resolve(fileToRun), options,
         { reporter, workerCount, pool }, accumulator
       )
+      options.onFileComplete?.(accumulator.fileResults)
+    }
   } finally {
     if (pool) await pool.close()
   }

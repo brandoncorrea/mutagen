@@ -62,7 +62,8 @@ export function createManualRunner(config) {
     runIncremental: (jsonOutput, timeout) => {
       const incrementalConfig = {
         sources, testSources, reportDir, reportPath,
-        runBatch: runBatch.bind(null, runContext)
+        runBatch: (jsonOutput, timeout, sources, options) =>
+          runBatch({ ...runContext, ...options }, jsonOutput, timeout, sources)
       }
       return runIncremental(incrementalConfig, jsonOutput, timeout, out)
     },

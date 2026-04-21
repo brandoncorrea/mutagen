@@ -87,8 +87,8 @@ describe('incremental deltas', () => {
       const calls = writeFileSync.mock.calls.filter(
         ([path]) => path === resolve('reports/out.json')
       )
-      expect(calls).toHaveLength(1)
-      const report = JSON.parse(calls[0][1])
+      expect(calls.length).toBeGreaterThanOrEqual(1)
+      const report = JSON.parse(calls.at(-1)[1])
 
       expect(report.deltas).toBeDefined()
       expect(report.deltas.fixes).toHaveLength(1)
@@ -142,7 +142,7 @@ describe('incremental deltas', () => {
       const calls = writeFileSync.mock.calls.filter(
         ([path]) => path === resolve('reports/out.json')
       )
-      const report = JSON.parse(calls[0][1])
+      const report = JSON.parse(calls.at(-1)[1])
 
       expect(report.deltas).toBeDefined()
       expect(report.deltas.regressions).toHaveLength(1)
@@ -189,7 +189,7 @@ describe('incremental deltas', () => {
       const calls = writeFileSync.mock.calls.filter(
         ([path]) => path === resolve('reports/out.json')
       )
-      const report = JSON.parse(calls[0][1])
+      const report = JSON.parse(calls.at(-1)[1])
 
       expect(report.deltas).toBeDefined()
       expect(report.deltas.rerunFiles).toContain('src/b.js')
@@ -288,7 +288,7 @@ describe('incremental deltas', () => {
       const calls = writeFileSync.mock.calls.filter(
         ([path]) => path === resolve('reports/out.json')
       )
-      const report = JSON.parse(calls[0][1])
+      const report = JSON.parse(calls.at(-1)[1])
 
       expect(report.deltas).toBeDefined()
       expect(report.deltas.fixes).toHaveLength(0)
@@ -334,8 +334,8 @@ describe('incremental deltas', () => {
       await manual.runIncremental(true, null)
 
       const calls = writeFileSync.mock.calls.filter(([path]) => path === reportPath)
-      expect(calls).toHaveLength(1)
-      const report = JSON.parse(calls[0][1])
+      expect(calls.length).toBeGreaterThanOrEqual(1)
+      const report = JSON.parse(calls.at(-1)[1])
 
       expect(report.deltas).toBeDefined()
       expect(report.deltas.fixes).toHaveLength(1)
