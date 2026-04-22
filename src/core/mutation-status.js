@@ -30,8 +30,9 @@ export function mutationScore(counts) {
 export function countStatuses(merged) {
   const statuses = { killed: 0, survived: 0, noCoverage: 0, timeout: 0 }
   for (const fileData of Object.values(merged.files))
-    for (const mutant of fileData.mutants)
-      accumulateStatus(statuses, mutant)
+    if (fileData.mutants)
+      for (const mutant of fileData.mutants)
+        accumulateStatus(statuses, mutant)
   return statuses
 }
 

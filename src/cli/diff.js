@@ -145,8 +145,9 @@ function computeFileDelta(beforeScores, afterScores, file) {
 function buildMutantMap(report) {
   const map = {}
   for (const [path, fileData] of Object.entries(report.files))
-    for (const mutant of fileData.mutants)
-      setMutant(map, path, mutant)
+    if (fileData.mutants)
+      for (const mutant of fileData.mutants)
+        setMutant(map, path, mutant)
   return map
 }
 

@@ -222,6 +222,7 @@ function deduplicateMutants(entries) {
   for (const [path, fileData] of entries) {
     if (!mergedFiles[path])
       mergedFiles[path] = { ...fileData, mutants: [] }
+    if (!fileData.mutants) continue
     for (const mutant of fileData.mutants) {
       const key = mutantKey(path, mutant)
       if (seen.has(key)) {
