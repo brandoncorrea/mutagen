@@ -152,6 +152,21 @@ describe('countStatuses', () => {
       timeout: 0
     })
   })
+
+  it('skips file entries without mutants arrays', () => {
+    const report = {
+      files: {
+        'a.js': { score: 100, killed: 3, total: 3 },
+        'b.js': { mutants: [{ status: 'Killed' }] }
+      }
+    }
+    expect(countStatuses(report)).toEqual({
+      killed: 1,
+      survived: 0,
+      noCoverage: 0,
+      timeout: 0
+    })
+  })
 })
 
 describe('totalMutants', () => {
@@ -596,6 +611,20 @@ describe('combineReportData', () => {
   it('returns empty files for empty input', () => {
     const merged = combineReportData([], { log: () => {}, error: () => {} })
     expect(Object.keys(merged.files)).toHaveLength(0)
+  })
+
+  it('skips file entries without mutants arrays', () => {
+    readFileSync.mockReturnValueOnce(JSON.stringify({
+      files: {
+        'a.js': { score: 100, killed: 3, total: 3 },
+        'b.js': { mutants: [{ mutatorName: 'x', replacement: 'y', status: 'Killed', location: { start: { line: 1 } } }] }
+      }
+    }))
+
+    const merged = combineReportData(['file.json'], { log: () => {}, error: () => {} })
+
+    expect(merged.files['b.js'].mutants).toHaveLength(1)
+    expect(merged.files['a.js'].mutants).toHaveLength(0)
   })
 })
 

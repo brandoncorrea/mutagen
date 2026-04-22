@@ -162,8 +162,10 @@ function setMutant(map, path, mutant) {
 
 function fileScores(report) {
   const scores = {}
-  for (const [path, { mutants }] of Object.entries(report.files))
-    scores[path] = evaluateMutants(mutants)
+  for (const [path, fileData] of Object.entries(report.files))
+    scores[path] = fileData.mutants
+      ? evaluateMutants(fileData.mutants)
+      : { killed: fileData.killed || 0, total: fileData.total || 0, score: fileData.score ?? 100 }
   return scores
 }
 

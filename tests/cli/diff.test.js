@@ -652,5 +652,17 @@ describe('diffReports', () => {
       const result = diffReports('before.json', 'after.json', out)
       expect(result).toBeUndefined()
     })
+
+    it('handles file entries without mutants arrays', () => {
+      readFileSync
+        .mockReturnValueOnce(JSON.stringify(makeReport({
+          'a.js': { score: 100, killed: 1, total: 1 }
+        })))
+        .mockReturnValueOnce(JSON.stringify(makeReport({
+          'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] }
+        })))
+
+      expect(() => diffReports('before.json', 'after.json', out)).not.toThrow()
+    })
   })
 })
