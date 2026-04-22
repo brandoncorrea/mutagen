@@ -197,6 +197,17 @@ describe('parseArgs', () => {
       expect(result).not.toHaveProperty('error')
     })
 
+    it('rejects --parallel one above the maximum (33)', () => {
+      const result = parseArgs(['--all', '--parallel', '33'])
+      expect(result.error).toContain('--parallel')
+    })
+
+    it('parses --parallel when it appears first in argv', () => {
+      const result = parseArgs(['--parallel', '4', '--all'])
+      expect(result.parallel).toBe(4)
+      expect(result).not.toHaveProperty('error')
+    })
+
     it('parses --parallel with a numeric value in --all mode', () => {
       const result = parseArgs(['--all', '--parallel', '4'])
       expect(result.parallel).toBe(4)
