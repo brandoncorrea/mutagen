@@ -680,5 +680,35 @@ describe('createManualRunner', () => {
       )
       expect(reportWrites).toHaveLength(0)
     })
+
+    it('uses --json path as cache when dispatched via run()', async () => {
+      const src = resolve('src/a.js')
+      const hash = hashOf(sourceCode)
+
+      existsSync.mockReturnValue(true)
+      mockFs({
+        [src]: sourceCode,
+        ['reports/custom.json']: JSON.stringify({
+          files: {
+            'src/a.js': {
+              mutants: [{ status: 'Killed', killedBy: ['t.test.js'] }]
+            }
+          },
+          sourceHashes: { 'src/a.js': hash },
+          testHashes: {}
+        })
+      })
+
+      const createRunner = vi.fn()
+      const manual = createManualRunner({
+        mutators: testMutators,
+        sources: ['src/a.js'],
+        createRunner
+      })
+      await manual.run(['--incremental', '--json', 'reports/custom.json'])
+
+      // Source unchanged + cache hit from --json path → no runner created
+      expect(createRunner).not.toHaveBeenCalled()
+    })
   })
 })
