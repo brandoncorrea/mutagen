@@ -171,7 +171,8 @@ function collectStat(stats, [path, fileData]) {
   stats.files[path] = {
     score: tally.score,
     killed: tally.killed,
-    total: tally.total
+    total: tally.total,
+    mutants: fileData.mutants
   }
 }
 

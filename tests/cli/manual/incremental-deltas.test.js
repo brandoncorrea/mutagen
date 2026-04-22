@@ -52,7 +52,7 @@ describe('incremental deltas', () => {
       existsSync.mockReturnValue(true)
       mockFs({
         [srcA]: codeA,
-        ['reports/mutation/manual-report.json']: JSON.stringify({
+        ['reports/out.json']: JSON.stringify({
           files: {
             'src/a.js': {
               mutants: [
@@ -109,7 +109,7 @@ describe('incremental deltas', () => {
       existsSync.mockReturnValue(true)
       mockFs({
         [srcA]: codeA,
-        ['reports/mutation/manual-report.json']: JSON.stringify({
+        ['reports/out.json']: JSON.stringify({
           files: {
             'src/a.js': {
               mutants: [
@@ -163,7 +163,7 @@ describe('incremental deltas', () => {
       mockFs({
         [srcA]: codeA,
         [srcB]: codeB,
-        ['reports/mutation/manual-report.json']: JSON.stringify({
+        ['reports/out.json']: JSON.stringify({
           files: {
             'src/a.js': { mutants: [{ status: 'Killed', mutatorName: 'x', location: { start: { line: 1 } } }] }
           },
@@ -203,7 +203,7 @@ describe('incremental deltas', () => {
       existsSync.mockReturnValue(true)
       mockFs({
         [srcA]: codeA,
-        ['reports/mutation/manual-report.json']: JSON.stringify({
+        ['reports/out.json']: JSON.stringify({
           files: {
             'src/a.js': {
               mutants: [{ mutatorName: 'x', replacement: 'y', status: 'Killed', killedBy: ['t.test.js'] }]
@@ -256,7 +256,7 @@ describe('incremental deltas', () => {
       existsSync.mockReturnValue(true)
       mockFs({
         [srcA]: codeA,
-        ['reports/mutation/manual-report.json']: JSON.stringify({
+        ['reports/out.json']: JSON.stringify({
           files: {
             'src/a.js': {
               mutants: [

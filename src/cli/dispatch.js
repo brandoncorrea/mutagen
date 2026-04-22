@@ -13,7 +13,7 @@ import { runIncremental } from './incremental.js'
 import { runRetest } from './retest.js'
 import { formatQuietSummary } from './report.js'
 import { formatProgressSummary, createProgressReporter } from './progress.js'
-import { parallelWorkerCount } from './shared.js'
+import { parallelWorkerCount, isString } from './shared.js'
 
 export async function run(runContext, argv) {
   const parsed = parseArgs(argv)
@@ -119,11 +119,12 @@ function runAllDryRun({ sources, mutationConfig, out }) {
 }
 
 async function runIncrementalMode(runContext, jsonOutput, timeout) {
+  const reportPath = isString(jsonOutput) ? jsonOutput : runContext.reportPath
   const incrementalConfig = {
     sources: runContext.sources,
     testSources: runContext.testSources,
     reportDir: runContext.reportDir,
-    reportPath: runContext.reportPath,
+    reportPath,
     runBatch: (jsonOutput, timeout, sources, options) =>
       runBatch({ ...runContext, ...options }, jsonOutput, timeout, sources)
   }

@@ -482,7 +482,7 @@ describe('createManualRunner', () => {
       mockFs({
         [srcA]: codeA,
         [srcB]: codeB,
-        [reportPath]: JSON.stringify({
+        ['reports/merged.json']: JSON.stringify({
           files: {
             'src/a.js': {
               mutants: [
@@ -578,7 +578,7 @@ describe('createManualRunner', () => {
       mockFs({
         [srcA]: sourceCode,
         [srcB]: 'const y = 1',
-        [reportPath]: JSON.stringify({
+        ['reports/custom.json']: JSON.stringify({
           schemaVersion: '1',
           files: {
             'src/a.js': {
@@ -615,7 +615,7 @@ describe('createManualRunner', () => {
       existsSync.mockReturnValue(true)
       mockFs({
         [src]: sourceCode,
-        [reportPath]: JSON.stringify({
+        ['reports/custom.json']: JSON.stringify({
           schemaVersion: '1',
           files: {
             'src/a.js': {

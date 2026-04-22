@@ -10,7 +10,7 @@ import { prepareMutationConfig } from '../core/generate.js'
 import { resolveGlobs } from '../core/resolve-globs.js'
 import { runBatch } from './runner/index.js'
 import { runIncremental } from './incremental.js'
-import { defaultOut } from './shared.js'
+import { defaultOut, isString } from './shared.js'
 import { run, scoreExitCode } from './dispatch.js'
 
 export { scoreExitCode }
@@ -60,8 +60,9 @@ export function createManualRunner(config) {
     runBatch: (jsonOutput, timeout, sourcesToRun) =>
       runBatch(runContext, jsonOutput, timeout, sourcesToRun),
     runIncremental: (jsonOutput, timeout) => {
+      const cachePath = isString(jsonOutput) ? jsonOutput : reportPath
       const incrementalConfig = {
-        sources, testSources, reportDir, reportPath,
+        sources, testSources, reportDir, reportPath: cachePath,
         runBatch: (jsonOutput, timeout, sources, options) =>
           runBatch({ ...runContext, ...options }, jsonOutput, timeout, sources)
       }
