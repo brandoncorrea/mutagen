@@ -116,37 +116,6 @@ export function writeStructuredReportFile(outputPath, fileResults, deltas, extra
   return stats
 }
 
-function tallyFileMutants(path, mutants) {
-  const tallies = {
-    killed: 0,
-    timedOut: 0,
-    survived: 0,
-    survivors: []
-  }
-
-  for (const mutant of mutants)
-    tallyMutant(tallies, path, mutant)
-
-  const total = mutants.length
-  const score = total ? (tallies.killed / total) * 100 : 100
-  return {
-    ...tallies,
-    score: round1(score),
-    total
-  }
-}
-
-function tallyMutant(tallies, path, mutant) {
-  if (isKilled(mutant)) {
-    tallies.killed++
-    if (mutant.status === STATUS.TIMEOUT)
-      tallies.timedOut++
-  } else if (isAlive(mutant)) {
-    tallies.survived++
-    tallies.survivors.push(toSurvivor(path, mutant))
-  }
-}
-
 function collectStats(fileResults) {
   const stats = {
     totalKilled: 0,
@@ -182,6 +151,37 @@ function collectStat(stats, [path, fileData]) {
     killed: tally.killed,
     total: tally.total,
     mutants: fileData.mutants
+  }
+}
+
+function tallyFileMutants(path, mutants) {
+  const tallies = {
+    killed: 0,
+    timedOut: 0,
+    survived: 0,
+    survivors: []
+  }
+
+  for (const mutant of mutants)
+    tallyMutant(tallies, path, mutant)
+
+  const total = mutants.length
+  const score = total ? (tallies.killed / total) * 100 : 100
+  return {
+    ...tallies,
+    score: round1(score),
+    total
+  }
+}
+
+function tallyMutant(tallies, path, mutant) {
+  if (isKilled(mutant)) {
+    tallies.killed++
+    if (mutant.status === STATUS.TIMEOUT)
+      tallies.timedOut++
+  } else if (isAlive(mutant)) {
+    tallies.survived++
+    tallies.survivors.push(toSurvivor(path, mutant))
   }
 }
 
