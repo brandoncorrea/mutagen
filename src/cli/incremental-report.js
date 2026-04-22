@@ -63,9 +63,9 @@ function countCachedResults(report, relPaths) {
 }
 
 function countCachedResult(results, report, relPath) {
-  const fileData = report.files[relPath]
-  if (fileData)
-    for (const mutant of fileData.mutants)
+  const mutants = report.files[relPath]?.mutants
+  if (mutants)
+    for (const mutant of mutants)
       countCachedMutation(results, mutant)
 }
 
@@ -169,8 +169,9 @@ export function computeDeltas(
 function buildMutantIndex(report) {
   const index = new Map()
   for (const [filePath, fileData] of Object.entries(report.files))
-    for (const mutant of fileData.mutants)
-      index.set(mutantKey(filePath, mutant), mutant)
+    if (fileData.mutants)
+      for (const mutant of fileData.mutants)
+        index.set(mutantKey(filePath, mutant), mutant)
   return index
 }
 

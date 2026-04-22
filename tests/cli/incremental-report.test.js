@@ -12,7 +12,8 @@ vi.mock('node:fs', async (importOriginal) => {
 import {
   printIncrementalSummary,
   printIncrementalHeader,
-  printAllCachedSummary
+  printAllCachedSummary,
+  computeDeltas
 } from '../../src/cli/incremental-report.js'
 
 import { capture } from './helpers.js'
@@ -114,5 +115,65 @@ describe('printAllCachedSummary', () => {
     const filesLine = lines.find(line => line.startsWith('Files:'))
     expect(filesLine).toContain('Killed: 2')
     expect(filesLine).toContain('Survived: 1')
+  })
+
+  it('handles structured report format without mutants arrays', () => {
+    const { out, lines } = capture()
+    const sources = ['a.js']
+    const previous = {
+      previousReport: {
+        files: {
+          'a.js': { score: 100, killed: 5, total: 5 }
+        }
+      }
+    }
+    const classification = { unchangedSources: ['a.js'] }
+
+    expect(() =>
+      printAllCachedSummary(out, sources, previous, classification)
+    ).not.toThrow()
+  })
+})
+
+describe('structured report compatibility', () => {
+  it('printIncrementalSummary handles files without mutants arrays', () => {
+    const { out } = capture()
+    const batchResult = { totalSurvived: 0, totalKilled: 1, failures: 0 }
+    const sources = ['a.js', 'b.js']
+    const previous = {
+      previousReport: {
+        files: {
+          'a.js': { score: 100, killed: 3, total: 3 }
+        }
+      }
+    }
+    const classification = {
+      unchangedSources: ['a.js'],
+      changedSources: ['b.js']
+    }
+
+    expect(() =>
+      printIncrementalSummary(out, batchResult, sources, previous, classification)
+    ).not.toThrow()
+  })
+
+  it('computeDeltas handles previous report without mutants arrays', () => {
+    const previousReport = {
+      files: {
+        'a.js': { score: 100, killed: 3, total: 3 }
+      }
+    }
+    const newFileResults = {
+      'a.js': {
+        mutants: [
+          { id: 'm1', mutatorName: 'x', status: 'Killed', location: { start: { line: 1 } } }
+        ]
+      }
+    }
+    const classification = { unchangedSources: [] }
+
+    expect(() =>
+      computeDeltas(previousReport, newFileResults, classification)
+    ).not.toThrow()
   })
 })

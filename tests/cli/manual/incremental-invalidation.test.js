@@ -243,6 +243,37 @@ describe('createManualRunner', () => {
       expect(result.totalKilled).toBe(2)
     })
 
+    it('handles structured report format without mutants arrays', async () => {
+      const src = resolve('src/a.js')
+      const testFile = resolve('test/a.test.js')
+      const srcHash = hashOf(sourceCode)
+
+      existsSync.mockReturnValue(true)
+      mockFs({
+        [src]: sourceCode,
+        [testFile]: 'new test code',
+        [reportPath]: JSON.stringify({
+          files: {
+            'src/a.js': { score: 100, killed: 3, total: 3 }
+          },
+          sourceHashes: { 'src/a.js': srcHash },
+          testHashes: { 'test/a.test.js': 'old-hash' }
+        })
+      })
+
+      const createRunner = vi.fn()
+      const manual = createManualRunner({
+        mutators: testMutators,
+        sources: ['src/a.js'],
+        testSources: ['test/a.test.js'],
+        createRunner
+      })
+
+      await expect(
+        manual.runIncremental(false, null)
+      ).resolves.not.toThrow()
+    })
+
     it('prints changed test count in header when tests change', async () => {
       const src = resolve('src/a.js')
       const testFile = resolve('test/a.test.js')

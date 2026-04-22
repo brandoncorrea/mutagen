@@ -174,6 +174,7 @@ function findTestInvalidatedSources(changedTestFiles, previousReport) {
     changedTestFiles.map(testFile => resolve(testFile))
   )
   for (const [sourcePath, fileData] of Object.entries(previousReport.files)) {
+    if (!fileData.mutants) continue
     for (const mutant of fileData.mutants) {
       if (isInvalidatedMutant(mutant, changedTestAbs)) {
         testInvalidated.add(sourcePath)
