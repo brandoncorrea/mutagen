@@ -714,6 +714,15 @@ describe('buildStructuredReport', () => {
     expect(report.files['a.js']).not.toHaveProperty('mutants')
   })
 
+  it('defaults missing summary stats to zero/100 for entries without mutants', () => {
+    const { report, stats } = buildStructuredReport({
+      'a.js': {}
+    })
+
+    expect(stats.killed).toBe(0)
+    expect(report.files['a.js']).toEqual({ score: 100, killed: 0, total: 0 })
+  })
+
   it('is pure — does not perform I/O', () => {
     vi.clearAllMocks()
     buildStructuredReport({ 'a.js': { mutants: [{ status: 'Killed', mutatorName: 'x' }] } })

@@ -673,5 +673,23 @@ describe('diffReports', () => {
       expect(perFile).toContain('0.0%')
       expect(perFile).toContain('100.0%')
     })
+
+    it('defaults missing stats to zero/100 for entries without mutants', () => {
+      readFileSync
+        .mockReturnValueOnce(JSON.stringify(makeReport({
+          'a.js': {}
+        })))
+        .mockReturnValueOnce(JSON.stringify(makeReport({
+          'a.js': { mutants: [makeMutant('m1', 'x', 'Survived')] }
+        })))
+
+      const result = diffReports('before.json', 'after.json', out)
+
+      expect(result).toBeDefined()
+      // Fallback score 100% → 0% should appear in per-file delta
+      const perFile = output().slice(output().indexOf('PER-FILE'))
+      expect(perFile).toContain('100.0%')
+      expect(perFile).toContain('0.0%')
+    })
   })
 })
