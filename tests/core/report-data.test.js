@@ -671,6 +671,17 @@ describe('buildStructuredReport', () => {
     expect(report.files['a.js'].score).toBe(100)
   })
 
+  it('handles file entries without mutants arrays (old structured format)', () => {
+    const { report, stats } = buildStructuredReport({
+      'a.js': { score: 100, killed: 3, total: 3 },
+      'b.js': { mutants: [{ status: 'Killed', mutatorName: 'x' }] }
+    })
+
+    expect(stats.killed).toBe(4)
+    expect(report.files['a.js'].killed).toBe(3)
+    expect(report.files['b.js'].killed).toBe(1)
+  })
+
   it('is pure — does not perform I/O', () => {
     vi.clearAllMocks()
     buildStructuredReport({ 'a.js': { mutants: [{ status: 'Killed', mutatorName: 'x' }] } })

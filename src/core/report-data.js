@@ -163,6 +163,15 @@ function collectStats(fileResults) {
 }
 
 function collectStat(stats, [path, fileData]) {
+  if (!fileData.mutants) {
+    stats.totalKilled += fileData.killed || 0
+    stats.files[path] = {
+      score: fileData.score ?? 100,
+      killed: fileData.killed || 0,
+      total: fileData.total || 0
+    }
+    return
+  }
   const tally = tallyFileMutants(path, fileData.mutants)
   stats.totalKilled += tally.killed
   stats.totalSurvived += tally.survived
