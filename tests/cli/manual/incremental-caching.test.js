@@ -639,5 +639,46 @@ describe('createManualRunner', () => {
       )
       expect(customCalls).toHaveLength(1)
     })
+
+    it('does not emit warning when no previous report exists', async () => {
+      const src = resolve('src/a.js')
+      existsSync.mockReturnValue(false)
+      mockFs({ [src]: sourceCode })
+
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: false }
+      ])
+      const lines = []
+      const manual = _createManualRunner({
+        mutators: testMutators, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner),
+        out: { log: msg => lines.push(msg), error: () => {} }
+      })
+      await manual.runIncremental(false, null)
+
+      expect(lines.join('\n')).not.toContain('Warning')
+    })
+
+    it('does not write intermediate reports when jsonOutput is false', async () => {
+      const src = resolve('src/a.js')
+      existsSync.mockReturnValue(false)
+      mockFs({ [src]: sourceCode })
+
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: false }
+      ])
+      const manual = createManualRunner({
+        mutators: testMutators, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner)
+      })
+      await manual.runIncremental(false, null)
+
+      const reportWrites = writeFileSync.mock.calls.filter(
+        ([path]) => path.includes('report')
+      )
+      expect(reportWrites).toHaveLength(0)
+    })
   })
 })

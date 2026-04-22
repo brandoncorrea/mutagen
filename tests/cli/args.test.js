@@ -122,6 +122,11 @@ describe('parseArgs', () => {
     it('returns error when --timeout is last arg with no value (source file)', () =>
       expectErrorResult('source.js', '--timeout'))
 
+    it('includes "positive" in --timeout error message', () => {
+      const result = parseArgs(['--incremental', '--timeout', 'abc'])
+      expect(result.error).toContain('positive')
+    })
+
     it('returns error when --timeout value is non-numeric', () =>
       expectErrorResult('--incremental', '--timeout', 'abc'))
 
@@ -186,6 +191,12 @@ describe('parseArgs', () => {
   })
 
   describe('--parallel flag', () => {
+    it('accepts --parallel at the maximum (32)', () => {
+      const result = parseArgs(['--all', '--parallel', '32'])
+      expect(result.parallel).toBe(32)
+      expect(result).not.toHaveProperty('error')
+    })
+
     it('parses --parallel with a numeric value in --all mode', () => {
       const result = parseArgs(['--all', '--parallel', '4'])
       expect(result.parallel).toBe(4)
@@ -241,6 +252,12 @@ describe('parseArgs', () => {
       const result = parseArgs(['--all'])
       expect(result.parallel).toBeUndefined()
     })
+
+    it('does not consume next positional arg when --parallel has numeric value', () => {
+      const result = parseArgs(['--parallel', '4', 'source.js'])
+      expect(result.sourceFile).toContain('source.js')
+      expect(result).not.toHaveProperty('error')
+    })
   })
 
   describe('--json flag', () => {
@@ -290,6 +307,11 @@ describe('parseArgs', () => {
       expect(result.sourceFile).toContain('source.js')
       expect(result.sourceFile).not.toContain('report.json')
       expect(result.jsonOutput).toBe('report.json')
+    })
+
+    it('does not skip a following flag when --json has no path in source-file mode', () => {
+      const result = parseArgs(['source.js', '--json', '--line', '5'])
+      expect(result.targetLine).toBe(5)
     })
   })
 
@@ -379,6 +401,12 @@ describe('parseArgs', () => {
 
     it('returns error when --min-score has no value', () =>
       expectErrorResult('--all', '--min-score'))
+
+    it('omits "positive" from --min-score error message', () => {
+      const result = parseArgs(['--all', '--min-score', 'abc'])
+      expect(result.error).not.toContain('positive')
+      expect(result.error).toContain('numeric value')
+    })
 
     it('returns error when --min-score value is non-numeric', () =>
       expectErrorResult('--all', '--min-score', 'abc'))

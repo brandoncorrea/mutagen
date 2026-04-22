@@ -182,6 +182,17 @@ describe('diffReports', () => {
     expect(output()).toContain('100.0%')
   })
 
+  it('scores file at 100% when it has zero mutations in per-file delta', () => {
+    runDiff(
+      { 'a.js': { mutants: [] } },
+      { 'a.js': { mutants: [makeMutant('m1', 'x', 'Survived', 5)] } }
+    )
+
+    const perFile = output().slice(output().indexOf('PER-FILE'))
+    expect(perFile).toContain('100.0%')
+    expect(perFile).toContain('0.0%')
+  })
+
   it('prints new mutants section when all new mutants are killed', () => {
     const result = runDiff(
       { 'a.js': { mutants: [] } },
@@ -522,6 +533,23 @@ describe('diffReports', () => {
       const json = parsedOutput()
       expect(json.removedMutants).toHaveLength(1)
       expect(json.removedMutants[0]).toMatchObject({
+        file: 'a.js',
+        line: 9,
+        mutatorName: 'LogicalOperator',
+        status: 'Killed'
+      })
+    })
+
+    it('removedMutants entries contain only formatted fields (no raw mutant properties)', () => {
+      runDiffJson(
+        { 'a.js': { mutants: [makeMutant('m1', 'LogicalOperator', 'Killed', 9)] } },
+        { 'a.js': { mutants: [] } }
+      )
+
+      const json = parsedOutput()
+      expect(json.removedMutants).toHaveLength(1)
+      expect(json.removedMutants[0]).toEqual({
+        id: 'm1',
         file: 'a.js',
         line: 9,
         mutatorName: 'LogicalOperator',

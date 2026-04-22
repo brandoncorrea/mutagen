@@ -37,6 +37,25 @@ describe('printIncrementalSummary', () => {
     const totalLine = lines.find(line => line.startsWith('Total:'))
     expect(totalLine).toContain('3 files')
   })
+
+  it('displays rerun line with killed and survived counts', () => {
+    const { out, lines } = capture()
+    const batchResult = { totalSurvived: 2, totalKilled: 5, failures: 1 }
+    const sources = ['a.js', 'b.js', 'c.js']
+    const previous = { previousReport: null }
+    const classification = {
+      unchangedSources: [],
+      changedSources: ['a.js', 'b.js', 'c.js']
+    }
+
+    printIncrementalSummary(out, batchResult, sources, previous, classification)
+
+    const rerunLine = lines.find(line => line.startsWith('Rerun:'))
+    expect(rerunLine).toContain('3 files')
+    expect(rerunLine).toContain('Killed: 5')
+    expect(rerunLine).toContain('Survived: 2')
+    expect(rerunLine).toContain('Errors: 1')
+  })
 })
 
 describe('printIncrementalHeader', () => {
@@ -70,5 +89,30 @@ describe('printAllCachedSummary', () => {
 
     const filesLine = lines.find(line => line.startsWith('Files:'))
     expect(filesLine).toContain('2')
+  })
+
+  it('displays killed and survived counts from cached results', () => {
+    const { out, lines } = capture()
+    const sources = ['a.js']
+    const previous = {
+      previousReport: {
+        files: {
+          'a.js': {
+            mutants: [
+              { status: 'Killed' },
+              { status: 'Killed' },
+              { status: 'Survived' }
+            ]
+          }
+        }
+      }
+    }
+    const classification = { unchangedSources: ['a.js'] }
+
+    printAllCachedSummary(out, sources, previous, classification)
+
+    const filesLine = lines.find(line => line.startsWith('Files:'))
+    expect(filesLine).toContain('Killed: 2')
+    expect(filesLine).toContain('Survived: 1')
   })
 })

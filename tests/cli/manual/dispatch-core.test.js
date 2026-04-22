@@ -183,6 +183,27 @@ describe('createManualRunner', () => {
       expect(lines.join('\n')).toContain('Timeout: 3000ms')
     })
 
+    it('CLI --timeout overrides config timeout when both are present', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: false }
+      ])
+
+      const lines = []
+      const manual = _createManualRunner({
+        mutators: testMutators, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner),
+        timeout: 3000,
+        out: { log: msg => lines.push(msg), error: () => {} }
+      })
+      const code = await manual.run(['src/a.js', '--timeout', '7000'])
+
+      expect(code).toBe(0)
+      expect(lines.join('\n')).toContain('Timeout: 7000ms')
+      expect(lines.join('\n')).not.toContain('Timeout: 3000ms')
+    })
+
     it('returns 0 with --min-score when source has no mutable code', async () => {
       mockFs({ [resolve('src/a.js')]: 'const x = 42' })
       const runner = fakeRunner([{ passed: true }])

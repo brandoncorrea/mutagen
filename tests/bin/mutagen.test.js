@@ -85,6 +85,36 @@ describe('--version flag', () => {
     })
     expect(code).toBe(0)
   })
+
+  it('works when called with no options object', async () => {
+    const spy = vi.spyOn(console, 'log').mockImplementation(noop)
+    const code = await run(['--version'])
+    expect(code).toBe(0)
+    expect(spy).toHaveBeenCalled()
+    spy.mockRestore()
+  })
+
+  it('defaults err to console.error when not provided', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(noop)
+    const code = await run(['src/a.js'], {
+      out: { log: noop, error: noop },
+      configPath: '/nonexistent/mutagen.config.js'
+    })
+    expect(code).toBe(1)
+    expect(spy).toHaveBeenCalled()
+    spy.mockRestore()
+  })
+
+  it('includes config path in error message when config load fails', async () => {
+    const errors = []
+    const code = await run(['src/a.js'], {
+      out: { log: noop, error: noop },
+      configPath: '/nonexistent/mutagen.config.js',
+      err: msg => errors.push(msg)
+    })
+    expect(code).toBe(1)
+    expect(errors.some(msg => msg.includes('/nonexistent/mutagen.config.js'))).toBe(true)
+  })
 })
 
 describe('bin/mutagen CLI', () => {

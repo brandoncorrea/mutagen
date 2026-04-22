@@ -231,6 +231,25 @@ describe('createManualRunner', () => {
       expect(errorOutput).toMatch(/^Score: \d+\.\d+% \(\d+\/\d+\) \| \d+ survivors \| \d+ files\n$/)
     })
 
+    it('reports 1 file in single-file mode stats', async () => {
+      mockFs({ [resolve('src/a.js')]: sourceCode })
+      const runner = fakeRunner([
+        { passed: true },
+        { passed: false, killedBy: ['t.test.js'] }
+      ])
+
+      const errors = []
+      const manual = _createManualRunner({
+        mutators: testMutators, sources: ['src/a.js'],
+        createRunner: vi.fn().mockResolvedValue(runner),
+        out: { log: () => {}, error: msg => errors.push(msg) }
+      })
+      await manual.run(['src/a.js', '--quiet'])
+
+      const errorOutput = errors.join('')
+      expect(errorOutput).toContain('| 1 files')
+    })
+
     it('still returns correct exit code', async () => {
       mockFs({ [resolve('src/a.js')]: sourceCode })
       const runner = fakeRunner([
