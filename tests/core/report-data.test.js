@@ -702,13 +702,16 @@ describe('buildStructuredReport', () => {
 
   it('handles file entries without mutants arrays (old structured format)', () => {
     const { report, stats } = buildStructuredReport({
-      'a.js': { score: 100, killed: 3, total: 3 },
+      'a.js': { score: 66.7, killed: 2, total: 3 },
       'b.js': { mutants: [{ status: 'Killed', mutatorName: 'x' }] }
     })
 
-    expect(stats.killed).toBe(4)
-    expect(report.files['a.js'].killed).toBe(3)
+    expect(stats.killed).toBe(3)
+    expect(report.files['a.js']).toEqual({ score: 66.7, killed: 2, total: 3 })
     expect(report.files['b.js'].killed).toBe(1)
+    expect(report.files['b.js'].mutants).toBeDefined()
+    // Summary-only entry should NOT have mutants key
+    expect(report.files['a.js']).not.toHaveProperty('mutants')
   })
 
   it('is pure — does not perform I/O', () => {

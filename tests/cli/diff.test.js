@@ -656,13 +656,22 @@ describe('diffReports', () => {
     it('handles file entries without mutants arrays', () => {
       readFileSync
         .mockReturnValueOnce(JSON.stringify(makeReport({
-          'a.js': { score: 100, killed: 1, total: 1 }
+          'a.js': { score: 0, killed: 0, total: 2 }
         })))
         .mockReturnValueOnce(JSON.stringify(makeReport({
-          'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] }
+          'a.js': { mutants: [
+            makeMutant('m1', 'x', 'Killed'),
+            makeMutant('m2', 'y', 'Killed')
+          ] }
         })))
 
-      expect(() => diffReports('before.json', 'after.json', out)).not.toThrow()
+      const result = diffReports('before.json', 'after.json', out)
+
+      expect(result).toBeDefined()
+      // Per-file delta should use fallback score (0%) → 100%
+      const perFile = output().slice(output().indexOf('PER-FILE'))
+      expect(perFile).toContain('0.0%')
+      expect(perFile).toContain('100.0%')
     })
   })
 })
