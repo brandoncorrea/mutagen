@@ -20,9 +20,7 @@ export function parseJestOutput(jsonString, stderr) {
 function parseTestResults(jsonString) {
   try {
     return JSON.parse(jsonString).testResults || []
-  } catch {
-    return null
-  }
+  } catch {}
 }
 
 function isFailure(result) {

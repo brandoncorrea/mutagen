@@ -145,5 +145,4 @@ function matchesStringPattern(nodeVal, patternVal) {
     return nodeVal === patternVal
   if (isObject(nodeVal) && nodeVal.type)
     return nodeVal.name === patternVal
-  return
 }
