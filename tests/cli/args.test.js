@@ -122,6 +122,22 @@ describe('parseArgs', () => {
     it('returns error when --timeout is last arg with no value (source file)', () =>
       expectErrorResult('source.js', '--timeout'))
 
+    it('returns error when --timeout is 0 (retest)', () =>
+      expectErrorResult('--retest', 'report.json', '--timeout', '0'))
+
+    it('error result in incremental mode has no mode flags', () => {
+      const result = parseArgs(['--incremental', '--timeout', 'abc'])
+      expect(result).toHaveProperty('error')
+      expect(result).not.toHaveProperty('incrementalMode')
+    })
+
+    it('error result in all mode has no mode flags', () => {
+      const result = parseArgs(['--all', '--timeout', 'abc'])
+      expect(result).toHaveProperty('error')
+      expect(result).not.toHaveProperty('allMode')
+      expect(result).not.toHaveProperty('dryRunMode')
+    })
+
     it('includes "positive" in --timeout error message', () => {
       const result = parseArgs(['--incremental', '--timeout', 'abc'])
       expect(result.error).toContain('positive')
@@ -413,10 +429,9 @@ describe('parseArgs', () => {
     it('returns error when --min-score has no value', () =>
       expectErrorResult('--all', '--min-score'))
 
-    it('omits "positive" from --min-score error message', () => {
+    it('--min-score error says "a numeric value" without prefix', () => {
       const result = parseArgs(['--all', '--min-score', 'abc'])
-      expect(result.error).not.toContain('positive')
-      expect(result.error).toContain('numeric value')
+      expect(result.error).toBe('--min-score requires a numeric value')
     })
 
     it('returns error when --min-score value is non-numeric', () =>
