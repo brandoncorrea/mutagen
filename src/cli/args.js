@@ -189,7 +189,7 @@ function parseParallelValue(args, idx) {
   return value
 }
 
-function parseNumericFlag(args, flag, { positive = false } = {}) {
+function parseNumericFlag(args, flag, { positive } = {}) {
   const idx = args.indexOf(flag)
   if (idx < 0) return
   const value = Number(args[idx + 1])
