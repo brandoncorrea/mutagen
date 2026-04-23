@@ -313,6 +313,17 @@ describe('autoDiffSummary', () => {
     expect(result).toContain('0 unchanged survivor')
   })
 
+  it('handles current file entries without mutants array', () => {
+    const previous = legacyReport({
+      'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Survived')] }
+    })
+    const current = {
+      'a.js': { score: 100, killed: 1, total: 1 }  // no mutants array
+    }
+
+    expect(() => autoDiffSummary(previous, current)).not.toThrow()
+  })
+
   it('skips structured survivors without id', () => {
     const previous = structuredReport({
       survivors: [

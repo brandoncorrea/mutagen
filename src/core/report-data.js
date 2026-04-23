@@ -200,7 +200,7 @@ function toSurvivor(file, mutation) {
 }
 
 function round1(n) {
-  return Math.round(n * 10) / 10
+  return parseFloat(n.toFixed(1))
 }
 
 function extractDescription(description, index) {

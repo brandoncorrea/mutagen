@@ -654,6 +654,17 @@ describe('buildStructuredReport', () => {
     expect(stats.total).toBe(2)
   })
 
+  it('rounds score without floating-point artifacts', () => {
+    // 6 killed out of 7 = 85.714...% → should round to 85.7
+    const mutants = [
+      ...Array.from({ length: 6 }, () => ({ status: 'Killed', mutatorName: 'x' })),
+      { status: 'Survived', mutatorName: 'y' }
+    ]
+    const { stats } = buildStructuredReport({ 'a.js': { mutants } })
+    expect(stats.score).toBe(85.7)
+    expect(stats.score.toString()).not.toMatch(/\d{4,}/)
+  })
+
   it('defaults score to 100% when no mutants exist', () => {
     const { report, stats } = buildStructuredReport({})
 

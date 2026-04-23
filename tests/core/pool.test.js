@@ -214,6 +214,25 @@ describe('createPool', () => {
 
       vi.useRealTimers()
     })
+
+    it('warns when runner.close() times out', async () => {
+      vi.useFakeTimers()
+      const spy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      const runner = fakeRunner()
+      runner.close.mockReturnValue(new Promise(() => {}))
+      const createRunner = vi.fn().mockResolvedValue(runner)
+      const pool = createPool({ workerCount: 1, createRunner })
+
+      await pool.run([fakeMutation()])
+
+      const closePromise = pool.close()
+      await vi.advanceTimersByTimeAsync(5000)
+      await closePromise
+
+      expect(spy).toHaveBeenCalled()
+      spy.mockRestore()
+      vi.useRealTimers()
+    })
   })
 
   describe('process cleanup', () => {

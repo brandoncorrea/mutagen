@@ -132,9 +132,24 @@ describe('createJestRunner', () => {
     )
   })
 
-  it('close() is a no-op', async () => {
+  it('close() kills active process', async () => {
+    const proc = {
+      stdout: { on: vi.fn(), setEncoding: vi.fn() },
+      stderr: { on: vi.fn(), setEncoding: vi.fn() },
+      on: vi.fn(),
+      kill: vi.fn()
+    }
+    // Process never closes — simulates a hanging run
+    proc.stdout.on.mockImplementation(() => {})
+    proc.stderr.on.mockImplementation(() => {})
+    proc.on.mockImplementation(() => {})
+    spawn.mockReturnValue(proc)
+
     const runner = await createJestRunner('src/foo.js')
-    await expect(runner.close()).resolves.toBeUndefined()
+    runner.run() // start but don't await — it will hang
+    await runner.close()
+
+    expect(proc.kill).toHaveBeenCalled()
   })
 
   it('does not include --config when config option omitted', async () => {
@@ -208,18 +223,20 @@ describe('createJestRunner', () => {
       await expect(runner.run()).rejects.toThrow('spawn ENOENT')
     })
 
-    it('rejects with parse error when stdout is invalid JSON', async () => {
+    it('returns failed result when stdout is invalid JSON', async () => {
       fakeProcess('not valid json at all')
 
       const runner = await createJestRunner('src/foo.js')
-      await expect(runner.run()).rejects.toThrow()
+      const result = await runner.run()
+      expect(result.passed).toBe(false)
     })
 
-    it('rejects with parse error when stdout is empty', async () => {
+    it('returns failed result when stdout is empty', async () => {
       fakeProcess('')
 
       const runner = await createJestRunner('src/foo.js')
-      await expect(runner.run()).rejects.toThrow()
+      const result = await runner.run()
+      expect(result.passed).toBe(false)
     })
   })
 

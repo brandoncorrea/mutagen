@@ -106,14 +106,14 @@ describe('parseJestOutput', () => {
         })
       })
 
-    it('throws on invalid JSON (Jest process crash)', () => {
-      expect(() => parseJestOutput('not json'))
-        .toThrow()
+    it('returns failed result on invalid JSON (Jest process crash)', () => {
+      const result = parseJestOutput('not json')
+      expect(result.passed).toBe(false)
     })
 
-    it('throws on empty string (Jest process crash)', () => {
-      expect(() => parseJestOutput(''))
-        .toThrow()
+    it('returns failed result on empty string (Jest process crash)', () => {
+      const result = parseJestOutput('')
+      expect(result.passed).toBe(false)
     })
 
     it('handles non-zero exit without test failures',

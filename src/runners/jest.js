@@ -10,8 +10,11 @@
 import { spawn } from 'node:child_process'
 import { parseJestOutput } from './jest-parse.js'
 
+const MAX_BUFFER = 10 * 1024 * 1024 // 10 MB
+
 export async function createJestRunner(sourceFile, options = {}) {
   const { config, root } = options
+  let activeProc = null
 
   return {
     async run() {
@@ -19,10 +22,16 @@ export async function createJestRunner(sourceFile, options = {}) {
       const spawnOpts = { stdio: ['ignore', 'pipe', 'pipe'] }
       if (root) spawnOpts.cwd = root
 
-      const stdout = await execJest(args, spawnOpts)
-      return parseJestOutput(stdout)
+      const { stdout, stderr } = await execJest(args, spawnOpts, p => { activeProc = p })
+      activeProc = null
+      return parseJestOutput(stdout, stderr)
     },
-    async close() {}
+    async close() {
+      if (activeProc) {
+        activeProc.kill()
+        activeProc = null
+      }
+    }
   }
 }
 
@@ -32,15 +41,24 @@ function buildArgs(sourceFile, config) {
   return args
 }
 
-function execJest(args, spawnOpts) {
+function execJest(args, spawnOpts, onProc) {
   return new Promise((resolve, reject) => {
     const proc = spawn('npx', args, spawnOpts)
+    onProc(proc)
     let stdout = ''
+    let stderr = ''
+    let stdoutCapped = false
 
     proc.stdout.setEncoding('utf8')
-    proc.stdout.on('data', chunk => { stdout += chunk })
-    proc.stderr.on('data', () => {})
-    proc.on('close', () => resolve(stdout))
+    proc.stderr.setEncoding('utf8')
+    proc.stdout.on('data', chunk => {
+      if (!stdoutCapped) {
+        stdout += chunk
+        if (stdout.length > MAX_BUFFER) stdoutCapped = true
+      }
+    })
+    proc.stderr.on('data', chunk => { stderr += chunk })
+    proc.on('close', () => resolve({ stdout, stderr }))
     proc.on('error', reject)
   })
 }

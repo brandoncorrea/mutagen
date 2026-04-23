@@ -143,6 +143,7 @@ export function computeDeltas(
   const previousIndex = buildMutantIndex(previousReport)
 
   for (const [filePath, fileData] of Object.entries(newFileResults)) {
+    if (!fileData.mutants) continue
     for (const mutant of fileData.mutants) {
       const key = mutantKey(filePath, mutant)
       const prevStatus = previousIndex.get(key)

@@ -126,9 +126,12 @@ async function closePool(pool) {
   untrackPool(pool)
   await Promise.all(pool.runners.map(runner =>
     Promise.race([
-      runner.close(),
-      new Promise(resolve => setTimeout(resolve, CLOSE_TIMEOUT))
-    ])
+      runner.close().then(() => false),
+      new Promise(resolve => setTimeout(() => resolve(true), CLOSE_TIMEOUT))
+    ]).then(timedOut => {
+      if (timedOut)
+        console.warn('Warning: runner.close() timed out after 5s')
+    })
   ))
 }
 

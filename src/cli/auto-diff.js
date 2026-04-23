@@ -55,8 +55,9 @@ function compileSummary(prevIds, currentFileResults) {
   }
 
   for (const { mutants } of Object.values(currentFileResults))
-    for (const mutant of mutants)
-      summarizeMutant(summary, prevIds, mutant)
+    if (Array.isArray(mutants))
+      for (const mutant of mutants)
+        summarizeMutant(summary, prevIds, mutant)
 
   return summary
 }

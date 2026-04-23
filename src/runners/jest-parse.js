@@ -2,10 +2,13 @@
  * Parse Jest --json output into mutation testing results.
  *
  * @param {string} jsonString - Raw stdout from `jest --json`
+ * @param {string} [stderr] - Raw stderr for diagnostics on parse failure
  * @returns {{ passed: boolean, killedBy: string[], coveredBy: string[] }}
  */
-export function parseJestOutput(jsonString) {
+export function parseJestOutput(jsonString, stderr) {
   const results = parseTestResults(jsonString)
+  if (!results)
+    return { passed: false, killedBy: [], coveredBy: [], stderr }
   const failed = results.filter(isFailure)
   return {
     passed: !failed.length,
@@ -15,7 +18,11 @@ export function parseJestOutput(jsonString) {
 }
 
 function parseTestResults(jsonString) {
-  return JSON.parse(jsonString).testResults || []
+  try {
+    return JSON.parse(jsonString).testResults || []
+  } catch {
+    return null
+  }
 }
 
 function isFailure(result) {

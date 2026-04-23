@@ -157,6 +157,26 @@ describe('structured report compatibility', () => {
     ).not.toThrow()
   })
 
+  it('computeDeltas handles new file results without mutants arrays', () => {
+    const previousReport = {
+      files: {
+        'a.js': {
+          mutants: [
+            { id: 'm1', mutatorName: 'x', status: 'Killed', location: { start: { line: 1 } } }
+          ]
+        }
+      }
+    }
+    const newFileResults = {
+      'a.js': { score: 100, killed: 1, total: 1 }  // no mutants array
+    }
+    const classification = { unchangedSources: [] }
+
+    expect(() =>
+      computeDeltas(previousReport, newFileResults, classification)
+    ).not.toThrow()
+  })
+
   it('computeDeltas handles previous report without mutants arrays', () => {
     const previousReport = {
       files: {
