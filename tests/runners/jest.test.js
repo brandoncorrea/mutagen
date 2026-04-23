@@ -147,9 +147,16 @@ describe('createJestRunner', () => {
 
     const runner = await createJestRunner('src/foo.js')
     runner.run() // start but don't await — it will hang
+    // Flush microtasks so activeProc is set
+    await new Promise(resolve => setImmediate(resolve))
     await runner.close()
 
     expect(proc.kill).toHaveBeenCalled()
+  })
+
+  it('close() is a no-op when no process is active', async () => {
+    const runner = await createJestRunner('src/foo.js')
+    await expect(runner.close()).resolves.not.toThrow()
   })
 
   it('does not include --config when config option omitted', async () => {
@@ -189,6 +196,35 @@ describe('createJestRunner', () => {
       expect.arrayContaining(['--config', '/app/jest.config.js']),
       expect.objectContaining({ cwd: '/app/project' })
     )
+  })
+
+  it('caps stdout buffer to prevent unbounded memory growth', async () => {
+    const proc = {
+      stdout: { on: vi.fn(), setEncoding: vi.fn() },
+      stderr: { on: vi.fn(), setEncoding: vi.fn() },
+      on: vi.fn(),
+      kill: vi.fn()
+    }
+
+    let stdoutCb
+    proc.stdout.on.mockImplementation((event, cb) => {
+      if (event === 'data') stdoutCb = cb
+    })
+    proc.stderr.on.mockImplementation(() => {})
+    proc.on.mockImplementation((event, cb) => {
+      if (event === 'close') {
+        const chunk = 'x'.repeat(1024 * 1024) // 1 MB
+        for (let i = 0; i < 15; i++) stdoutCb(chunk)
+        cb(0)
+      }
+    })
+    spawn.mockReturnValue(proc)
+
+    const runner = await createJestRunner('src/foo.js')
+    const result = await runner.run()
+
+    // stdout is invalid JSON after capping, so parse returns failed
+    expect(result.passed).toBe(false)
   })
 
   it('caps stderr buffer to prevent unbounded memory growth', async () => {
