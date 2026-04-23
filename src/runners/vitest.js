@@ -88,8 +88,9 @@ function flushModuleState(vitest) {
   for (const project of vitest.projects) {
     const vite = project._vite
     if (!vite) continue
-    for (const env of Object.values(vite.environments))
-      env.moduleGraph.invalidateAll()
+    if (vite.environments)
+      for (const env of Object.values(vite.environments))
+        env.moduleGraph.invalidateAll()
     vite.moduleGraph.invalidateAll()
   }
   vitest._fsCache?.clearCache(false)

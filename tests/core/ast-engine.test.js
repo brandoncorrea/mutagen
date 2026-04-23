@@ -427,6 +427,32 @@ describe('matchesPattern', () => {
     expect(matchesPattern(node, { type: 'BooleanLiteral', value: false })).toBe(false)
   })
 
+  it('matches falsy primitive values (false, 0, empty string)', () => {
+    expect(matchesPattern(
+      { type: 'BooleanLiteral', value: false },
+      { type: 'BooleanLiteral', value: false }
+    )).toBe(true)
+    expect(matchesPattern(
+      { type: 'NumericLiteral', value: 0 },
+      { type: 'NumericLiteral', value: 0 }
+    )).toBe(true)
+    expect(matchesPattern(
+      { type: 'StringLiteral', value: '' },
+      { type: 'StringLiteral', value: '' }
+    )).toBe(true)
+  })
+
+  it('rejects when falsy node value does not match pattern', () => {
+    expect(matchesPattern(
+      { type: 'BooleanLiteral', value: false },
+      { type: 'BooleanLiteral', value: true }
+    )).toBe(false)
+    expect(matchesPattern(
+      { type: 'NumericLiteral', value: 0 },
+      { type: 'NumericLiteral', value: 1 }
+    )).toBe(false)
+  })
+
   it('returns false for non-object inputs', () => {
     expect(matchesPattern(null, { type: 'Foo' })).toBe(false)
     expect(matchesPattern({ type: 'Foo' }, null)).toBe(false)

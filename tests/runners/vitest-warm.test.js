@@ -166,6 +166,21 @@ describe('createVitestRunner', () => {
       expect(mock._fsCache.clearCache).toHaveBeenCalledWith(false)
     })
 
+    it('handles _vite without environments property during flush', async () => {
+      const mock = createMockVitest()
+      mock.projects = [
+        { _vite: { moduleGraph: createMockModuleGraph() } } // no environments
+      ]
+      mock.state.getFiles.mockReturnValue([
+        { result: { state: 'pass' }, filepath: 'test/a.test.js' }
+      ])
+      startVitest.mockResolvedValue(mock)
+
+      const runner = await createVitestRunner('src/a.js')
+      await expect(runner.switchFile('src/b.js')).resolves.not.toThrow()
+      expect(mock.projects[0]._vite.moduleGraph.invalidateAll).toHaveBeenCalled()
+    })
+
     it('skips projects with undefined _vite during flush', async () => {
       const mock = createMockVitest()
       mock.projects = [

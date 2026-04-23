@@ -132,7 +132,7 @@ export function matchesPattern(node, pattern) {
 }
 
 function matchesValue(nodeVal, patternVal) {
-  if (!nodeVal) return
+  if (nodeVal == null) return
   if (typeof patternVal === 'string')
     return matchesStringPattern(nodeVal, patternVal)
   if (isObject(patternVal))

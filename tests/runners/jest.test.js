@@ -191,6 +191,38 @@ describe('createJestRunner', () => {
     )
   })
 
+  it('caps stderr buffer to prevent unbounded memory growth', async () => {
+    const proc = {
+      stdout: { on: vi.fn(), setEncoding: vi.fn() },
+      stderr: { on: vi.fn(), setEncoding: vi.fn() },
+      on: vi.fn(),
+      kill: vi.fn()
+    }
+
+    let stderrCb
+    proc.stdout.on.mockImplementation((event, cb) => {
+      if (event === 'data') cb('not json') // invalid → parse failure, stderr surfaces
+    })
+    proc.stderr.on.mockImplementation((event, cb) => {
+      if (event === 'data') stderrCb = cb
+    })
+    proc.on.mockImplementation((event, cb) => {
+      if (event === 'close') {
+        const chunk = 'x'.repeat(1024 * 1024) // 1 MB
+        for (let i = 0; i < 15; i++) stderrCb(chunk)
+        cb(1)
+      }
+    })
+    spawn.mockReturnValue(proc)
+
+    const runner = await createJestRunner('src/foo.js')
+    const result = await runner.run()
+
+    expect(result.passed).toBe(false)
+    // stderr should be capped at ~10 MB, not 15 MB
+    expect(result.stderr.length).toBeLessThanOrEqual(11 * 1024 * 1024)
+  })
+
   it('configures stdio to ignore stdin and pipe stdout/stderr', async () => {
     const json = JSON.stringify({ success: true, testResults: [] })
     fakeProcess(json)
