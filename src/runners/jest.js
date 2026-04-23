@@ -64,6 +64,8 @@ function execJest(args, spawnOpts, onProc) {
         if (stderr.length > MAX_BUFFER) stderrCapped = true
       }
     })
+    proc.stdout.on('error', reject)
+    proc.stderr.on('error', reject)
     proc.on('close', () => resolve({ stdout, stderr }))
     proc.on('error', reject)
   })

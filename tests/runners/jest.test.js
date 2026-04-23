@@ -291,6 +291,26 @@ describe('createJestRunner', () => {
       await expect(runner.run()).rejects.toThrow('spawn ENOENT')
     })
 
+    it('rejects when stdout stream emits error', async () => {
+      const proc = {
+        stdout: { on: vi.fn(), setEncoding: vi.fn() },
+        stderr: { on: vi.fn(), setEncoding: vi.fn() },
+        on: vi.fn(),
+        kill: vi.fn()
+      }
+
+      proc.stdout.on.mockImplementation((event, cb) => {
+        if (event === 'error') cb(new Error('stream read error'))
+      })
+      proc.stderr.on.mockImplementation(() => {})
+      proc.on.mockImplementation(() => {})
+
+      spawn.mockReturnValue(proc)
+
+      const runner = await createJestRunner('src/foo.js')
+      await expect(runner.run()).rejects.toThrow('stream read error')
+    })
+
     it('returns failed result when stdout is invalid JSON', async () => {
       fakeProcess('not valid json at all')
 
