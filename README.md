@@ -19,7 +19,7 @@ export default {
   mutators: [...mutators.javascript],
   include: ['src/**/*.js'],
   exclude: ['**/*.test.js'],
-  createRunner: sourceFile => createVitestRunner(sourceFile)
+  createRunner: createVitestRunner
 }
 ```
 
@@ -128,7 +128,7 @@ export default {
   testSources: [],             // Explicit test files for incremental invalidation
   testInclude: ['tests/**/*.test.js'],  // Glob patterns to discover test files
   testExclude: [],             // Glob patterns to exclude from test discovery
-  createRunner: async (sourceFile) => runner,  // Test runner factory
+  createRunner: async (sourceFile, options) => runner,  // Test runner factory
   reportDir: 'reports/mutation',               // Directory for JSON reports
   reportFile: 'manual-report.json',            // Report filename
   skipNodes: [],                 // AST node patterns to exclude from mutation (optional)
@@ -178,7 +178,7 @@ import { createManualRunner, mutators, createVitestRunner } from '@bwawan/mutage
 const runner = createManualRunner({
   mutators: [...mutators.javascript],
   include: ['src/**/*.js'],
-  createRunner: sourceFile => createVitestRunner(sourceFile)
+  createRunner: createVitestRunner
 })
 
 runner.main()
@@ -192,8 +192,8 @@ import { createManualRunner, mutators, createJestRunner } from '@bwawan/mutagen'
 const runner = createManualRunner({
   mutators: [...mutators.javascript],
   include: ['src/**/*.js'],
-  createRunner: sourceFile => createJestRunner(sourceFile, {
-    config: 'jest.config.js'
+  createRunner: (sourceFile, options) => createJestRunner(sourceFile, {
+    ...options, config: 'jest.config.js'
   })
 })
 
@@ -202,10 +202,10 @@ runner.main()
 
 ## Runner interface
 
-The `createRunner` callback receives a source file path and returns a runner object:
+The `createRunner` callback receives the source file path (inside the temporary worktree) and an options object, and returns a runner:
 
 ```js
-async function createRunner(sourceFile) {
+async function createRunner(sourceFile, { root }) {
   return {
     async run() { return { passed: true, killedBy: [] } },
     async close() {}
@@ -213,7 +213,7 @@ async function createRunner(sourceFile) {
 }
 ```
 
-Mutagen creates a temporary worktree (project copy) and writes mutations there. Original source files are never modified. The runner receives the worktree path as `sourceFile` and an `options.root` pointing to the worktree root.
+Mutagen creates a temporary worktree (project copy) and writes mutations there. Original source files are never modified. `sourceFile` points into the worktree and `root` is the worktree root directory.
 
 ## Vitest runner
 
@@ -259,8 +259,8 @@ export default {
   mutators: [...mutators.javascript],
   include: ['src/**/*.js', 'src/**/*.tsx'],
   exclude: ['**/*.test.*'],
-  createRunner: sourceFile => createJestRunner(sourceFile, {
-    config: 'jest.config.js'
+  createRunner: (sourceFile, options) => createJestRunner(sourceFile, {
+    ...options, config: 'jest.config.js'
   })
 }
 ```
