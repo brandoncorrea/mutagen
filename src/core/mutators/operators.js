@@ -110,7 +110,7 @@ export const negationRemoval = [
     types: ['UnaryExpression'],
     test: ({ operator, prefix }) => operator === '!' && prefix,
     mutate: ({ start, argument }) => ({
-      start: start,
+      start,
       end: argument.start,
       replacement: ''
     })

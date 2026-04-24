@@ -9,7 +9,7 @@
  *   warm    - attempt warm rerun (default: true).
  */
 
-import { basename, parse as parsePath } from 'node:path'
+import { basename, parse } from 'node:path'
 import { Readable } from 'node:stream'
 
 export const BAIL_ON_FIRST_FAILURE = 1
@@ -187,7 +187,7 @@ function coldRunner(startVitest, testFilter, vitestOpts) {
 function splitSpecs(specs, sourceFile) {
   if (!sourceFile) return { direct: specs, indirect: [] }
 
-  const stem = parsePath(sourceFile).name
+  const stem = parse(sourceFile).name
   const direct = []
   const indirect = []
   for (const spec of specs) {

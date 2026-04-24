@@ -11,7 +11,7 @@
  *   npx mutagen --version               # Print version
  */
 
-import { resolve, parse as parsePath } from 'node:path'
+import { resolve, parse } from 'node:path'
 import { createRequire } from 'node:module'
 import { pathToFileURL } from 'node:url'
 import { createManualRunner } from '../cli/manual.js'
@@ -56,7 +56,7 @@ export function isMain(argv) {
 }
 
 function stemOf(filepath) {
-  return parsePath(filepath.replace(/\\/g, '/')).name
+  return parse(filepath.replace(/\\/g, '/')).name
 }
 
 /* v8 ignore next 2 */

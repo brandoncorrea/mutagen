@@ -47,21 +47,21 @@ function execJest(args, spawnOpts, onProc) {
     onProc(proc)
     let stdout = ''
     let stderr = ''
-    let stdoutCapped = false
-    let stderrCapped = false
+    let isStdoutCapped = false
+    let isStderrCapped = false
 
     proc.stdout.setEncoding('utf8')
     proc.stderr.setEncoding('utf8')
     proc.stdout.on('data', chunk => {
-      if (!stdoutCapped) {
+      if (!isStdoutCapped) {
         stdout += chunk
-        if (stdout.length > MAX_BUFFER) stdoutCapped = true
+        if (stdout.length > MAX_BUFFER) isStdoutCapped = true
       }
     })
     proc.stderr.on('data', chunk => {
-      if (!stderrCapped) {
+      if (!isStderrCapped) {
         stderr += chunk
-        if (stderr.length > MAX_BUFFER) stderrCapped = true
+        if (stderr.length > MAX_BUFFER) isStderrCapped = true
       }
     })
     proc.stdout.on('error', reject)
