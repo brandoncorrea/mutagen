@@ -41,9 +41,6 @@ Mutagen is designed for agent consumption. Use `--quiet` and `--json` for machin
 # One-line summary to stderr, structured JSON to file
 npx mutagen --all --quiet --json reports/mutation.json
 
-# Only show surviving mutations (what to fix)
-npx mutagen --all --quiet --survivors-only
-
 # Incremental: only re-test changed files, JSON report
 npx mutagen --incremental --quiet --json reports/mutation.json
 
@@ -58,6 +55,9 @@ npx mutagen --all --quiet --min-score 80
 
 # Compare reports for regressions (exit code 1 = regressions found)
 npx mutagen --diff before.json after.json --json
+
+# Only show surviving mutations on stdout (what to fix)
+npx mutagen --all --survivors-only
 ```
 
 ### Exit codes

@@ -54,7 +54,7 @@ export async function runRetest(runContext, parsed) {
 
   const report = tryLoadJson(reportPath, out)
   if (!report) {
-    out.log(`Error: could not load report from ${reportPath}`)
+    out.error(`Error: could not load report from ${reportPath}\n`)
     return { exitCode: 1 }
   }
 
@@ -159,7 +159,7 @@ function loadRetestMutations(file, { mutationConfig, survivorIds, out }) {
   try {
     source = readFileSync(absPath, 'utf-8')
   } catch {
-    out.log(`  Skipping ${file} — file not found`)
+    out.error(`  Skipping ${file} — file not found\n`)
     return { done: true, result: toEmptyResult(0) }
   }
 

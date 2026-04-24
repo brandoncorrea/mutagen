@@ -5,18 +5,18 @@
 import { HEADER_SEPARATOR } from '../shared.js'
 
 export const PREFLIGHT_ABORT_MSG =
-  '\nABORT: Tests already FAILING on original source. Fix the suite first.'
+  '\nABORT: Tests already FAILING on original source. Fix the suite first.\n'
 
 export async function runPreflightTests(out, runner) {
   if (runner.preflight) {
     if (runner.preflight.passed) return {}
-    out.log(PREFLIGHT_ABORT_MSG)
+    out.error(PREFLIGHT_ABORT_MSG)
     return { error: true }
   }
   out.log(`\nPre-flight: running tests against original source...`)
   const preflight = await runner.run()
   if (preflight.passed) return {}
-  out.log(PREFLIGHT_ABORT_MSG)
+  out.error(PREFLIGHT_ABORT_MSG)
   return { error: true }
 }
 

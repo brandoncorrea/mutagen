@@ -253,8 +253,8 @@ describe('tryLoadJson', () => {
     const result = tryLoadJson('/tmp/missing.json', out)
 
     expect(result).toBeUndefined()
-    expect(out.log).toHaveBeenCalledWith(expect.stringContaining('Warning'))
-    expect(out.log).toHaveBeenCalledWith(expect.stringContaining('missing.json'))
+    expect(out.error).toHaveBeenCalledWith(expect.stringContaining('Warning'))
+    expect(out.error).toHaveBeenCalledWith(expect.stringContaining('missing.json'))
   })
 
   it('returns undefined and calls out on invalid JSON', () => {
@@ -264,7 +264,7 @@ describe('tryLoadJson', () => {
     const result = tryLoadJson('/tmp/bad.json', out)
 
     expect(result).toBeUndefined()
-    expect(out.log).toHaveBeenCalledWith(expect.stringContaining('Warning'))
+    expect(out.error).toHaveBeenCalledWith(expect.stringContaining('Warning'))
   })
 
   it('returns undefined silently when no out callback provided', () => {

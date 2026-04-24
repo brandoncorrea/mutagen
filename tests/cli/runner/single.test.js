@@ -410,16 +410,16 @@ describe('runSingle', () => {
       preflight: { passed: false }
     }
 
-    const lines = []
+    const errors = []
     const result = await runSingle({
       sourceFile: resolve('src/a.js'),
       mutationConfig,
       createRunner: vi.fn().mockResolvedValue(runner),
-      out: { log: msg => lines.push(msg), error: () => {} }
+      out: { log: () => {}, error: msg => errors.push(msg) }
     })
 
     expect(result.error).toBe(true)
     expect(runner.run).not.toHaveBeenCalled()
-    expect(lines.some(line => line.includes('ABORT'))).toBe(true)
+    expect(errors.some(msg => msg.includes('ABORT'))).toBe(true)
   })
 })

@@ -603,15 +603,15 @@ describe('createManualRunner', () => {
         { passed: true },
         { passed: false }
       ])
-      const lines = []
+      const errors = []
       const manual = createTestRunner({
         mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner),
-        out: { log: msg => lines.push(msg), error: () => {} }
+        out: { log: () => {}, error: msg => errors.push(msg) }
       })
       await manual.runIncremental(false, null)
 
-      expect(lines.join('\n')).not.toContain('Warning')
+      expect(errors.join('\n')).not.toContain('Warning')
     })
 
     it('does not write intermediate reports when jsonOutput is false', async () => {

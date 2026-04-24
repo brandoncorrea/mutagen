@@ -14,7 +14,7 @@ describe('diffReports', () => {
   beforeEach(() => {
     readFileSync.mockReset()
     lines = []
-    out = { log: msg => lines.push(msg), error: () => {} }
+    out = { log: msg => lines.push(msg), error: msg => lines.push(msg) }
   })
 
   function makeReport(files) {

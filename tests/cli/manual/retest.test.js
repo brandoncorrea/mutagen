@@ -180,15 +180,15 @@ describe('createManualRunner --retest', () => {
       throw new Error('ENOENT')
     })
 
-    const lines = []
+    const errors = []
     const manual = createTestRunner({
-      out: { log: msg => lines.push(msg), error: () => {} },
+      out: { log: () => {}, error: msg => errors.push(msg) },
       mutators: testMutators, sources: ['src/a.js'],
       createRunner: vi.fn()
     })
     const exitCode = await manual.run(['--retest', 'reports/latest.json'])
 
-    expect(lines.some(line => line.includes('Skipping') && line.includes('not found'))).toBe(true)
+    expect(errors.some(msg => msg.includes('Skipping') && msg.includes('not found'))).toBe(true)
     expect(exitCode).toBe(0)
   })
 
