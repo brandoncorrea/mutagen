@@ -316,7 +316,7 @@ describe('createManualRunner', () => {
         score: 0, total: 1, killed: 0, survived: 1, timedOut: 0,
         files: {
           'src/a.js': {
-            mutants: [{ id, name: '=== → !==', status: 'Survived', line: 1 }]
+            mutants: [{ id, name: '=== → !==', status: 'survived', line: 1 }]
           }
         },
         survivors: [{ id, file: 'src/a.js', line: 1, name: '=== → !==' }]

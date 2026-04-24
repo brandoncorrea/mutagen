@@ -1,12 +1,11 @@
 /**
  * Mutation status classification and scoring.
- * Pure functions for categorizing and scoring mutation test results.
  */
 
 export const STATUS = {
-  SURVIVED: 'Survived',
-  KILLED: 'Killed',
-  TIMEOUT: 'Timeout'
+  SURVIVED: 'survived',
+  KILLED: 'killed',
+  TIMEOUT: 'timeout'
 }
 
 export function isKilled({ status }) {

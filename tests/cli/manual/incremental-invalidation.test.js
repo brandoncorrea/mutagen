@@ -46,7 +46,7 @@ describe('createManualRunner', () => {
           files: {
             'src/a.js': {
               mutants: [{
-                status: 'Killed',
+                status: 'killed',
                 killedBy: [resolve('test/a.test.js')]
               }]
             }
@@ -85,7 +85,7 @@ describe('createManualRunner', () => {
         [reportPath]: JSON.stringify({
           files: {
             'src/a.js': {
-              mutants: [{ status: 'Survived' }]
+              mutants: [{ status: 'survived' }]
             }
           },
           sourceHashes: { 'src/a.js': srcHash },
@@ -124,7 +124,7 @@ describe('createManualRunner', () => {
         [reportPath]: JSON.stringify({
           files: {
             'src/a.js': {
-              mutants: [{ status: 'Killed', killedBy: [resolve('test/a.test.js')] }]
+              mutants: [{ status: 'killed', killedBy: [resolve('test/a.test.js')] }]
             }
           },
           sourceHashes: { 'src/a.js': srcHash },
@@ -162,7 +162,7 @@ describe('createManualRunner', () => {
           files: {
             'src/a.js': {
               mutants: [{
-                status: 'Killed',
+                status: 'killed',
                 killedBy: [resolve('test/a.test.js'), resolve('test/b.test.js')]
               }]
             }
@@ -206,8 +206,8 @@ describe('createManualRunner', () => {
           files: {
             'src/a.js': {
               mutants: [
-                { status: 'Killed', killedBy: ['/other/test.js'] },
-                { status: 'Killed' }
+                { status: 'killed', killedBy: ['/other/test.js'] },
+                { status: 'killed' }
               ]
             }
           },
@@ -273,7 +273,7 @@ describe('createManualRunner', () => {
         [testFile]: 'new test code',
         [reportPath]: JSON.stringify({
           files: {
-            'src/a.js': { mutants: [{ status: 'Survived' }] }
+            'src/a.js': { mutants: [{ status: 'survived' }] }
           },
           sourceHashes: { 'src/a.js': srcHash },
           testHashes: { 'test/a.test.js': 'old-hash' }

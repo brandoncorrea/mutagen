@@ -100,9 +100,9 @@ describe('printAllCachedSummary', () => {
         files: {
           'a.js': {
             mutants: [
-              { status: 'Killed' },
-              { status: 'Killed' },
-              { status: 'Survived' }
+              { status: 'killed' },
+              { status: 'killed' },
+              { status: 'survived' }
             ]
           }
         }
@@ -125,8 +125,8 @@ describe('printAllCachedSummary', () => {
         files: {
           'a.js': {
             mutants: [
-              { status: 'Killed' },
-              { status: 'Survived' },
+              { status: 'killed' },
+              { status: 'survived' },
               { status: 'CompileError' }
             ]
           }
@@ -187,7 +187,7 @@ describe('files without mutants arrays', () => {
       files: {
         'a.js': {
           mutants: [
-            { id: 'm1', name: 'x', status: 'Killed', line: 1 }
+            { id: 'm1', name: 'x', status: 'killed', line: 1 }
           ]
         }
       }
@@ -211,7 +211,7 @@ describe('files without mutants arrays', () => {
     const newFileResults = {
       'a.js': {
         mutants: [
-          { id: 'm1', name: 'x', status: 'Killed', line: 1 }
+          { id: 'm1', name: 'x', status: 'killed', line: 1 }
         ]
       }
     }

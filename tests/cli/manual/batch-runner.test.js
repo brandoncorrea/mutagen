@@ -91,7 +91,7 @@ describe('createManualRunner', () => {
         ([path]) => path.includes('manual-report.json')
       )
       const report = JSON.parse(reportCalls[0][1])
-      const killedMutant = Object.values(report.files)[0].mutants.find(mutant => mutant.status === 'Killed')
+      const killedMutant = Object.values(report.files)[0].mutants.find(mutant => mutant.status === 'killed')
       expect(killedMutant.killedBy).toEqual(['spec-a.js'])
     })
 

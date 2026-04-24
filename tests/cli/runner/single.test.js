@@ -219,7 +219,7 @@ describe('--survivors-only output filtering', () => {
 
     const perMutationLines = lines.filter(line => line.match(/^\[\d+\/\d+\]/))
     expect(perMutationLines).toHaveLength(1)
-    expect(perMutationLines[0]).toContain('Survived')
+    expect(perMutationLines[0]).toContain('survived')
   })
 
   it('filters JSON output to only survivors when survivorsOnly is true', async () => {
@@ -240,7 +240,7 @@ describe('--survivors-only output filtering', () => {
     })
 
     expect(result.jsonData.mutants).toHaveLength(1)
-    expect(result.jsonData.mutants[0].status).toBe('Survived')
+    expect(result.jsonData.mutants[0].status).toBe('survived')
   })
 })
 
@@ -331,7 +331,7 @@ describe('runSingle', () => {
       out: { log: msg => lines.push(msg), error: () => {} }
     })
 
-    expect(lines.some(line => line.includes('Timeout'))).toBe(false)
+    expect(lines.some(line => line.includes('timeout'))).toBe(false)
   })
 
   it('suppresses error report with survivorsOnly', async () => {

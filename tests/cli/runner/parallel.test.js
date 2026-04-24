@@ -183,8 +183,8 @@ describe('runParallel', () => {
     mockFs({ [resolve('src/a.js')]: sourceCode })
     const preflightRunner = fakePoolRunner([{ passed: true }])
     const poolRun = vi.fn().mockImplementation((mutations, opts) => {
-      opts.onResult?.({ mutation: mutations[0], status: 'Survived' })
-      opts.onResult?.({ mutation: mutations[0], status: 'Timeout' })
+      opts.onResult?.({ mutation: mutations[0], status: 'survived' })
+      opts.onResult?.({ mutation: mutations[0], status: 'timeout' })
       return Promise.resolve({ killed: [], survived: [mutations[0]], timedOut: [mutations[0]] })
     })
     createPool.mockReturnValue({ run: poolRun, close: vi.fn().mockResolvedValue() })
@@ -198,8 +198,8 @@ describe('runParallel', () => {
       out: { log: msg => lines.push(msg), error: () => {} }
     })
 
-    expect(lines.some(line => line.includes('Survived'))).toBe(true)
-    expect(lines.some(line => line.includes('Timeout'))).toBe(true)
+    expect(lines.some(line => line.includes('survived'))).toBe(true)
+    expect(lines.some(line => line.includes('timeout'))).toBe(true)
   })
 
   it('prints run report after pool completes', async () => {
@@ -221,7 +221,7 @@ describe('runParallel', () => {
       out: { log: msg => lines.push(msg), error: () => {} }
     })
 
-    const reportLines = lines.filter(line => line.includes('MUTATION REPORT') || line.includes('Killed'))
+    const reportLines = lines.filter(line => line.includes('MUTATION REPORT') || line.includes('killed'))
     expect(reportLines.length).toBeGreaterThan(0)
   })
 
@@ -311,7 +311,7 @@ describe('runParallel', () => {
     mockFs({ [resolve('src/a.js')]: sourceCode })
     const preflightRunner = fakePoolRunner([{ passed: true }])
     const poolRun = vi.fn().mockImplementation((mutations, opts) => {
-      opts.onResult?.({ mutation: mutations[0], status: 'Survived' })
+      opts.onResult?.({ mutation: mutations[0], status: 'survived' })
       return { killed: [], survived: [mutations[0]], timedOut: [] }
     })
     createPool.mockReturnValue({ run: poolRun, close: vi.fn().mockResolvedValue() })
@@ -328,7 +328,7 @@ describe('runParallel', () => {
 
     const progressLines = lines.filter(line => /\[\d+\/\d+\]/.test(line))
     expect(progressLines).toHaveLength(1)
-    expect(progressLines[0]).toContain('Survived')
+    expect(progressLines[0]).toContain('survived')
   })
 
   it('filters JSON to only survivors when survivorsOnly is true', async () => {

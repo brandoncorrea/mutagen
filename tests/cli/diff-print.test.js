@@ -14,8 +14,8 @@ describe('printDiffReport', () => {
       newMutants: [],
       removedMutants: []
     }
-    const before = { files: { 'a.js': { mutants: [makeMutant('m1', 'x', 'Survived')] } } }
-    const after = { files: { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } } }
+    const before = { files: { 'a.js': { mutants: [makeMutant('m1', 'x', 'survived')] } } }
+    const after = { files: { 'a.js': { mutants: [makeMutant('m1', 'x', 'killed')] } } }
 
     printDiffReport(
       { beforeFile: 'before.json', afterFile: 'after.json', before, after },

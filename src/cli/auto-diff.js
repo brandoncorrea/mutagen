@@ -15,23 +15,22 @@ import { isKilled, isAlive } from '../core/mutation-status.js'
  */
 export function autoDiffSummary(previousReport, currentFileResults) {
   if (!previousReport) return null
-  const prevIds = buildPreviousIdMap(previousReport)
-  if (!prevIds) return null
-  const summary = compileSummary(prevIds, currentFileResults)
+  const prevSurvivorIds = collectSurvivorIds(previousReport)
+  if (!prevSurvivorIds.size) return null
+  const summary = compileSummary(prevSurvivorIds, currentFileResults)
   if (isUnchanged(summary)) return null
   return formatSummary(summary)
 }
 
-function buildPreviousIdMap({ survivors }) {
-  if (!survivors) return null
-  const map = new Map()
-  for (const { id } of survivors)
-    if (id)
-      map.set(id, 'survived')
-  if (map.size) return map
+function collectSurvivorIds({ survivors }) {
+  const ids = new Set()
+  if (survivors)
+    for (const { id } of survivors)
+      if (id) ids.add(id)
+  return ids
 }
 
-function compileSummary(prevIds, currentFileResults) {
+function compileSummary(prevSurvivorIds, currentFileResults) {
   const summary = {
     newlyKilled: 0,
     unchangedSurvivors: 0
@@ -40,14 +39,13 @@ function compileSummary(prevIds, currentFileResults) {
   for (const { mutants } of Object.values(currentFileResults))
     if (Array.isArray(mutants))
       for (const mutant of mutants)
-        summarizeMutant(summary, prevIds, mutant)
+        if (prevSurvivorIds.has(mutant.id))
+          summarizeMutant(summary, mutant)
 
   return summary
 }
 
-function summarizeMutant(summary, prevIds, mutant) {
-  const prev = prevIds.get(mutant.id)
-  if (prev !== 'survived') return
+function summarizeMutant(summary, mutant) {
   if (isKilled(mutant))
     summary.newlyKilled += 1
   else if (isAlive(mutant))
@@ -62,7 +60,7 @@ function isUnchanged(summary) {
 function formatSummary({ newlyKilled, unchangedSurvivors }) {
   return [
     `+${newlyKilled} newly killed`,
-    `${unchangedSurvivors} unchanged` +
-    ` survivor${unchangedSurvivors !== 1 ? 's' : ''}`
+    `${unchangedSurvivors} unchanged`
+    + ` survivor${unchangedSurvivors !== 1 ? 's' : ''}`
   ].join(', ')
 }

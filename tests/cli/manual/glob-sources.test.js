@@ -117,7 +117,7 @@ describe('createManualRunner with include/exclude globs', () => {
       [reportPath]: JSON.stringify({
         files: {
           'src/a.js': {
-            mutants: [{ status: 'Survived' }]
+            mutants: [{ status: 'survived' }]
           }
         },
         sourceHashes: { 'src/a.js': srcHash },
@@ -157,7 +157,7 @@ describe('createManualRunner with include/exclude globs', () => {
       [reportPath]: JSON.stringify({
         files: {
           'src/a.js': {
-            mutants: [{ status: 'Killed', killedBy: [resolve('tests/a.test.js')] }]
+            mutants: [{ status: 'killed', killedBy: [resolve('tests/a.test.js')] }]
           }
         },
         sourceHashes: { 'src/a.js': srcHash },

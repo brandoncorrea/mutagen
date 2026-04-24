@@ -35,7 +35,7 @@ describe('createManualRunner', () => {
         files: {
           'a.js': {
             mutants: [{
-              id: 'm1', mutatorName: 'x', status: 'Killed',
+              id: 'm1', mutatorName: 'x', status: 'killed',
               location: { start: { line: 1 } }, replacement: 'y'
             }]
           }
@@ -59,7 +59,7 @@ describe('createManualRunner', () => {
         files: {
           'a.js': {
             mutants: [{
-              id: 'm1', mutatorName: 'x', status: 'Killed',
+              id: 'm1', mutatorName: 'x', status: 'killed',
               location: { start: { line: 1 } }, replacement: 'y'
             }]
           }
@@ -69,7 +69,7 @@ describe('createManualRunner', () => {
         files: {
           'a.js': {
             mutants: [{
-              id: 'm1', mutatorName: 'x', status: 'Survived',
+              id: 'm1', mutatorName: 'x', status: 'survived',
               location: { start: { line: 1 } }, replacement: 'y'
             }]
           }
@@ -104,8 +104,8 @@ describe('createManualRunner', () => {
         files: {
           'a.js': {
             mutants: [
-              { id: 'm1', mutatorName: 'x', status: 'Killed', location: { start: { line: 1 } }, replacement: 'y' },
-              { id: 'm2', mutatorName: 'x', status: 'Killed', location: { start: { line: 2 } }, replacement: 'z' }
+              { id: 'm1', mutatorName: 'x', status: 'killed', location: { start: { line: 1 } }, replacement: 'y' },
+              { id: 'm2', mutatorName: 'x', status: 'killed', location: { start: { line: 2 } }, replacement: 'z' }
             ]
           }
         }
@@ -114,8 +114,8 @@ describe('createManualRunner', () => {
         files: {
           'a.js': {
             mutants: [
-              { id: 'm1', mutatorName: 'x', status: 'Survived', location: { start: { line: 1 } }, replacement: 'y' },
-              { id: 'm2', mutatorName: 'x', status: 'Survived', location: { start: { line: 2 } }, replacement: 'z' }
+              { id: 'm1', mutatorName: 'x', status: 'survived', location: { start: { line: 1 } }, replacement: 'y' },
+              { id: 'm2', mutatorName: 'x', status: 'survived', location: { start: { line: 2 } }, replacement: 'z' }
             ]
           }
         }

@@ -32,8 +32,8 @@ describe('diffReports', () => {
 
   it('detects newly killed mutants (Survived → Killed)', () => {
     const result = runDiff(
-      { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Survived', 5)] } },
-      { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Killed', 5)] } }
+      { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'survived', 5)] } },
+      { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'killed', 5)] } }
     )
 
     expect(result.newlyKilled).toBe(1)
@@ -43,8 +43,8 @@ describe('diffReports', () => {
 
   it('detects regressions (Killed → Survived)', () => {
     const result = runDiff(
-      { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Killed', 5)] } },
-      { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Survived', 5)] } }
+      { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'killed', 5)] } },
+      { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'survived', 5)] } }
     )
 
     expect(result.regressions).toBe(1)
@@ -54,11 +54,11 @@ describe('diffReports', () => {
 
   it('detects new mutants (present only in after)', () => {
     const result = runDiff(
-      { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Killed', 5)] } },
+      { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'killed', 5)] } },
       { 'a.js': {
         mutants: [
-          makeMutant('m1', 'EqualityOperator', 'Killed', 5),
-          makeMutant('m2', 'ArithmeticOperator', 'Survived', 10)
+          makeMutant('m1', 'EqualityOperator', 'killed', 5),
+          makeMutant('m2', 'ArithmeticOperator', 'survived', 10)
         ]
       } }
     )
@@ -71,11 +71,11 @@ describe('diffReports', () => {
     const result = runDiff(
       { 'a.js': {
         mutants: [
-          makeMutant('m1', 'EqualityOperator', 'Killed', 5),
-          makeMutant('m2', 'ArithmeticOperator', 'Survived', 10)
+          makeMutant('m1', 'EqualityOperator', 'killed', 5),
+          makeMutant('m2', 'ArithmeticOperator', 'survived', 10)
         ]
       } },
-      { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Killed', 5)] } }
+      { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'killed', 5)] } }
     )
 
     expect(result.removedMutants).toBe(1)
@@ -85,12 +85,12 @@ describe('diffReports', () => {
   it('prints overall score delta', () => {
     runDiff(
       { 'a.js': { mutants: [
-        makeMutant('m1', 'x', 'Killed'),
-        makeMutant('m2', 'y', 'Survived')
+        makeMutant('m1', 'x', 'killed'),
+        makeMutant('m2', 'y', 'survived')
       ] } },
       { 'a.js': { mutants: [
-        makeMutant('m1', 'x', 'Killed'),
-        makeMutant('m2', 'y', 'Killed')
+        makeMutant('m1', 'x', 'killed'),
+        makeMutant('m2', 'y', 'killed')
       ] } }
     )
 
@@ -101,8 +101,8 @@ describe('diffReports', () => {
 
   it('shows per-file score changes', () => {
     runDiff(
-      { 'a.js': { mutants: [makeMutant('m1', 'x', 'Survived')] } },
-      { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } }
+      { 'a.js': { mutants: [makeMutant('m1', 'x', 'survived')] } },
+      { 'a.js': { mutants: [makeMutant('m1', 'x', 'killed')] } }
     )
 
     expect(output()).toContain('PER-FILE CHANGES')
@@ -112,14 +112,14 @@ describe('diffReports', () => {
   it('formats per-file delta to one decimal place', () => {
     runDiff(
       { 'a.js': { mutants: [
-        makeMutant('m1', 'x', 'Killed'),
-        makeMutant('m2', 'y', 'Survived'),
-        makeMutant('m3', 'z', 'Survived')
+        makeMutant('m1', 'x', 'killed'),
+        makeMutant('m2', 'y', 'survived'),
+        makeMutant('m3', 'z', 'survived')
       ] } },
       { 'a.js': { mutants: [
-        makeMutant('m1', 'x', 'Killed'),
-        makeMutant('m2', 'y', 'Killed'),
-        makeMutant('m3', 'z', 'Survived')
+        makeMutant('m1', 'x', 'killed'),
+        makeMutant('m2', 'y', 'killed'),
+        makeMutant('m3', 'z', 'survived')
       ] } }
     )
 
@@ -128,7 +128,7 @@ describe('diffReports', () => {
   })
 
   it('reports identical reports with no changes', () => {
-    const files = { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } }
+    const files = { 'a.js': { mutants: [makeMutant('m1', 'x', 'killed')] } }
     const result = runDiff(files, files)
 
     expect(result.newlyKilled).toBe(0)
@@ -139,9 +139,9 @@ describe('diffReports', () => {
 
   it('handles new files in after report', () => {
     runDiff(
-      { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } },
-      { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] },
-        'b.js': { mutants: [makeMutant('m2', 'y', 'Survived')] } }
+      { 'a.js': { mutants: [makeMutant('m1', 'x', 'killed')] } },
+      { 'a.js': { mutants: [makeMutant('m1', 'x', 'killed')] },
+        'b.js': { mutants: [makeMutant('m2', 'y', 'survived')] } }
     )
 
     expect(output()).toContain('PER-FILE CHANGES')
@@ -151,9 +151,9 @@ describe('diffReports', () => {
 
   it('handles removed files in after report', () => {
     runDiff(
-      { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] },
-        'b.js': { mutants: [makeMutant('m2', 'y', 'Survived')] } },
-      { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } }
+      { 'a.js': { mutants: [makeMutant('m1', 'x', 'killed')] },
+        'b.js': { mutants: [makeMutant('m2', 'y', 'survived')] } },
+      { 'a.js': { mutants: [makeMutant('m1', 'x', 'killed')] } }
     )
 
     expect(output()).toContain('PER-FILE CHANGES')
@@ -172,7 +172,7 @@ describe('diffReports', () => {
   it('scores file at 100% when it has zero mutations in per-file delta', () => {
     runDiff(
       { 'a.js': { mutants: [] } },
-      { 'a.js': { mutants: [makeMutant('m1', 'x', 'Survived', 5)] } }
+      { 'a.js': { mutants: [makeMutant('m1', 'x', 'survived', 5)] } }
     )
 
     const perFile = output().slice(output().indexOf('PER-FILE'))
@@ -183,7 +183,7 @@ describe('diffReports', () => {
   it('prints new mutants section when all new mutants are killed', () => {
     const result = runDiff(
       { 'a.js': { mutants: [] } },
-      { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed', 5)] } }
+      { 'a.js': { mutants: [makeMutant('m1', 'x', 'killed', 5)] } }
     )
 
     expect(result.newMutants).toBe(1)
@@ -193,9 +193,9 @@ describe('diffReports', () => {
 
   it('sorts REMOVED files after positive-delta files via || 0 fallback', () => {
     runDiff(
-      { 'removed.js': { mutants: [makeMutant('m1', 'x', 'Killed')] },
-        'changed.js': { mutants: [makeMutant('m2', 'y', 'Survived')] } },
-      { 'changed.js': { mutants: [makeMutant('m2', 'y', 'Killed')] } }
+      { 'removed.js': { mutants: [makeMutant('m1', 'x', 'killed')] },
+        'changed.js': { mutants: [makeMutant('m2', 'y', 'survived')] } },
+      { 'changed.js': { mutants: [makeMutant('m2', 'y', 'killed')] } }
     )
 
     const perFileSection = output().slice(output().indexOf('PER-FILE CHANGES'))
@@ -204,11 +204,11 @@ describe('diffReports', () => {
 
   it('sorts per-file deltas descending, using 0 for NEW files', () => {
     runDiff(
-      { 'a.js': { mutants: [makeMutant('m1', 'x', 'Survived'), makeMutant('m2', 'y', 'Survived')] },
-        'c.js': { mutants: [makeMutant('m4', 'w', 'Survived')] } },
-      { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed'), makeMutant('m2', 'y', 'Survived')] },
-        'b.js': { mutants: [makeMutant('m3', 'z', 'Killed')] },
-        'c.js': { mutants: [makeMutant('m4', 'w', 'Killed')] } }
+      { 'a.js': { mutants: [makeMutant('m1', 'x', 'survived'), makeMutant('m2', 'y', 'survived')] },
+        'c.js': { mutants: [makeMutant('m4', 'w', 'survived')] } },
+      { 'a.js': { mutants: [makeMutant('m1', 'x', 'killed'), makeMutant('m2', 'y', 'survived')] },
+        'b.js': { mutants: [makeMutant('m3', 'z', 'killed')] },
+        'c.js': { mutants: [makeMutant('m4', 'w', 'killed')] } }
     )
 
     const perFileSection = output().slice(output().indexOf('PER-FILE CHANGES'))
@@ -221,9 +221,9 @@ describe('diffReports', () => {
 
   it('sorts NEW files before negative-delta files (delta: 0 vs undefined)', () => {
     runDiff(
-      { 'worsened.js': { mutants: [makeMutant('m1', 'x', 'Killed'), makeMutant('m2', 'y', 'Killed')] } },
-      { 'worsened.js': { mutants: [makeMutant('m1', 'x', 'Survived'), makeMutant('m2', 'y', 'Killed')] },
-        'new.js': { mutants: [makeMutant('m3', 'z', 'Killed')] } }
+      { 'worsened.js': { mutants: [makeMutant('m1', 'x', 'killed'), makeMutant('m2', 'y', 'killed')] } },
+      { 'worsened.js': { mutants: [makeMutant('m1', 'x', 'survived'), makeMutant('m2', 'y', 'killed')] },
+        'new.js': { mutants: [makeMutant('m3', 'z', 'killed')] } }
     )
 
     const perFileSection = output().slice(output().indexOf('PER-FILE CHANGES'))
@@ -231,17 +231,17 @@ describe('diffReports', () => {
   })
 
   it('skips per-file section when no file scores changed', () => {
-    const files = { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } }
+    const files = { 'a.js': { mutants: [makeMutant('m1', 'x', 'killed')] } }
     runDiff(files, files)
 
     expect(output()).not.toContain('PER-FILE CHANGES')
   })
 
   it('handles mutants with no location object', () => {
-    const mutant = { id: 'm1', name: 'x', status: 'Killed', replacement: 'y' }
+    const mutant = { id: 'm1', name: 'x', status: 'killed', replacement: 'y' }
     const result = runDiff(
       { 'a.js': { mutants: [mutant] } },
-      { 'a.js': { mutants: [{ ...mutant, status: 'Survived' }] } }
+      { 'a.js': { mutants: [{ ...mutant, status: 'survived' }] } }
     )
 
     expect(result.regressions).toBe(1)
@@ -258,8 +258,8 @@ describe('diffReports', () => {
 
   it('prints +0.0% when overall score delta is exactly zero', () => {
     runDiff(
-      { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } },
-      { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } }
+      { 'a.js': { mutants: [makeMutant('m1', 'x', 'killed')] } },
+      { 'a.js': { mutants: [makeMutant('m1', 'x', 'killed')] } }
     )
 
     expect(output()).toContain('(+0.0%)')
@@ -268,11 +268,11 @@ describe('diffReports', () => {
   it('skips mutants with unrecognized status in overall summary counts', () => {
     runDiff(
       { 'a.js': { mutants: [
-        makeMutant('m1', 'x', 'Killed'),
+        makeMutant('m1', 'x', 'killed'),
         makeMutant('m2', 'y', 'CompileError')
       ] } },
       { 'a.js': { mutants: [
-        makeMutant('m1', 'x', 'Killed'),
+        makeMutant('m1', 'x', 'killed'),
         makeMutant('m2', 'y', 'CompileError')
       ] } }
     )
@@ -284,12 +284,12 @@ describe('diffReports', () => {
   it('counts survived mutants in overall summary', () => {
     runDiff(
       { 'a.js': { mutants: [
-        makeMutant('m1', 'x', 'Killed'),
-        makeMutant('m2', 'y', 'Survived')
+        makeMutant('m1', 'x', 'killed'),
+        makeMutant('m2', 'y', 'survived')
       ] } },
       { 'a.js': { mutants: [
-        makeMutant('m1', 'x', 'Killed'),
-        makeMutant('m2', 'y', 'Survived')
+        makeMutant('m1', 'x', 'killed'),
+        makeMutant('m2', 'y', 'survived')
       ] } }
     )
 
@@ -299,18 +299,18 @@ describe('diffReports', () => {
   it('prints negative score delta when score decreases', () => {
     runDiff(
       { 'a.js': { mutants: [
-        makeMutant('m1', 'a', 'Killed'),
-        makeMutant('m2', 'b', 'Killed'),
-        makeMutant('m3', 'c', 'Killed'),
-        makeMutant('m4', 'd', 'Killed'),
-        makeMutant('m5', 'e', 'Survived')
+        makeMutant('m1', 'a', 'killed'),
+        makeMutant('m2', 'b', 'killed'),
+        makeMutant('m3', 'c', 'killed'),
+        makeMutant('m4', 'd', 'killed'),
+        makeMutant('m5', 'e', 'survived')
       ] } },
       { 'a.js': { mutants: [
-        makeMutant('m1', 'a', 'Killed'),
-        makeMutant('m2', 'b', 'Killed'),
-        makeMutant('m3', 'c', 'Killed'),
-        makeMutant('m4', 'd', 'Survived'),
-        makeMutant('m5', 'e', 'Survived')
+        makeMutant('m1', 'a', 'killed'),
+        makeMutant('m2', 'b', 'killed'),
+        makeMutant('m3', 'c', 'killed'),
+        makeMutant('m4', 'd', 'survived'),
+        makeMutant('m5', 'e', 'survived')
       ] } }
     )
 
@@ -319,11 +319,11 @@ describe('diffReports', () => {
 
   it('prints correct killed count among new mutants', () => {
     runDiff(
-      { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } },
+      { 'a.js': { mutants: [makeMutant('m1', 'x', 'killed')] } },
       { 'a.js': { mutants: [
-        makeMutant('m1', 'x', 'Killed'),
-        makeMutant('m2', 'y', 'Killed', 10),
-        makeMutant('m3', 'z', 'Survived', 20)
+        makeMutant('m1', 'x', 'killed'),
+        makeMutant('m2', 'y', 'killed', 10),
+        makeMutant('m3', 'z', 'survived', 20)
       ] } }
     )
 
@@ -332,8 +332,8 @@ describe('diffReports', () => {
 
   it('hides REMOVED MUTANTS section when no mutants were removed', () => {
     runDiff(
-      { 'a.js': { mutants: [makeMutant('m1', 'x', 'Survived')] } },
-      { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } }
+      { 'a.js': { mutants: [makeMutant('m1', 'x', 'survived')] } },
+      { 'a.js': { mutants: [makeMutant('m1', 'x', 'killed')] } }
     )
 
     expect(output()).not.toContain('REMOVED MUTANTS')
@@ -342,13 +342,13 @@ describe('diffReports', () => {
   it('falls back to mutantKey when mutant has no id', () => {
     const mutantNoId = {
       name: 'EqualityOperator',
-      status: 'Survived',
+      status: 'survived',
       line: 5,
       replacement: '!=='
     }
     const result = runDiff(
       { 'a.js': { mutants: [mutantNoId] } },
-      { 'a.js': { mutants: [{ ...mutantNoId, status: 'Killed' }] } }
+      { 'a.js': { mutants: [{ ...mutantNoId, status: 'killed' }] } }
     )
 
     expect(result.newlyKilled).toBe(1)
@@ -375,14 +375,14 @@ describe('diffReports', () => {
   })
 
   it('tracks mutants separately by id even when computed keys collide', () => {
-    const m1 = makeMutant('id-alpha', 'EqualityOperator', 'Survived', 5)
-    const m2 = makeMutant('id-beta', 'EqualityOperator', 'Survived', 5)
+    const m1 = makeMutant('id-alpha', 'EqualityOperator', 'survived', 5)
+    const m2 = makeMutant('id-beta', 'EqualityOperator', 'survived', 5)
 
     const result = runDiff(
       { 'a.js': { mutants: [m1, m2] } },
       { 'a.js': { mutants: [
-        { ...m1, status: 'Killed' },
-        { ...m2, status: 'Killed' }
+        { ...m1, status: 'killed' },
+        { ...m2, status: 'killed' }
       ] } }
     )
 
@@ -391,8 +391,8 @@ describe('diffReports', () => {
 
   it('reports correct line number for newly killed mutant', () => {
     const result = runDiff(
-      { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Survived', 42)] } },
-      { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Killed', 42)] } }
+      { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'survived', 42)] } },
+      { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'killed', 42)] } }
     )
 
     expect(result.newlyKilled).toBe(1)
@@ -400,11 +400,11 @@ describe('diffReports', () => {
   })
 
   it('uses line 0 for mutant with no location', () => {
-    const noLoc = { id: 'no-loc', name: 'X', status: 'Survived', replacement: '' }
+    const noLoc = { id: 'no-loc', name: 'X', status: 'survived', replacement: '' }
 
     const result = runDiff(
       { 'a.js': { mutants: [noLoc] } },
-      { 'a.js': { mutants: [{ ...noLoc, status: 'Killed' }] } }
+      { 'a.js': { mutants: [{ ...noLoc, status: 'killed' }] } }
     )
 
     expect(result.newlyKilled).toBe(1)
@@ -412,11 +412,11 @@ describe('diffReports', () => {
   })
 
   it('handles mutant with location but missing start', () => {
-    const noStart = { id: 'no-start', name: 'X', status: 'Survived', location: {}, replacement: '' }
+    const noStart = { id: 'no-start', name: 'X', status: 'survived', location: {}, replacement: '' }
 
     const result = runDiff(
       { 'a.js': { mutants: [noStart] } },
-      { 'a.js': { mutants: [{ ...noStart, status: 'Killed' }] } }
+      { 'a.js': { mutants: [{ ...noStart, status: 'killed' }] } }
     )
 
     expect(result.newlyKilled).toBe(1)
@@ -426,12 +426,12 @@ describe('diffReports', () => {
   it('computes exact per-file scores from mutant counts', () => {
     runDiff(
       { 'a.js': { mutants: [
-        makeMutant('m1', 'x', 'Survived'),
-        makeMutant('m2', 'y', 'Survived')
+        makeMutant('m1', 'x', 'survived'),
+        makeMutant('m2', 'y', 'survived')
       ] } },
       { 'a.js': { mutants: [
-        makeMutant('m1', 'x', 'Killed'),
-        makeMutant('m2', 'y', 'Killed')
+        makeMutant('m1', 'x', 'killed'),
+        makeMutant('m2', 'y', 'killed')
       ] } }
     )
 
@@ -453,8 +453,8 @@ describe('diffReports', () => {
 
     it('outputs valid JSON instead of text report', () => {
       runDiffJson(
-        { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } },
-        { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } }
+        { 'a.js': { mutants: [makeMutant('m1', 'x', 'killed')] } },
+        { 'a.js': { mutants: [makeMutant('m1', 'x', 'killed')] } }
       )
 
       expect(lines).toHaveLength(1)
@@ -464,12 +464,12 @@ describe('diffReports', () => {
     it('includes beforeScore, afterScore, and delta', () => {
       runDiffJson(
         { 'a.js': { mutants: [
-          makeMutant('m1', 'x', 'Killed'),
-          makeMutant('m2', 'y', 'Survived')
+          makeMutant('m1', 'x', 'killed'),
+          makeMutant('m2', 'y', 'survived')
         ] } },
         { 'a.js': { mutants: [
-          makeMutant('m1', 'x', 'Killed'),
-          makeMutant('m2', 'y', 'Killed')
+          makeMutant('m1', 'x', 'killed'),
+          makeMutant('m2', 'y', 'killed')
         ] } }
       )
 
@@ -481,8 +481,8 @@ describe('diffReports', () => {
 
     it('includes newlyKilled mutants with file, line, and name', () => {
       runDiffJson(
-        { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Survived', 5)] } },
-        { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Killed', 5)] } }
+        { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'survived', 5)] } },
+        { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'killed', 5)] } }
       )
 
       const json = parsedOutput()
@@ -496,8 +496,8 @@ describe('diffReports', () => {
 
     it('includes regressions with file, line, and name', () => {
       runDiffJson(
-        { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Killed', 7)] } },
-        { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Survived', 7)] } }
+        { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'killed', 7)] } },
+        { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'survived', 7)] } }
       )
 
       const json = parsedOutput()
@@ -512,7 +512,7 @@ describe('diffReports', () => {
     it('includes newMutants with file, line, name, and status', () => {
       runDiffJson(
         { 'a.js': { mutants: [] } },
-        { 'a.js': { mutants: [makeMutant('m1', 'ArithmeticOperator', 'Survived', 3)] } }
+        { 'a.js': { mutants: [makeMutant('m1', 'ArithmeticOperator', 'survived', 3)] } }
       )
 
       const json = parsedOutput()
@@ -521,14 +521,14 @@ describe('diffReports', () => {
         file: 'a.js',
         line: 3,
         name: 'ArithmeticOperator',
-        status: 'Survived'
+        status: 'survived'
       })
     })
 
     it('newMutants entries contain only formatted fields (no raw mutant properties)', () => {
       runDiffJson(
         { 'a.js': { mutants: [] } },
-        { 'a.js': { mutants: [makeMutant('m1', 'ArithmeticOperator', 'Survived', 3)] } }
+        { 'a.js': { mutants: [makeMutant('m1', 'ArithmeticOperator', 'survived', 3)] } }
       )
 
       const json = parsedOutput()
@@ -538,13 +538,13 @@ describe('diffReports', () => {
         file: 'a.js',
         line: 3,
         name: 'ArithmeticOperator',
-        status: 'Survived'
+        status: 'survived'
       })
     })
 
     it('includes removedMutants with file, line, name, and status', () => {
       runDiffJson(
-        { 'a.js': { mutants: [makeMutant('m1', 'LogicalOperator', 'Killed', 9)] } },
+        { 'a.js': { mutants: [makeMutant('m1', 'LogicalOperator', 'killed', 9)] } },
         { 'a.js': { mutants: [] } }
       )
 
@@ -554,13 +554,13 @@ describe('diffReports', () => {
         file: 'a.js',
         line: 9,
         name: 'LogicalOperator',
-        status: 'Killed'
+        status: 'killed'
       })
     })
 
     it('removedMutants entries contain only formatted fields (no raw mutant properties)', () => {
       runDiffJson(
-        { 'a.js': { mutants: [makeMutant('m1', 'LogicalOperator', 'Killed', 9)] } },
+        { 'a.js': { mutants: [makeMutant('m1', 'LogicalOperator', 'killed', 9)] } },
         { 'a.js': { mutants: [] } }
       )
 
@@ -571,14 +571,14 @@ describe('diffReports', () => {
         file: 'a.js',
         line: 9,
         name: 'LogicalOperator',
-        status: 'Killed'
+        status: 'killed'
       })
     })
 
     it('includes fileDeltas keyed by path', () => {
       runDiffJson(
-        { 'a.js': { mutants: [makeMutant('m1', 'x', 'Survived')] } },
-        { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } }
+        { 'a.js': { mutants: [makeMutant('m1', 'x', 'survived')] } },
+        { 'a.js': { mutants: [makeMutant('m1', 'x', 'killed')] } }
       )
 
       const json = parsedOutput()
@@ -592,8 +592,8 @@ describe('diffReports', () => {
 
     it('omits files with no score change from fileDeltas', () => {
       runDiffJson(
-        { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } },
-        { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } }
+        { 'a.js': { mutants: [makeMutant('m1', 'x', 'killed')] } },
+        { 'a.js': { mutants: [makeMutant('m1', 'x', 'killed')] } }
       )
 
       const json = parsedOutput()
@@ -602,8 +602,8 @@ describe('diffReports', () => {
 
     it('returns the same counts object as text mode', () => {
       const result = runDiffJson(
-        { 'a.js': { mutants: [makeMutant('m1', 'x', 'Survived', 5)] } },
-        { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed', 5)] } }
+        { 'a.js': { mutants: [makeMutant('m1', 'x', 'survived', 5)] } },
+        { 'a.js': { mutants: [makeMutant('m1', 'x', 'killed', 5)] } }
       )
 
       expect(result.newlyKilled).toBe(1)
@@ -614,9 +614,9 @@ describe('diffReports', () => {
 
     it('includes new files in fileDeltas with null before', () => {
       runDiffJson(
-        { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } },
-        { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] },
-          'b.js': { mutants: [makeMutant('m2', 'y', 'Survived')] } }
+        { 'a.js': { mutants: [makeMutant('m1', 'x', 'killed')] } },
+        { 'a.js': { mutants: [makeMutant('m1', 'x', 'killed')] },
+          'b.js': { mutants: [makeMutant('m2', 'y', 'survived')] } }
       )
 
       const json = parsedOutput()
@@ -629,9 +629,9 @@ describe('diffReports', () => {
 
     it('includes removed files in fileDeltas with null after', () => {
       runDiffJson(
-        { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] },
-          'b.js': { mutants: [makeMutant('m2', 'y', 'Killed')] } },
-        { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } }
+        { 'a.js': { mutants: [makeMutant('m1', 'x', 'killed')] },
+          'b.js': { mutants: [makeMutant('m2', 'y', 'killed')] } },
+        { 'a.js': { mutants: [makeMutant('m1', 'x', 'killed')] } }
       )
 
       const json = parsedOutput()
@@ -686,8 +686,8 @@ describe('diffReports', () => {
 
     it('does not print text report headers in JSON mode', () => {
       runDiffJson(
-        { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } },
-        { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } }
+        { 'a.js': { mutants: [makeMutant('m1', 'x', 'killed')] } },
+        { 'a.js': { mutants: [makeMutant('m1', 'x', 'killed')] } }
       )
 
       expect(output()).not.toContain('MUTATION DIFF')
@@ -720,8 +720,8 @@ describe('diffReports', () => {
         })))
         .mockReturnValueOnce(JSON.stringify(makeReport({
           'a.js': { mutants: [
-            makeMutant('m1', 'x', 'Killed'),
-            makeMutant('m2', 'y', 'Killed')
+            makeMutant('m1', 'x', 'killed'),
+            makeMutant('m2', 'y', 'killed')
           ] }
         })))
 
@@ -740,7 +740,7 @@ describe('diffReports', () => {
           'a.js': {}
         })))
         .mockReturnValueOnce(JSON.stringify(makeReport({
-          'a.js': { mutants: [makeMutant('m1', 'x', 'Survived')] }
+          'a.js': { mutants: [makeMutant('m1', 'x', 'survived')] }
         })))
 
       const result = diffReports('before.json', 'after.json', out)

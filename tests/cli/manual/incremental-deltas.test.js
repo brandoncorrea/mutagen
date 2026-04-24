@@ -47,7 +47,7 @@ describe('incremental deltas', () => {
                 {
                   id: mutationId('src/a.js', 1, '=== → !=='),
                   name: '=== → !==',
-                  status: 'Survived',
+                  status: 'survived',
                   line: 1
                 }
               ]
@@ -103,7 +103,7 @@ describe('incremental deltas', () => {
                 {
                   id: mutationId('src/a.js', 1, '=== → !=='),
                   name: '=== → !==',
-                  status: 'Killed',
+                  status: 'killed',
                   line: 1,
                   killedBy: ['t.test.js']
                 }
@@ -151,7 +151,7 @@ describe('incremental deltas', () => {
         [srcB]: codeB,
         ['reports/out.json']: JSON.stringify({
           files: {
-            'src/a.js': { mutants: [{ id: 'x1', status: 'Killed', name: 'x', line: 1 }] }
+            'src/a.js': { mutants: [{ id: 'x1', status: 'killed', name: 'x', line: 1 }] }
           },
           sourceHashes: {
             'src/a.js': hashOf(codeA),
@@ -192,7 +192,7 @@ describe('incremental deltas', () => {
         ['reports/out.json']: JSON.stringify({
           files: {
             'src/a.js': {
-              mutants: [{ id: 'x1', name: 'x', status: 'Killed', killedBy: ['t.test.js'] }]
+              mutants: [{ id: 'x1', name: 'x', status: 'killed', killedBy: ['t.test.js'] }]
             }
           },
           sourceHashes: { 'src/a.js': hashOf(codeA) },
@@ -249,7 +249,7 @@ describe('incremental deltas', () => {
                 {
                   id: mutationId('src/a.js', 1, '=== → !=='),
                   name: '=== → !==',
-                  status: 'Survived',
+                  status: 'survived',
                   line: 1
                 }
               ]
@@ -298,7 +298,7 @@ describe('incremental deltas', () => {
                 {
                   id: mutationId('src/a.js', 1, '=== → !=='),
                   name: '=== → !==',
-                  status: 'Survived',
+                  status: 'survived',
                   line: 1
                 }
               ]
@@ -338,14 +338,14 @@ describe('writeMergedReport', () => {
   it('does not mutate the fileResults object when merging cached files', () => {
     const fileResults = {
       'src/changed.js': {
-        mutants: [{ id: 'x1', name: 'x', status: 'Killed', killedBy: ['t.test.js'] }]
+        mutants: [{ id: 'x1', name: 'x', status: 'killed', killedBy: ['t.test.js'] }]
       }
     }
     const originalKeys = Object.keys(fileResults)
     const previousReport = {
       files: {
         'src/cached.js': {
-          mutants: [{ id: 'z1', name: 'z', status: 'Killed', killedBy: ['t.test.js'] }]
+          mutants: [{ id: 'z1', name: 'z', status: 'killed', killedBy: ['t.test.js'] }]
         }
       }
     }
@@ -370,13 +370,13 @@ describe('computeDeltas', () => {
     const previousReport = {
       files: {
         'a.js': {
-          mutants: [{ id: 'x1', name: 'x', status: 'Survived' }]
+          mutants: [{ id: 'x1', name: 'x', status: 'survived' }]
         }
       }
     }
     const newFileResults = {
       'a.js': {
-        mutants: [{ id: 'x1', name: 'x', status: 'Killed' }]
+        mutants: [{ id: 'x1', name: 'x', status: 'killed' }]
       }
     }
     const classification = { changedSources: ['a.js'], unchangedSources: [] }
@@ -389,13 +389,13 @@ describe('computeDeltas', () => {
     const previousReport = {
       files: {
         'a.js': {
-          mutants: [{ id: 'x1', name: 'x', status: 'Survived' }]
+          mutants: [{ id: 'x1', name: 'x', status: 'survived' }]
         }
       }
     }
     const newFileResults = {
       'a.js': {
-        mutants: [{ id: 'x1', line: 1, name: 'x', status: 'Killed' }]
+        mutants: [{ id: 'x1', line: 1, name: 'x', status: 'killed' }]
       }
     }
     const classification = { changedSources: ['a.js'], unchangedSources: [] }

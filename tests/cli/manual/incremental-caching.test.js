@@ -44,8 +44,8 @@ describe('createManualRunner', () => {
           files: {
             'src/a.js': {
               mutants: [
-                { status: 'Killed' },
-                { status: 'Survived' }
+                { status: 'killed' },
+                { status: 'survived' }
               ]
             }
           },
@@ -123,7 +123,7 @@ describe('createManualRunner', () => {
         [src]: sourceCode,
         [reportPath]: JSON.stringify({
           files: {
-            'src/a.js': { mutants: [{ status: 'Killed' }] }
+            'src/a.js': { mutants: [{ status: 'killed' }] }
           },
           sourceHashes: { 'src/a.js': hash },
           testHashes: {}
@@ -151,7 +151,7 @@ describe('createManualRunner', () => {
         [src]: sourceCode,
         [reportPath]: JSON.stringify({
           files: {
-            'src/a.js': { mutants: [{ status: 'Killed' }] }
+            'src/a.js': { mutants: [{ status: 'killed' }] }
           },
           sourceHashes: { 'src/a.js': hash },
           testHashes: {}
@@ -175,8 +175,8 @@ describe('createManualRunner', () => {
         [src]: sourceCode,
         [reportPath]: JSON.stringify({
           files: {
-            'src/a.js': { mutants: [{ status: 'Killed' }] },
-            'src/removed.js': { mutants: [{ status: 'Survived' }] }
+            'src/a.js': { mutants: [{ status: 'killed' }] },
+            'src/removed.js': { mutants: [{ status: 'survived' }] }
           },
           sourceHashes: { 'src/a.js': 'stale-hash', 'src/removed.js': 'x' },
           testHashes: {}
@@ -213,7 +213,7 @@ describe('createManualRunner', () => {
         [srcB]: codeB,
         [reportPath]: JSON.stringify({
           files: {
-            'src/a.js': { mutants: [{ status: 'Killed' }] }
+            'src/a.js': { mutants: [{ status: 'killed' }] }
           },
           sourceHashes: {
             'src/a.js': hashOf(codeA),
@@ -261,7 +261,7 @@ describe('createManualRunner', () => {
         [srcC]: codeC,
         [reportPath]: JSON.stringify({
           files: {
-            'src/a.js': { mutants: [{ status: 'Killed' }] }
+            'src/a.js': { mutants: [{ status: 'killed' }] }
             // src/b.js has a matching hash but no entry in files
           },
           sourceHashes: {
@@ -302,8 +302,8 @@ describe('createManualRunner', () => {
           files: {
             'src/a.js': {
               mutants: [
-                { status: 'Timeout' },
-                { status: 'Survived' }
+                { status: 'timeout' },
+                { status: 'survived' }
               ]
             }
           },
@@ -334,7 +334,7 @@ describe('createManualRunner', () => {
         [srcB]: codeB,
         [reportPath]: JSON.stringify({
           files: {
-            'src/a.js': { mutants: [{ status: 'Killed' }, { status: 'Survived' }] }
+            'src/a.js': { mutants: [{ status: 'killed' }, { status: 'survived' }] }
           },
           sourceHashes: {
             'src/a.js': hashOf(codeA),
@@ -442,8 +442,8 @@ describe('createManualRunner', () => {
           files: {
             'src/a.js': {
               mutants: [
-                { status: 'Killed', mutatorName: 'eq', location: { start: { line: 1 } }, description: '== → !=' },
-                { status: 'Survived', mutatorName: 'eq2', location: { start: { line: 2 } }, description: '== → ===' }
+                { id: 'eq1', status: 'killed', name: 'eq', line: 1 },
+                { id: 'eq2', status: 'survived', name: 'eq2', line: 2 }
               ]
             }
           },
@@ -493,8 +493,8 @@ describe('createManualRunner', () => {
         [srcB]: codeB,
         [reportPath]: JSON.stringify({
           files: {
-            'src/a.js': { mutants: [{ status: 'Killed' }] },
-            'deleted.js': { mutants: [{ status: 'Killed' }] }
+            'src/a.js': { mutants: [{ status: 'killed' }] },
+            'deleted.js': { mutants: [{ status: 'killed' }] }
           },
           sourceHashes: {
             'src/a.js': hashOf(codeA),
@@ -537,7 +537,7 @@ describe('createManualRunner', () => {
         ['reports/custom.json']: JSON.stringify({
           files: {
             'src/a.js': {
-              mutants: [{ id: 'x1', line: 1, name: '=== → !==', status: 'Killed' }]
+              mutants: [{ id: 'x1', line: 1, name: '=== → !==', status: 'killed' }]
             }
             // src/b.js intentionally absent from previous report files
           },
@@ -573,7 +573,7 @@ describe('createManualRunner', () => {
         ['reports/custom.json']: JSON.stringify({
           files: {
             'src/a.js': {
-              mutants: [{ id: 'x1', line: 1, name: '=== → !==', status: 'Killed' }]
+              mutants: [{ id: 'x1', line: 1, name: '=== → !==', status: 'killed' }]
             }
           },
           sourceHashes: { 'src/a.js': hash },
@@ -645,7 +645,7 @@ describe('createManualRunner', () => {
         ['reports/custom.json']: JSON.stringify({
           files: {
             'src/a.js': {
-              mutants: [{ status: 'Killed', killedBy: ['t.test.js'] }]
+              mutants: [{ status: 'killed', killedBy: ['t.test.js'] }]
             }
           },
           sourceHashes: { 'src/a.js': hash },
