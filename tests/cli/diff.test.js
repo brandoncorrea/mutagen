@@ -269,6 +269,21 @@ describe('diffReports', () => {
     expect(output()).toContain('(+0.0%)')
   })
 
+  it('counts survived mutants in overall summary', () => {
+    runDiff(
+      { 'a.js': { mutants: [
+        makeMutant('m1', 'x', 'Killed'),
+        makeMutant('m2', 'y', 'Survived')
+      ] } },
+      { 'a.js': { mutants: [
+        makeMutant('m1', 'x', 'Killed'),
+        makeMutant('m2', 'y', 'Survived')
+      ] } }
+    )
+
+    expect(output()).toContain('Survived: 1 → 1')
+  })
+
   it('prints negative score delta when score decreases', () => {
     runDiff(
       { 'a.js': { mutants: [
@@ -613,6 +628,22 @@ describe('diffReports', () => {
         after: null,
         delta: 0
       })
+    })
+
+    it('computes score from killed/total fields when mutants array is absent', () => {
+      readFileSync
+        .mockReturnValueOnce(JSON.stringify(makeReport({
+          'a.js': { killed: 3, total: 4 }
+        })))
+        .mockReturnValueOnce(JSON.stringify(makeReport({
+          'a.js': { killed: 4, total: 4 }
+        })))
+      diffReports('before.json', 'after.json', out, true)
+
+      const json = parsedOutput()
+      expect(json.beforeScore).toBe(75)
+      expect(json.afterScore).toBe(100)
+      expect(json.delta).toBe(25)
     })
 
     it('does not print text report headers in JSON mode', () => {
