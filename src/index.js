@@ -16,5 +16,4 @@ export { createManualRunner } from './cli/manual.js'
 
 // Report utilities
 export { mutationId } from './core/mutation-id.js'
-export { combineReportData } from './core/report-data.js'
 export { diffReports } from './cli/diff.js'

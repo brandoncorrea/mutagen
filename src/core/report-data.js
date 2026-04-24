@@ -1,15 +1,14 @@
 /**
  * Shared data utilities for mutation reports.
- * Used by CLI, Stryker integration, and diff/incremental modules.
  *
- * Mutation identity (mutationId, mutantKey) → core/mutation-id.js
+ * Mutation identity (mutationId) → core/mutation-id.js
  * Mutation status (isKilled, isAlive, scoring) → core/mutation-status.js
  */
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { resolve, relative, dirname } from 'node:path'
 
-import { mutationId, mutantKey } from './mutation-id.js'
+import { mutationId } from './mutation-id.js'
 import { STATUS, isKilled, isAlive, calculateScore } from './mutation-status.js'
 
 const SEPARATOR_WIDTH = 60
@@ -24,17 +23,6 @@ export function tryLoadJson(path, out) {
     if (out)
       out.log(`Warning: could not read ${path}: ${err.message}`)
   }
-}
-
-export function combineReportData(reports, out) {
-  const entries = loadAllEntries(reports, out)
-  const { mergedFiles, duplicates } = deduplicateMutants(entries)
-
-  if (duplicates)
-    out.log(`  Deduplicated: ${duplicates} duplicate mutant(s) removed`)
-
-  const { report } = buildStructuredReport(mergedFiles)
-  return report
 }
 
 export function toJsonMutants(sourceFile, results, { survivorsOnly } = {}) {
@@ -191,36 +179,6 @@ function roundToOneDecimal(n) {
 
 function extractDescription(description, index) {
   return description?.split(' → ')[index] || ''
-}
-
-function loadAllEntries(reports, out) {
-  return reports
-    .map(filePath => tryLoadJson(filePath, out))
-    .filter(Boolean)
-    .flatMap(({ files }) => Object.entries(files))
-}
-
-function deduplicateMutants(entries) {
-  const mergedFiles = {}
-  const seen = new Set()
-  let duplicates = 0
-
-  for (const [path, fileData] of entries) {
-    if (!mergedFiles[path])
-      mergedFiles[path] = { ...fileData, mutants: [] }
-    if (!fileData.mutants) continue
-    for (const mutant of fileData.mutants) {
-      const key = mutantKey(path, mutant)
-      if (seen.has(key)) {
-        duplicates++
-      } else {
-        seen.add(key)
-        mergedFiles[path].mutants.push(mutant)
-      }
-    }
-  }
-
-  return { mergedFiles, duplicates }
 }
 
 function toMutant(relPath, mutation, status) {

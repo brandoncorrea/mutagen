@@ -1,52 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { printRunReport, printSummary, formatQuietSummary } from '../../src/cli/report.js'
-
-describe('printSummary', () => {
-  it('prints file count, statuses, and mutation score', () => {
-    const lines = []
-    const out = { log: msg => lines.push(msg), error: () => {} }
-    const merged = {
-      files: {
-        'a.js': { mutants: [{ status: 'Killed' }, { status: 'Survived' }] },
-        'b.js': { mutants: [{ status: 'Killed' }] }
-      }
-    }
-    const counts = { killed: 2, survived: 1, noCoverage: 0, timeout: 0 }
-
-    printSummary(merged, counts, '/tmp/report.json', out)
-
-    const output = lines.join('\n')
-    expect(output).toContain('Files:    2')
-    expect(output).toContain('Killed:   2')
-    expect(output).toContain('Survived: 1')
-    expect(output).toContain('66.7%')
-    expect(output).toContain('/tmp/report.json')
-  })
-
-  it('shows 100.0% when no mutants', () => {
-    const lines = []
-    const out = { log: msg => lines.push(msg), error: () => {} }
-    const counts = { killed: 0, survived: 0, noCoverage: 0, timeout: 0 }
-    printSummary({ files: {} }, counts, null, out)
-    const output = lines.join('\n')
-    expect(output).toContain('100.0%')
-    expect(output).not.toContain('Report:')
-  })
-
-  it('includes timeout in score calculation', () => {
-    const lines = []
-    const out = { log: msg => lines.push(msg), error: () => {} }
-    const merged = {
-      files: { 'a.js': { mutants: [{ status: 'Timeout' }, { status: 'Survived' }] } }
-    }
-    const counts = { killed: 0, survived: 1, noCoverage: 0, timeout: 1 }
-
-    printSummary(merged, counts, null, out)
-
-    const output = lines.join('\n')
-    expect(output).toContain('50.0%')
-  })
-})
+import { printRunReport, formatQuietSummary } from '../../src/cli/report.js'
 
 describe('formatQuietSummary', () => {
   it('formats single-line score summary', () => {

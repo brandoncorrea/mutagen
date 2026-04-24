@@ -12,8 +12,7 @@
     "mutation-testing",
     "mutation",
     "testing",
-    "vitest",
-    "stryker"
+    "vitest"
   ],
   "type": "module",
   "main": "src/index.js",
@@ -31,8 +30,7 @@
   "exports": {
     ".": "./src/index.js",
     "./mutators": "./src/core/ast-mutators.js",
-    "./runners/vitest": "./src/runners/vitest.js",
-    "./stryker": "./src/stryker.js"
+    "./runners/vitest": "./src/runners/vitest.js"
   },
   "dependencies": {
     "@babel/parser": "^7.29.2",

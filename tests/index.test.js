@@ -21,7 +21,6 @@ describe('public API (index.js)', () => {
     'createManualRunner',
 
     // Report utilities
-    'combineReportData',
     'diffReports',
     'mutationId'
   ]

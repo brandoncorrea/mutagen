@@ -299,24 +299,6 @@ npx mutagen --diff before.json after.json --json   # Machine-readable diff
 
 Returns exit code 1 if regressions are found.
 
-## Stryker integration
-
-Optional utilities for projects using Stryker alongside mutagen:
-
-```js
-import {
-  cleanStaleSandboxes,
-  clearIncrementalCache,
-  runStrykerScope,
-  mergeReports
-} from '@bwawan/mutagen/stryker'
-
-cleanStaleSandboxes()
-clearIncrementalCache()
-const reportFile = runStrykerScope('core', ['src/a.js', 'src/b.js'])
-const survived = mergeReports([reportFile])
-```
-
 ## License
 
 MIT

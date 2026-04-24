@@ -6,23 +6,6 @@
 import { mutationScore, totalMutants } from '../core/mutation-status.js'
 import { HEADER_SEPARATOR, SECTION_SEPARATOR } from '../core/report-data.js'
 
-export function printSummary(merged, counts, reportPath, out) {
-  const { killed, survived, noCoverage, timeout } = counts
-  const score = mutationScore(counts).toFixed(1)
-
-  out.log(`\n${HEADER_SEPARATOR}`)
-  out.log(`MUTATION REPORT`)
-  out.log(HEADER_SEPARATOR)
-  out.log(`Files:    ${Object.keys(merged.files).length}`)
-  out.log(`Killed:   ${killed}`)
-  out.log(`Survived: ${survived}`)
-  out.log(`No cov:   ${noCoverage}`)
-  out.log(`Timeout:  ${timeout}`)
-  out.log(`Score:    ${score}%`)
-  if (reportPath) out.log(`Report:   ${reportPath}`)
-  out.log(`${HEADER_SEPARATOR}\n`)
-}
-
 export function printRunReport(mutations, results, out) {
   const { killed, survived, timedOut = [] } = results
   const allKilled = [...killed, ...timedOut]
