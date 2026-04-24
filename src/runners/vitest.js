@@ -12,7 +12,7 @@
 import { basename, parse } from 'node:path'
 import { Readable } from 'node:stream'
 
-export const BAIL_ON_FIRST_FAILURE = 1
+const BAIL_ON_FIRST_FAILURE = 1
 
 export async function createVitestRunner(sourceFile, options = {}) {
   const { testFile, warm = true } = options

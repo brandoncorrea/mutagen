@@ -1,7 +1,7 @@
 /**
  * AST-based mutation generation engine.
- * Parses source into an AST, walks the tree, and generates mutations
- * by node type. Returns the same shape as the regex engine.
+ * Parses source into an AST, walks the tree,
+ * and generates mutations by node type.
  *
  * Mutator interface:
  *   { name, types: string[],
