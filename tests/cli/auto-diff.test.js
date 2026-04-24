@@ -139,6 +139,18 @@ describe('autoDiffSummary', () => {
     expect(autoDiffSummary(previous, current)).toBeNull()
   })
 
+  it('returns null early when previous survivors have no valid ids', () => {
+    const previous = makeReport({}, [
+      { file: 'a.js', line: 1, name: 'x' },
+      { file: 'a.js', line: 2, name: 'y' }
+    ])
+    const current = {
+      'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'killed')] }
+    }
+
+    expect(autoDiffSummary(previous, current)).toBeNull()
+  })
+
   describe('format', () => {
     it('uses singular "survivor" for count of 1', () => {
       const previous = reportWithSurvivors({
@@ -148,7 +160,7 @@ describe('autoDiffSummary', () => {
         'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'survived')] }
       }
 
-      expect(autoDiffSummary(previous, current)).toContain('1 unchanged survivor')
+      expect(autoDiffSummary(previous, current)).toMatch(/1 unchanged survivor$/)
       expect(autoDiffSummary(previous, current)).not.toContain('survivors')
     })
 
