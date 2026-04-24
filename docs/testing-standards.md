@@ -4,10 +4,10 @@ Reference guide for test quality. Read this before writing any tests.
 
 ## Test Naming
 
-Test names are specifications. They describe behavior, not implementation. They should read like documentation. Both stacks use BDD-style testing libraries where test names are plain strings.
+Test names are specifications. They describe behavior, not implementation. They should read like documentation.
 
-**Good:** `"rejects expired tokens"`, `"returns empty list when no results found"`
-**Bad:** `"test validate"`, `"test function 1"`, `"it works"`
+**Good:** `"returns empty array when source has no mutable nodes"`, `"exits 1 when survivors remain"`
+**Bad:** `"test parse"`, `"test function 1"`, `"it works"`
 
 Aim for the pattern: `<expected behavior> when <condition>` — but prioritize readability over rigid format.
 
@@ -21,7 +21,7 @@ Every test follows Arrange → Act → Assert:
 // Assert — verify the outcome
 ```
 
-Use `before`, `after`, `before-all`, and `after-all` hooks to extract shared setup and teardown. This keeps test bodies clean and eliminates duplication. When setup hooks handle the Arrange (and sometimes the Act), the test body can focus entirely on assertions — this is a good thing.
+Use `beforeEach`, `afterEach`, `beforeAll`, and `afterAll` hooks to extract shared setup and teardown. This keeps test bodies clean and eliminates duplication. When setup hooks handle the Arrange (and sometimes the Act), the test body can focus entirely on assertions — this is a good thing.
 
 Keep tests readable. If you can't tell what a test does without reading three different hooks, the setup has been over-extracted.
 
@@ -29,22 +29,21 @@ Keep tests readable. If you can't tell what a test does without reading three di
 
 Each test verifies ONE logical behavior. Multiple assertions are fine if they all verify the same behavior from different angles. But if a test fails, you should immediately know WHAT broke without reading the test body.
 
-**Good:** Two asserts checking that a created user has the right name AND email (one behavior: user creation)
-**Bad:** One test that checks user creation, then checks login, then checks profile fetch (three behaviors)
+**Good:** Two asserts checking that a report has the right score AND the right survivor count (one behavior: report generation)
+**Bad:** One test that checks mutation generation, then checks runner execution, then checks report writing (three behaviors)
 
 ## Test Behavior, Not Implementation
 
-Tests should describe WHAT the system does, not HOW it does it internally. Test from the outside in: dispatch events, call public functions, render components, hit endpoints. Check the side effects and outputs — not the internal steps that produced them.
+Tests should describe WHAT the system does, not HOW it does it internally. Test from the outside in: call public functions, check return values and side effects — not the internal steps that produced them.
 
 **Signs you're testing implementation:**
-- Mocking private methods
+- Mocking private/internal functions
 - Asserting on internal state that isn't part of the public contract
 - Tests that break when you refactor without changing behavior
-- Testing the exact sequence of internal method calls
-- Reaching into component internals instead of interacting through the rendered UI
+- Testing the exact sequence of internal function calls
 
 **Signs you're testing behavior:**
-- Tests use the public API or rendered output
+- Tests use the public API (exported functions)
 - Refactoring internals doesn't break tests
 - Test names read as user-facing specifications
 - Tests would still make sense if you rewrote the implementation from scratch
@@ -53,7 +52,8 @@ Tests should describe WHAT the system does, not HOW it does it internally. Test 
 
 Outside-in is not all-or-nothing. There are layers:
 
-- The **HTTP layer** (routing, middleware) is separate from the **business logic layer** of each handler. These can and should be tested independently.
+- The **CLI layer** (arg parsing, mode dispatch) is separate from the **runner layer** (mutation execution). These can and should be tested independently.
+- The **AST engine** has its own contract (source in, mutations out) separate from the **report layer** that formats results.
 - **Shared code** that is implicitly tested through its callers may deserve direct tests if it has grown into its own module with its own responsibilities. Promoting it to a directly testable unit means its dependents can fake it out, keeping their tests simpler.
 - The question is: does this code have its own contract? If yes, test it directly. If it's a private helper that only exists to serve one caller, implicit coverage is fine.
 
@@ -76,7 +76,7 @@ Duplicate tests often appear after refactoring when old tests are left behind. C
 
 ## Implicit Coverage Is Real Coverage
 
-Code does not need its own dedicated test file to be considered tested. A helper function called by a component is tested through that component's tests. A validation function used by an API handler is tested through the handler's tests.
+Code does not need its own dedicated test file to be considered tested. A helper function called by the AST engine is tested through the engine's tests. A formatting function used by the report module is tested through the report's tests.
 
 Before declaring code "untested":
 1. Trace the call sites
@@ -99,57 +99,44 @@ Do not keep dead code "just in case." Version control exists for that.
 
 ## Shared Test Data
 
-Most applications have a core domain that shows up in nearly every test — users, accounts, projects, etc. Rather than rebuilding this data from scratch in every test file, define a shared set of well-known test entities that the entire suite can reference.
+Rather than rebuilding test data from scratch in every test file, define shared fixtures that the entire suite can reference.
 
-### Named Personas
+### What to share
 
-Give test entities recognizable names and fixed roles. When someone reading a test sees "Jarvis," they should immediately know that's an admin user — not some throwaway string.
+Mutagen tests commonly need:
+- **Test mutators** — a small set of AST mutators for generating mutations in test source code
+- **Source code strings** — simple JS snippets that produce known mutations (e.g., `'if (a === b) {}'`)
+- **Fake runners** — mock runner objects with queued results (`{ passed: true }`, `{ passed: false }`)
+- **Fake worktrees** — mock temp copies with `resolve`, `mapPaths`, `cleanup`
+- **Report fixtures** — structured report objects with known scores, survivors, and mutants
 
-Build these personas into the in-memory database or test fixtures so they're available by default. Tests that need a user to already exist shouldn't have to create one first.
+These live in shared test helpers (`tests/cli/helpers.js`, `tests/runners/vitest-helpers.js`) so every test file can reference them.
 
 ### Guidelines
 
-- Define personas in your shared test helpers (`spec_helper`, `testHelpers`, etc.) so every test file can reference them
-- Give each persona a clear, memorable identity: a name, a role, and any other attributes that matter to the domain. Document what each persona represents if it isn't obvious from the name.
-- Keep the set small and stable — a handful of well-known personas is better than dozens of forgettable ones
-- Tests that create, update, or delete entities can operate on these shared personas rather than building throwaway data
-- Tests that need a truly unique or unusual entity (edge cases, specific error conditions) should still build their own — shared data is for the common cases
-- Never mutate shared personas in a way that leaks between tests. Reset the in-memory database between tests, or treat shared personas as templates that each test copies from
-
-### Why This Matters
-
-Uniform test data makes the suite read like a cohesive story rather than a collection of isolated fragments. A new developer scanning test files picks up the cast of characters quickly: "Alice is a regular user, Jarvis is an admin, this org has three members." That familiarity reduces cognitive load and makes tests easier to write, read, and review.
+- Keep shared fixtures small and stable
+- Tests that need unusual data (edge cases, specific error conditions) should build their own
+- Never mutate shared fixtures in a way that leaks between tests
 
 ## What to Test
 
 - **Happy path** — the expected, normal usage
 - **Edge cases** — empty inputs, nulls, boundary values, off-by-one
-- **Error cases** — invalid input, missing data, failure modes
-- **Component integration** — the scenario may work in isolation, but does it work when rendered with its parent?
+- **Error cases** — invalid input, missing data, failure modes (missing files, parse errors, preflight failures)
 - **Security boundaries** — see `/docs/security-checklist.md`
 
 ## What NOT to Test
 
 - Things that already have tests (see "No Duplicate Tests")
-- Framework internals or third-party library behavior
+- Framework internals or third-party library behavior (`@babel/parser` parsing, `vitest` runner internals)
 - Implementation details that aren't part of the public contract
 - Dead code (delete it instead)
-
-## Backend API Testing
-
-Backend tests have two layers, and they should be tested separately:
-
-**Handler tests** verify business logic — that given certain input, the handler produces the correct output and side effects. These call the handler function directly, which keeps them simpler and avoids the complexity of setting up the full HTTP stack for every test case.
-
-**Route tests** verify the HTTP wiring — that the right methods and paths invoke the right handlers, and that middleware (auth, validation, error handling) is applied correctly. Route tests should **mock the handler** and verify it was invoked, rather than asserting on response bodies or status codes. This is one of the rare cases where mocks are preferred — you only care that the correct function was called for the correct method and path.
-
-This separation means changes to handler logic only break handler tests, and changes to routing only break route tests. If route tests assert on response codes or bodies, a handler change breaks both layers — exactly the kind of coupling we want to avoid.
 
 ## Assertion Style
 
 - Prefer truthiness checks when all you care about is truthy/falsy. If `null` or `undefined` communicate the same thing as `false`, asserting strict `false` is testing implementation, not behavior.
-- Use concrete expected values when the specific value is the behavior under test. If the system should return exactly 3 results, assert `3` — that's a behavioral claim.
-- For random or generated values, assert on boundaries or shape rather than exact values.
+- Use concrete expected values when the specific value is the behavior under test. If the system should return exactly 3 mutations, assert `3` — that's a behavioral claim.
+- For random or generated values (like mutation IDs), assert on shape rather than exact values: `expect(id).toMatch(/^[0-9a-f]{8}$/)`.
 - For collections, assert on specific contents when the values matter, and on length or emptiness when they don't.
 
 The guiding question: **is the exact value part of the behavior contract, or am I just checking that something reasonable came back?** Let that answer drive the assertion.
@@ -159,18 +146,20 @@ The guiding question: **is the exact value part of the behavior contract, or am 
 We value meaningful coverage of critical paths over chasing a percentage. A codebase with 60% coverage of the right things is better than 95% coverage padded with trivial tests.
 
 Focus coverage on:
-1. Business logic and domain rules
-2. Security and validation boundaries
-3. Error handling and failure modes
-4. Complex conditional logic
+1. Mutation generation logic (AST engine, mutator definitions)
+2. Runner adapters (vitest warm/cold, jest spawning)
+3. Report data computation (scoring, survivors, deltas)
+4. CLI argument parsing and mode dispatch
+5. Error handling and failure modes
 
 Do not write tests solely to increase a coverage number. Every test must protect against a real regression.
 
 ## Test Speed
 
-- Unit tests must be fast. If a test hits the network, disk, or database, it's an integration test — isolate it.
+- Unit tests must be fast. If a test hits the network or spawns real processes, it's an integration test — isolate it.
 - Prefer in-memory fakes over mocks. Mocks verify interaction; fakes verify behavior.
-- If you must mock, mock at the boundary (I/O, network, clock) — never mock the class under test.
+- If you must mock, mock at the boundary (file system, child processes, vitest API) — never mock the module under test.
+- Use `vi.mock('node:fs')` to avoid real file I/O in unit tests.
 
 ## Red → Green → Refactor Checklist
 
