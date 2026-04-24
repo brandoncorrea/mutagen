@@ -82,20 +82,29 @@ When `--json [path]` is used, a structured report is written:
   "survived": 2,
   "timedOut": 0,
   "files": {
-    "src/foo.js": { "score": 100, "killed": 8, "total": 8 },
-    "src/bar.js": { "score": 66.7, "killed": 4, "total": 6 }
+    "src/foo.js": {
+      "score": 100, "killed": 8, "total": 8,
+      "mutants": [
+        { "id": "a1b2c3d4", "name": "=== → !==", "status": "killed", "line": 10,
+          "original": "if (a === b) {}", "mutated": "if (a !== b) {}",
+          "killedBy": ["tests/foo.test.js"] }
+      ]
+    },
+    "src/bar.js": { "score": 66.7, "killed": 4, "total": 6, "mutants": [] }
   },
   "survivors": [
     {
+      "id": "e5f6a7b8",
       "file": "src/bar.js",
       "line": 42,
       "name": "=== → !==",
       "original": "if (a === b) {}",
-      "mutated": "if (a !== b) {}"
+      "mutated": "if (a !== b) {}",
+      "coveredBy": ["tests/bar.test.js"]
     }
   ],
   "deltas": {
-    "fixes": ["src/bar.js:10:+ → -"],
+    "fixes": [{ "file": "src/bar.js", "line": 10, "name": "+ → -" }],
     "regressions": [],
     "rerunFiles": ["src/bar.js"],
     "cachedFiles": ["src/foo.js"]
@@ -103,7 +112,7 @@ When `--json [path]` is used, a structured report is written:
 }
 ```
 
-The `deltas` field is only present in incremental mode.
+Per-file entries include a `mutants` array with every individual mutant (id, name, status, line, original, mutated, killedBy/coveredBy). Survivors are collected into the top-level `survivors` array for quick access. The `deltas` field is only present in incremental mode.
 
 ## Config file
 
