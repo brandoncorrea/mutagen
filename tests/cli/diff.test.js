@@ -269,6 +269,22 @@ describe('diffReports', () => {
     expect(output()).toContain('(+0.0%)')
   })
 
+  it('skips mutants with unrecognized status in overall summary counts', () => {
+    runDiff(
+      { 'a.js': { mutants: [
+        makeMutant('m1', 'x', 'Killed'),
+        makeMutant('m2', 'y', 'CompileError')
+      ] } },
+      { 'a.js': { mutants: [
+        makeMutant('m1', 'x', 'Killed'),
+        makeMutant('m2', 'y', 'CompileError')
+      ] } }
+    )
+
+    // CompileError mutant is neither killed nor survived, so total = 1
+    expect(output()).toContain('Mutations: 1 → 1')
+  })
+
   it('counts survived mutants in overall summary', () => {
     runDiff(
       { 'a.js': { mutants: [
@@ -644,6 +660,32 @@ describe('diffReports', () => {
       expect(json.beforeScore).toBe(75)
       expect(json.afterScore).toBe(100)
       expect(json.delta).toBe(25)
+    })
+
+    it('uses report.score directly when present', () => {
+      readFileSync
+        .mockReturnValueOnce(JSON.stringify({ ...makeReport({ 'a.js': { mutants: [] } }), score: 42 }))
+        .mockReturnValueOnce(JSON.stringify({ ...makeReport({ 'a.js': { mutants: [] } }), score: 88 }))
+      diffReports('before.json', 'after.json', out, true)
+
+      const json = parsedOutput()
+      expect(json.beforeScore).toBe(42)
+      expect(json.afterScore).toBe(88)
+    })
+
+    it('defaults killed and total to zero when missing from structured entries', () => {
+      readFileSync
+        .mockReturnValueOnce(JSON.stringify(makeReport({
+          'a.js': {}
+        })))
+        .mockReturnValueOnce(JSON.stringify(makeReport({
+          'a.js': { killed: 1, total: 2 }
+        })))
+      diffReports('before.json', 'after.json', out, true)
+
+      const json = parsedOutput()
+      expect(json.beforeScore).toBe(100)
+      expect(json.afterScore).toBe(50)
     })
 
     it('does not print text report headers in JSON mode', () => {
