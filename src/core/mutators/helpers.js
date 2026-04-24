@@ -93,6 +93,33 @@ export function staticMethodSwap(name, obj, from, replacement) {
   }
 }
 
+export function memberCallRemoval(name, method, testArgs) {
+  return {
+    name,
+    types: ['CallExpression'],
+    test: node => isMemberCall(node, method)
+      && (testArgs ? testArgs(node) : true),
+    mutate: ({ callee, end }) => ({
+      start: callee.object.end,
+      end,
+      replacement: ''
+    })
+  }
+}
+
+export function staticMethodRemoval(name, obj, method) {
+  return {
+    name,
+    types: ['CallExpression'],
+    test: node => isStaticCall(node, obj, method),
+    mutate: ({ callee }) => ({
+      start: callee.start,
+      end: callee.end,
+      replacement: ''
+    })
+  }
+}
+
 export function globalFnSwap(name, from, replacement) {
   return {
     name,

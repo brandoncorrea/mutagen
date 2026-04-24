@@ -235,7 +235,7 @@ function buildProgressWriter(jsonOutput, config, previous, classification) {
   }
 }
 
-function mergeCachedFiles(freshFileResults, previous, classification) {
+export function mergeCachedFiles(freshFileResults, previous, classification) {
   const merged = { ...freshFileResults }
   if (previous.previousReport)
     for (const relPath of classification.unchangedSources)

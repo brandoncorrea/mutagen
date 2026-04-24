@@ -14,24 +14,12 @@ vi.mock('node:fs', async (importOriginal) => {
 
 vi.mock('../../../src/core/temp-copy.js')
 
-import { createManualRunner as _createManualRunner } from '../../../src/cli/manual.js'
 import { createTempCopy } from '../../../src/core/temp-copy.js'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
-import { testMutators, sourceCode, hashOf, fakeRunner, mockFs as _mockFs, noop } from '../helpers.js'
+import { testMutators, sourceCode, hashOf, fakeRunner, mockFs as _mockFs, noop, fakeWorktree, createTestRunner } from '../helpers.js'
 
 function mockFs(files) { _mockFs(readFileSync, files) }
-function createManualRunner(config) {
-  return _createManualRunner({ out: noop, ...config })
-}
 
-function fakeWorktree() {
-  const tempRoot = '/tmp/mutagen-test'
-  return {
-    root: tempRoot,
-    resolve: vi.fn((path) => path.replace(resolve('.'), tempRoot)),
-    cleanup: vi.fn()
-  }
-}
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -72,7 +60,7 @@ describe('createManualRunner', () => {
         { passed: true },
         { passed: false, killedBy: ['test/a.test.js'] }
       ])
-      const manual = createManualRunner({
+      const manual = createTestRunner({
         mutators: testMutators,
         sources: ['src/a.js'],
         testSources: ['test/a.test.js'],
@@ -109,7 +97,7 @@ describe('createManualRunner', () => {
         { passed: true },
         { passed: false, killedBy: ['test/a.test.js'] }
       ])
-      const manual = createManualRunner({
+      const manual = createTestRunner({
         mutators: testMutators,
         sources: ['src/a.js'],
         testSources: ['test/a.test.js'],
@@ -145,7 +133,7 @@ describe('createManualRunner', () => {
       })
 
       const createRunner = vi.fn()
-      const manual = createManualRunner({
+      const manual = createTestRunner({
         mutators: testMutators,
         sources: ['src/a.js'],
         testSources: ['test/a.test.js'],
@@ -191,7 +179,7 @@ describe('createManualRunner', () => {
         { passed: true },
         { passed: false, killedBy: ['test/a.test.js'] }
       ])
-      const manual = createManualRunner({
+      const manual = createTestRunner({
         mutators: testMutators,
         sources: ['src/a.js'],
         testSources: ['test/a.test.js', 'test/b.test.js'],
@@ -229,7 +217,7 @@ describe('createManualRunner', () => {
       })
 
       const createRunner = vi.fn()
-      const manual = createManualRunner({
+      const manual = createTestRunner({
         mutators: testMutators,
         sources: ['src/a.js'],
         testSources: ['test/a.test.js'],
@@ -262,7 +250,7 @@ describe('createManualRunner', () => {
       })
 
       const createRunner = vi.fn()
-      const manual = createManualRunner({
+      const manual = createTestRunner({
         mutators: testMutators,
         sources: ['src/a.js'],
         testSources: ['test/a.test.js'],
@@ -297,7 +285,7 @@ describe('createManualRunner', () => {
         { passed: false }
       ])
       const lines = []
-      const manual = _createManualRunner({
+      const manual = createTestRunner({
         mutators: testMutators,
         sources: ['src/a.js'],
         testSources: ['test/a.test.js'],

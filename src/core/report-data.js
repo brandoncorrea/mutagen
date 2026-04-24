@@ -6,13 +6,13 @@
  * Mutation status (isKilled, isAlive, scoring) → core/mutation-status.js
  */
 
-const SEPARATOR_WIDTH = 60
-
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { resolve, relative, dirname } from 'node:path'
 
 import { mutationId, mutantKey } from './mutation-id.js'
-import { STATUS, isKilled, isAlive } from './mutation-status.js'
+import { STATUS, isKilled, isAlive, calculateScore } from './mutation-status.js'
+
+const SEPARATOR_WIDTH = 60
 
 export const HEADER_SEPARATOR = '═'.repeat(SEPARATOR_WIDTH)
 export const SECTION_SEPARATOR = '─'.repeat(SEPARATOR_WIDTH)
@@ -78,9 +78,9 @@ export function buildStructuredReport(fileResults, deltas) {
     files, survivors, totalKilled, totalSurvived, totalTimedOut
   } = collectStats(fileResults)
   const total = totalKilled + totalSurvived
-  const score = total ? (totalKilled / total) * 100 : 100
+  const score = calculateScore(totalKilled, total)
   const stats = {
-    score: round1(score),
+    score: roundToOneDecimal(score),
     total,
     killed: totalKilled,
     survived: totalSurvived,
@@ -166,10 +166,10 @@ function tallyFileMutants(path, mutants) {
     tallyMutant(tallies, path, mutant)
 
   const total = mutants.length
-  const score = total ? (tallies.killed / total) * 100 : 100
+  const score = calculateScore(tallies.killed, total)
   return {
     ...tallies,
-    score: round1(score),
+    score: roundToOneDecimal(score),
     total
   }
 }
@@ -199,7 +199,7 @@ function toSurvivor(file, mutation) {
   }
 }
 
-function round1(n) {
+function roundToOneDecimal(n) {
   return parseFloat(n.toFixed(1))
 }
 

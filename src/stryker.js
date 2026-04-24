@@ -3,14 +3,14 @@
  * Import only if your project uses Stryker alongside mutagen.
  */
 
-const STRYKER_TIMEOUT_MS = 600_000
-
 import { execFileSync } from 'node:child_process'
 import { existsSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 
 import { countStatuses } from './core/mutation-status.js'
 import { HEADER_SEPARATOR, combineReportData } from './core/report-data.js'
 import { printSummary } from './cli/report.js'
+
+const STRYKER_TIMEOUT_MS = 600_000
 
 export function cleanStaleSandboxes(out) {
   const strykerTmp = '.stryker-tmp'

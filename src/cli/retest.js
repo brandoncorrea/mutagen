@@ -38,7 +38,7 @@ export function loadRetestTargets(report) {
 export function filterMutationsToSurvivors(
   mutations, filePath, survivorKeys
 ) {
-  const prefix = filePath + ':'
+  const prefix = `${filePath}:`
   const fileSurvivors = [...survivorKeys].filter(
     key => key.startsWith(prefix)
   )
@@ -91,10 +91,7 @@ export async function runRetest(runContext, parsed) {
   out.log(`\n${HEADER_SEPARATOR}`)
   out.log(`MUTAGEN — RETEST MODE`)
   out.log(`   Report: ${reportPath}`)
-  out.log(
-    `   Survivors to retest: ${survivorKeys.size}` +
-    ` across ${files.length} file(s)\n`
-  )
+  out.log(`   Survivors to retest: ${survivorKeys.size} across ${files.length} file(s)\n`)
 
   const result = await retestFiles(files, {
     mutationConfig, createRunner, timeout,
@@ -147,31 +144,37 @@ async function retestFiles(files, options) {
 }
 
 async function retestOneFile(file, options) {
-  const {
-    mutationConfig,
-    createRunner,
-    timeout,
-    survivorKeys,
-    parallel,
-    out
-  } = options
+  const { survivorKeys, out } = options
+  const loaded = loadRetestMutations(file, options)
+  if (loaded.done) return loaded.result
+
+  const { matched, skipped, absPath } = loaded
+  out.log(`  ${file}: retesting ${matched.length} mutation(s)`)
+
+  const opts = {
+    sourceFile: absPath,
+    mutationConfig: options.mutationConfig,
+    createRunner: options.createRunner,
+    timeout: options.timeout,
+    survivorsOnly: false,
+    out,
+    retestMutations: matched
+  }
+
+  const result = await runResult(options.parallel, opts)
+  if (result.error)
+    return toErrorResult(skipped)
+  return toRetestResult(result, skipped)
+}
+
+function loadRetestMutations(file, { mutationConfig, survivorKeys, out }) {
   const absPath = resolve(file)
   let source
   try {
     source = readFileSync(absPath, 'utf-8')
   } catch {
     out.log(`  Skipping ${file} — file not found`)
-    const skipped = [...survivorKeys].filter(
-      key => key.startsWith(file + ':')
-    ).length
-    return {
-      skipped,
-      killed: 0,
-      survived: 0,
-      timedOut: 0,
-      error: false,
-      fileResult: null
-    }
+    return { done: true, result: toMissingFileResult(file, survivorKeys) }
   }
 
   const allMutations = generateMutations(source, mutationConfig)
@@ -181,8 +184,8 @@ async function retestOneFile(file, options) {
 
   if (skipped)
     out.log(
-      `  ${file}: ${skipped} survivor(s) no longer exist` +
-      ` (line shifted or code deleted)`
+      `  ${file}: ${skipped} survivor(s) no longer exist`
+      + ` (line shifted or code deleted)`
     )
 
   if (!matched.length) {
@@ -190,27 +193,22 @@ async function retestOneFile(file, options) {
       `  ${file}: no matching mutations — all survivors gone`
     )
     return {
-      skipped, killed: 0, survived: 0,
-      timedOut: 0, error: false, fileResult: null
+      done: true,
+      result: { skipped, killed: 0, survived: 0, timedOut: 0, error: false, fileResult: null }
     }
   }
 
-  out.log(`  ${file}: retesting ${matched.length} mutation(s)`)
+  return { done: false, matched, skipped, absPath }
+}
 
-  const opts = {
-    sourceFile: absPath,
-    mutationConfig,
-    createRunner,
-    timeout,
-    survivorsOnly: false,
-    out,
-    retestMutations: matched
+function toMissingFileResult(file, survivorKeys) {
+  const skipped = [...survivorKeys].filter(
+    key => key.startsWith(`${file}:`)
+  ).length
+  return {
+    skipped, killed: 0, survived: 0,
+    timedOut: 0, error: false, fileResult: null
   }
-
-  const result = await runResult(parallel, opts)
-  if (result.error)
-    return toErrorResult(skipped)
-  return toRetestResult(result, skipped)
 }
 
 function toErrorResult(skipped) {

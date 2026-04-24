@@ -14,6 +14,7 @@ import {
 import {
   HEADER_SEPARATOR, createReport, writeReportFile
 } from '../core/report-data.js'
+import { mergeCachedFiles } from './incremental.js'
 
 export function printIncrementalSummary(
   out, batchResult, sources, previous, classification
@@ -180,15 +181,8 @@ export function writeMergedReport(
   out, { config, previous, classification, fileResults }
 ) {
   const { reportDir, reportPath } = config
-  const {
-    unchangedSources, currentHashes, currentTestHashes
-  } = classification
-  const mergedFiles = { ...fileResults }
-
-  if (previous.previousReport)
-    for (const relPath of unchangedSources)
-      if (previous.previousReport.files[relPath])
-        mergedFiles[relPath] = previous.previousReport.files[relPath]
+  const { currentHashes, currentTestHashes } = classification
+  const mergedFiles = mergeCachedFiles(fileResults, previous, classification)
 
   const extra = {
     sourceHashes: currentHashes,

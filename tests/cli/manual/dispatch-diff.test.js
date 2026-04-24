@@ -14,25 +14,12 @@ vi.mock('node:fs', async (importOriginal) => {
 
 vi.mock('../../../src/core/temp-copy.js')
 
-import { createManualRunner as _createManualRunner } from '../../../src/cli/manual.js'
 import { createTempCopy } from '../../../src/core/temp-copy.js'
 import { readFileSync, existsSync } from 'node:fs'
-import { testMutators, mockFs as _mockFs, noop } from '../helpers.js'
+import { testMutators, mockFs as _mockFs, noop, fakeWorktree, createTestRunner } from '../helpers.js'
 
 function mockFs(files) { _mockFs(readFileSync, files) }
-function createManualRunner(config) {
-  return _createManualRunner({ out: noop, ...config })
-}
 
-function fakeWorktree() {
-  const tempRoot = '/tmp/mutagen-test'
-  return {
-    root: tempRoot,
-    resolve: vi.fn((path) => path.replace(resolve('.'), tempRoot)),
-    mapPaths: vi.fn(paths => paths),
-    cleanup: vi.fn()
-  }
-}
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -59,7 +46,7 @@ describe('createManualRunner', () => {
         [resolve('after.json')]: report
       })
 
-      const manual = createManualRunner({
+      const manual = createTestRunner({
         mutators: testMutators, sources: [], createRunner: vi.fn()
       })
       const code = await manual.run(['--diff', 'before.json', 'after.json'])
@@ -93,7 +80,7 @@ describe('createManualRunner', () => {
         [resolve('after.json')]: after
       })
 
-      const manual = createManualRunner({
+      const manual = createTestRunner({
         mutators: testMutators, sources: [], createRunner: vi.fn()
       })
       const code = await manual.run(['--diff', 'before.json', 'after.json'])
@@ -104,7 +91,7 @@ describe('createManualRunner', () => {
     it('returns 1 when report file is unreadable', async () => {
       readFileSync.mockImplementation(() => { throw new Error('ENOENT') })
 
-      const manual = createManualRunner({
+      const manual = createTestRunner({
         mutators: testMutators, sources: [], createRunner: vi.fn()
       })
       const code = await manual.run(['--diff', 'missing.json', 'also-missing.json'])
@@ -138,7 +125,7 @@ describe('createManualRunner', () => {
         [resolve('after.json')]: after
       })
 
-      const manual = createManualRunner({
+      const manual = createTestRunner({
         mutators: testMutators, sources: [], createRunner: vi.fn()
       })
       const code = await manual.run(['--diff', 'before.json', 'after.json'])

@@ -15,26 +15,14 @@ vi.mock('node:fs', async (importOriginal) => {
 vi.mock('../../../src/core/pool.js')
 vi.mock('../../../src/core/temp-copy.js')
 
-import { createManualRunner as _createManualRunner } from '../../../src/cli/manual.js'
 import { createPool } from '../../../src/core/pool.js'
 import { createTempCopy } from '../../../src/core/temp-copy.js'
 import { readFileSync, existsSync } from 'node:fs'
-import { testMutators, sourceCode, fakeRunner, killedMutation, setupPool as _setupPool, mockFs as _mockFs, noop } from '../helpers.js'
+import { testMutators, sourceCode, fakeRunner, killedMutation, setupPool as _setupPool, mockFs as _mockFs, noop, fakeWorktree, createTestRunner } from '../helpers.js'
 
 function mockFs(files) { _mockFs(readFileSync, files) }
-function createManualRunner(config) {
-  return _createManualRunner({ out: noop, ...config })
-}
 function setupPool(results) { return _setupPool(createPool, results) }
 
-function fakeWorktree() {
-  const tempRoot = '/tmp/mutagen-test'
-  return {
-    root: tempRoot,
-    resolve: vi.fn((path) => path.replace(resolve('.'), tempRoot)),
-    cleanup: vi.fn()
-  }
-}
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -50,7 +38,7 @@ describe('--parallel flag wiring through manual.js', () => {
       setupPool({ killed: [killedMutation], survived: [], timedOut: [] })
       const runner = fakeRunner([{ passed: true }])
 
-      const manual = createManualRunner({
+      const manual = createTestRunner({
         mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
@@ -65,7 +53,7 @@ describe('--parallel flag wiring through manual.js', () => {
       setupPool({ killed: [killedMutation], survived: [], timedOut: [] })
       const runner = fakeRunner([{ passed: true }])
 
-      const manual = createManualRunner({
+      const manual = createTestRunner({
         mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
@@ -83,7 +71,7 @@ describe('--parallel flag wiring through manual.js', () => {
         { passed: false, killedBy: ['t.test.js'] }
       ])
 
-      const manual = createManualRunner({
+      const manual = createTestRunner({
         mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
@@ -102,7 +90,7 @@ describe('--parallel flag wiring through manual.js', () => {
       setupPool({ killed: [killedMutation], survived: [], timedOut: [] })
       const runner = fakeRunner([{ passed: true }])
 
-      const manual = createManualRunner({
+      const manual = createTestRunner({
         mutators: testMutators, sources: ['src/a.js', 'src/b.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
@@ -116,7 +104,7 @@ describe('--parallel flag wiring through manual.js', () => {
       setupPool({ killed: [killedMutation], survived: [], timedOut: [] })
       const runner = fakeRunner([{ passed: true }])
 
-      const manual = createManualRunner({
+      const manual = createTestRunner({
         mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
@@ -134,7 +122,7 @@ describe('--parallel flag wiring through manual.js', () => {
         { passed: false }
       ])
 
-      const manual = createManualRunner({
+      const manual = createTestRunner({
         mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
@@ -151,7 +139,7 @@ describe('--parallel flag wiring through manual.js', () => {
       setupPool({ killed: [killedMutation], survived: [], timedOut: [] })
       const runner = fakeRunner([{ passed: true }])
 
-      const manual = createManualRunner({
+      const manual = createTestRunner({
         mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
@@ -168,7 +156,7 @@ describe('--parallel flag wiring through manual.js', () => {
         { passed: false }
       ])
 
-      const manual = createManualRunner({
+      const manual = createTestRunner({
         mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })

@@ -27,9 +27,9 @@ describe('parallelWorkerCount', () => {
     expect(parallelWorkerCount(4)).toBe(4)
   })
 
-  it('returns undefined when parallel is not a number', () => {
-    expect(parallelWorkerCount(true)).toBeUndefined()
-    expect(parallelWorkerCount(undefined)).toBeUndefined()
+  it('returns default worker count when parallel is not a number', () => {
+    expect(parallelWorkerCount(true)).toBe(2)
+    expect(parallelWorkerCount(undefined)).toBe(2)
   })
 })
 

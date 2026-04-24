@@ -3,14 +3,14 @@
  * Compare two reports to find regressions, improvements, and new mutants.
  */
 
-const SCORE_DELTA_THRESHOLD = 0.05
-
 import { mutantKey } from '../core/mutation-id.js'
 import {
-  isKilled, isAlive, countStatuses, mutationScore
+  isKilled, isAlive, countStatuses, mutationScore, calculateScore
 } from '../core/mutation-status.js'
 import { tryLoadJson } from '../core/report-data.js'
 import { printDiffReport } from './diff-print.js'
+
+const SCORE_DELTA_THRESHOLD = 0.05
 
 /**
  * Diff two mutation reports and print a summary of changes.
@@ -172,6 +172,6 @@ function fileScores(report) {
 function evaluateMutants(mutants) {
   const total = mutants.length
   const killed = mutants.filter(isKilled).length
-  const score = total ? (killed / total * 100) : 100
+  const score = calculateScore(killed, total)
   return { killed, total, score }
 }

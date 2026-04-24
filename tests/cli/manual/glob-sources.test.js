@@ -15,24 +15,12 @@ vi.mock('node:fs', async (importOriginal) => {
 
 vi.mock('../../../src/core/temp-copy.js')
 
-import { createManualRunner as _createManualRunner } from '../../../src/cli/manual.js'
 import { createTempCopy } from '../../../src/core/temp-copy.js'
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs'
-import { testMutators, sourceCode, hashOf, fakeRunner, mockFs as _mockFs, noop } from '../helpers.js'
+import { testMutators, sourceCode, hashOf, fakeRunner, mockFs as _mockFs, noop, fakeWorktree, createTestRunner } from '../helpers.js'
 
 function mockFs(files) { _mockFs(readFileSync, files) }
-function createManualRunner(config) {
-  return _createManualRunner({ out: noop, ...config })
-}
 
-function fakeWorktree() {
-  const tempRoot = '/tmp/mutagen-test'
-  return {
-    root: tempRoot,
-    resolve: vi.fn((path) => path.replace(resolve('.'), tempRoot)),
-    cleanup: vi.fn()
-  }
-}
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -52,7 +40,7 @@ describe('createManualRunner with include/exclude globs', () => {
       { passed: true }, { passed: false, killedBy: ['t.js'] }
     ])
 
-    const manual = createManualRunner({
+    const manual = createTestRunner({
       mutators: testMutators,
       include: ['src/**/*.js'],
       createRunner: vi.fn().mockResolvedValue(runner)
@@ -70,7 +58,7 @@ describe('createManualRunner with include/exclude globs', () => {
       { passed: true }, { passed: false, killedBy: ['t.js'] }
     ])
 
-    const manual = createManualRunner({
+    const manual = createTestRunner({
       mutators: testMutators,
       include: ['**/*.js'],
       exclude: ['src/vendor/**'],
@@ -89,7 +77,7 @@ describe('createManualRunner with include/exclude globs', () => {
       { passed: true }, { passed: false, killedBy: ['t.js'] }
     ])
 
-    const manual = createManualRunner({
+    const manual = createTestRunner({
       mutators: testMutators,
       sources: ['src/a.js'],
       include: ['src/**/*.js'],
@@ -104,7 +92,7 @@ describe('createManualRunner with include/exclude globs', () => {
   it('passes cwd to glob resolution', () => {
     readdirSync.mockReturnValue([])
 
-    createManualRunner({
+    createTestRunner({
       mutators: testMutators,
       include: ['**/*.js'],
       cwd: '/my/project',
@@ -141,7 +129,7 @@ describe('createManualRunner with include/exclude globs', () => {
       { passed: true },
       { passed: false, killedBy: ['tests/a.test.js'] }
     ])
-    const manual = createManualRunner({
+    const manual = createTestRunner({
       mutators: testMutators,
       sources: ['src/a.js'],
       testInclude: ['tests/**/*.test.js'],
@@ -178,7 +166,7 @@ describe('createManualRunner with include/exclude globs', () => {
     })
 
     const createRunner = vi.fn()
-    const manual = createManualRunner({
+    const manual = createTestRunner({
       mutators: testMutators,
       sources: ['src/a.js'],
       testSources: ['tests/a.test.js'],
@@ -195,7 +183,7 @@ describe('createManualRunner with include/exclude globs', () => {
   it('applies testExclude when resolving testInclude globs', () => {
     readdirSync.mockReturnValue(['tests/a.test.js', 'tests/fixtures/helper.test.js'])
 
-    const manual = createManualRunner({
+    const manual = createTestRunner({
       mutators: testMutators,
       sources: ['src/a.js'],
       testInclude: ['tests/**/*.test.js'],

@@ -20,7 +20,9 @@ export function isString(value) {
   return typeof value === 'string'
 }
 
+export const DEFAULT_WORKER_COUNT = 2
+
 export function parallelWorkerCount(parallel) {
-  if (typeof parallel === 'number')
-    return parallel
+  return typeof parallel === 'number'
+    ? parallel : DEFAULT_WORKER_COUNT
 }

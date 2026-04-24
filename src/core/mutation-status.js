@@ -7,7 +7,8 @@ export const STATUS = {
   SURVIVED: 'Survived',
   KILLED: 'Killed',
   KILLED_ERROR: 'Killed',
-  TIMEOUT: 'Timeout'
+  TIMEOUT: 'Timeout',
+  NO_COVERAGE: 'NoCoverage'
 }
 
 export function isKilled({ status }) {
@@ -15,16 +16,20 @@ export function isKilled({ status }) {
 }
 
 export function isAlive({ status }) {
-  return status === STATUS.SURVIVED || status === 'NoCoverage'
+  return status === STATUS.SURVIVED || status === STATUS.NO_COVERAGE
 }
 
 export function totalMutants({ killed, survived, noCoverage, timeout }) {
   return killed + survived + noCoverage + timeout
 }
 
+export function calculateScore(killed, total) {
+  return total ? (killed / total) * 100 : 100
+}
+
 export function mutationScore(counts) {
   const total = totalMutants(counts)
-  return total ? (counts.killed + counts.timeout) / total * 100 : 100
+  return calculateScore(counts.killed + counts.timeout, total)
 }
 
 export function countStatuses(merged) {
@@ -41,7 +46,7 @@ function accumulateStatus(statuses, { status }) {
     statuses.killed++
   else if (status === STATUS.SURVIVED)
     statuses.survived++
-  else if (status === 'NoCoverage')
+  else if (status === STATUS.NO_COVERAGE)
     statuses.noCoverage++
   else if (status === STATUS.TIMEOUT)
     statuses.timeout++

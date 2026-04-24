@@ -5,6 +5,7 @@
 
 import { resolve, relative } from 'node:path'
 
+import { calculateScore } from '../core/mutation-status.js'
 import { gitChangedFiles } from '../core/git-changed.js'
 import { diffReports } from './diff.js'
 import { parseArgs } from './args.js'
@@ -49,9 +50,9 @@ export async function run(runContext, argv) {
 function printPostRunSummary(out, parsed, stats) {
   if (!stats) return
   if (parsed.progress)
-    out.error(formatProgressSummary(stats) + '\n')
+    out.error(`${formatProgressSummary(stats)}\n`)
   else if (parsed.quiet)
-    out.error(formatQuietSummary(stats) + '\n')
+    out.error(`${formatQuietSummary(stats)}\n`)
 }
 
 function applyRunFlags(runContext, parsed) {
@@ -209,7 +210,7 @@ function getSingleRunResult(runContext, runOptions) {
 export function scoreExitCode({ killed, survived, timedOut }, minScore) {
   const effectiveKilled = killed + timedOut
   const total = effectiveKilled + survived
-  const score = total ? (effectiveKilled / total) * 100 : 100
+  const score = calculateScore(effectiveKilled, total)
   return score >= minScore ? 0 : 1
 }
 

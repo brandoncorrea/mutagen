@@ -1,5 +1,8 @@
 import { vi } from 'vitest'
 import { createHash } from 'node:crypto'
+import { resolve } from 'node:path'
+
+import { createManualRunner as _createManualRunner } from '../../src/cli/manual.js'
 
 export const testMutators = [{
   name: '=== → !==',
@@ -63,6 +66,19 @@ export function makeMutant(id, mutatorName, status, line = 1) {
 export function capture() {
   const lines = []
   return { out: { log: msg => lines.push(msg), error: () => {} }, lines }
+}
+
+export function fakeWorktree(tempRoot = '/tmp/mutagen-test') {
+  return {
+    root: tempRoot,
+    resolve: vi.fn(path => path.replace(resolve('.'), tempRoot)),
+    mapPaths: vi.fn(paths => paths),
+    cleanup: vi.fn()
+  }
+}
+
+export function createTestRunner(config) {
+  return _createManualRunner({ out: noop, ...config })
 }
 
 export function setupPool(createPool, results = { killed: [], survived: [], timedOut: [] }) {

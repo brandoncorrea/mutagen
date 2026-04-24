@@ -5,22 +5,17 @@
 
 import {
   isMemberCall, isStaticCall, methodNameSwap,
-  staticMethodSwap, globalFnSwap
+  staticMethodSwap, globalFnSwap,
+  memberCallRemoval, staticMethodRemoval
 } from './helpers.js'
+
+const noArgs = node => !node.arguments.length
+const hasArgs = node => node.arguments.length > 0
 
 export const methodExpressions = [
   methodNameSwap('toLowerCase → toUpperCase', 'toLowerCase', 'toUpperCase'),
   methodNameSwap('toUpperCase → toLowerCase', 'toUpperCase', 'toLowerCase'),
-  {
-    name: 'trim() → (removed)',
-    types: ['CallExpression'],
-    test: node => isMemberCall(node, 'trim') && !node.arguments.length,
-    mutate: node => ({
-      start: node.callee.object.end,
-      end: node.end,
-      replacement: ''
-    })
-  },
+  memberCallRemoval('trim() → (removed)', 'trim', noArgs),
   {
     name: 'filter(predicate) → filter(true) (ignore predicate)',
     types: ['CallExpression'],
@@ -58,29 +53,11 @@ export const mathMethodSwaps = [
   staticMethodSwap('Math.ceil → Math.floor', 'Math', 'ceil', 'floor'),
   staticMethodSwap('Math.min → Math.max', 'Math', 'min', 'max'),
   staticMethodSwap('Math.max → Math.min', 'Math', 'max', 'min'),
-  {
-    name: 'Math.abs → (removed)',
-    types: ['CallExpression'],
-    test: node => isStaticCall(node, 'Math', 'abs'),
-    mutate: ({ callee }) => ({
-      start: callee.start,
-      end: callee.end,
-      replacement: ''
-    })
-  },
+  staticMethodRemoval('Math.abs → (removed)', 'Math', 'abs'),
   staticMethodSwap('Math.round → Math.floor', 'Math', 'round', 'floor'),
   staticMethodSwap('Math.sqrt → Math.cbrt', 'Math', 'sqrt', 'cbrt'),
   staticMethodSwap('Math.trunc → Math.floor', 'Math', 'trunc', 'floor'),
-  {
-    name: 'Math.sign → (removed)',
-    types: ['CallExpression'],
-    test: node => isStaticCall(node, 'Math', 'sign'),
-    mutate: ({ callee }) => ({
-      start: callee.start,
-      end: callee.end,
-      replacement: ''
-    })
-  }
+  staticMethodRemoval('Math.sign → (removed)', 'Math', 'sign')
 ]
 
 export const arrayMethodSwaps = [
@@ -110,49 +87,13 @@ export const arrayMethodSwaps = [
   methodNameSwap('unshift → push', 'unshift', 'push'),
   methodNameSwap('find → findIndex', 'find', 'findIndex'),
   methodNameSwap('findIndex → find', 'findIndex', 'find'),
-  {
-    name: 'reverse() → (removed)',
-    types: ['CallExpression'],
-    test: node => isMemberCall(node, 'reverse') && !node.arguments.length,
-    mutate: ({ callee, end }) => ({
-      start: callee.object.end,
-      end,
-      replacement: ''
-    })
-  },
+  memberCallRemoval('reverse() → (removed)', 'reverse', noArgs),
   methodNameSwap('splice → slice', 'splice', 'slice'),
-  {
-    name: 'sort() → (removed)',
-    types: ['CallExpression'],
-    test: node => isMemberCall(node, 'sort'),
-    mutate: ({ callee, end }) => ({
-      start: callee.object.end,
-      end,
-      replacement: ''
-    })
-  },
+  memberCallRemoval('sort() → (removed)', 'sort'),
   methodNameSwap('reduce → reduceRight', 'reduce', 'reduceRight'),
   methodNameSwap('reduceRight → reduce', 'reduceRight', 'reduce'),
-  {
-    name: 'forEach() → (removed)',
-    types: ['CallExpression'],
-    test: node => isMemberCall(node, 'forEach'),
-    mutate: ({ callee, end }) => ({
-      start: callee.object.end,
-      end,
-      replacement: ''
-    })
-  },
-  {
-    name: 'flat() → (removed)',
-    types: ['CallExpression'],
-    test: node => isMemberCall(node, 'flat'),
-    mutate: ({ callee, end }) => ({
-      start: callee.object.end,
-      end,
-      replacement: ''
-    })
-  },
+  memberCallRemoval('forEach() → (removed)', 'forEach'),
+  memberCallRemoval('flat() → (removed)', 'flat'),
   methodNameSwap('flatMap → map', 'flatMap', 'map')
 ]
 
@@ -164,26 +105,8 @@ export const mapSetMethodSwaps = [
 ]
 
 export const miscMethodMutations = [
-  {
-    name: 'split() → (removed)',
-    types: ['CallExpression'],
-    test: node => isMemberCall(node, 'split'),
-    mutate: ({ callee, end }) => ({
-      start: callee.object.end,
-      end,
-      replacement: ''
-    })
-  },
-  {
-    name: 'join() → (removed)',
-    types: ['CallExpression'],
-    test: node => isMemberCall(node, 'join'),
-    mutate: ({ callee, end }) => ({
-      start: callee.object.end,
-      end,
-      replacement: ''
-    })
-  }
+  memberCallRemoval('split() → (removed)', 'split'),
+  memberCallRemoval('join() → (removed)', 'join')
 ]
 
 export const objectMethodSwaps = [
@@ -250,31 +173,13 @@ export const stringMethodMutations = [
   methodNameSwap('charCodeAt → charAt', 'charCodeAt', 'charAt'),
   methodNameSwap('toString → valueOf', 'toString', 'valueOf'),
   methodNameSwap('valueOf → toString', 'valueOf', 'toString'),
-  {
-    name: 'toString() → (removed)',
-    types: ['CallExpression'],
-    test: node => isMemberCall(node, 'toString') && !node.arguments.length,
-    mutate: ({ callee, end }) => ({
-      start: callee.object.end,
-      end,
-      replacement: ''
-    })
-  }
+  memberCallRemoval('toString() → (removed)', 'toString', noArgs)
 ]
 
 export const promiseChainMutations = [
   methodNameSwap('.then → .catch', 'then', 'catch'),
   methodNameSwap('.catch → .then', 'catch', 'then'),
-  {
-    name: '.catch() → (removed)',
-    types: ['CallExpression'],
-    test: node => isMemberCall(node, 'catch') && node.arguments.length > 0,
-    mutate: ({ callee, end }) => ({
-      start: callee.object.end,
-      end,
-      replacement: ''
-    })
-  }
+  memberCallRemoval('.catch() → (removed)', 'catch', hasArgs)
 ]
 
 export const typeConversions = [

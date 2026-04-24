@@ -13,7 +13,7 @@ export function createProgressReporter(files, { write } = {}) {
 
   return {
     startFile(filename) {
-      write(filename.padEnd(maxWidth) + ' ')
+      write(`${filename.padEnd(maxWidth)} `)
     },
     dot(status) {
       write(dotChar(status))

@@ -66,8 +66,10 @@ async function cleanupAllPools() {
   await Promise.all(pools.map(pool => closePool(pool).catch(() => {})))
 }
 
+/* exported for testing */
 export { cleanupAllPools as _cleanupAllPools }
 
+/* exported for testing */
 export function _resetCleanupState() {
   activePools.clear()
   removeSignalHandlers()

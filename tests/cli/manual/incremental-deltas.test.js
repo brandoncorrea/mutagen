@@ -15,25 +15,12 @@ vi.mock('node:fs', async (importOriginal) => {
 
 vi.mock('../../../src/core/temp-copy.js')
 
-import { createManualRunner as _createManualRunner } from '../../../src/cli/manual.js'
 import { createTempCopy } from '../../../src/core/temp-copy.js'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
-import { testMutators, sourceCode, hashOf, fakeRunner, mockFs as _mockFs, noop } from '../helpers.js'
+import { testMutators, sourceCode, hashOf, fakeRunner, mockFs as _mockFs, noop, fakeWorktree, createTestRunner } from '../helpers.js'
 
 function mockFs(files) { _mockFs(readFileSync, files) }
-function createManualRunner(config) {
-  return _createManualRunner({ out: noop, ...config })
-}
 
-function fakeWorktree() {
-  const tempRoot = '/tmp/mutagen-test'
-  return {
-    root: tempRoot,
-    resolve: vi.fn((path) => path.replace(resolve('.'), tempRoot)),
-    mapPaths: vi.fn(paths => paths),
-    cleanup: vi.fn()
-  }
-}
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -77,7 +64,7 @@ describe('incremental deltas', () => {
         { passed: false, killedBy: ['t.test.js'] }
       ])
       const errorLines = []
-      const manual = _createManualRunner({
+      const manual = createTestRunner({
         mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner),
         out: { log: () => {}, error: msg => errorLines.push(msg) }
@@ -133,7 +120,7 @@ describe('incremental deltas', () => {
       const runner = fakeRunner([
         { passed: true }
       ])
-      const manual = createManualRunner({
+      const manual = createTestRunner({
         mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
@@ -179,7 +166,7 @@ describe('incremental deltas', () => {
         { passed: true },
         { passed: false }
       ])
-      const manual = createManualRunner({
+      const manual = createTestRunner({
         mutators: testMutators,
         sources: ['src/a.js', 'src/b.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
@@ -215,7 +202,7 @@ describe('incremental deltas', () => {
       })
 
       const errorLines = []
-      const manual = _createManualRunner({
+      const manual = createTestRunner({
         mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn(),
         out: { log: () => {}, error: msg => errorLines.push(msg) }
@@ -235,7 +222,7 @@ describe('incremental deltas', () => {
         { passed: true },
         { passed: true }
       ])
-      const manual = createManualRunner({
+      const manual = createTestRunner({
         mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
@@ -279,7 +266,7 @@ describe('incremental deltas', () => {
         { passed: true },
         { passed: true }
       ])
-      const manual = createManualRunner({
+      const manual = createTestRunner({
         mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })
@@ -327,7 +314,7 @@ describe('incremental deltas', () => {
         { passed: true },
         { passed: false, killedBy: ['t.test.js'] }
       ])
-      const manual = createManualRunner({
+      const manual = createTestRunner({
         mutators: testMutators, sources: ['src/a.js'],
         createRunner: vi.fn().mockResolvedValue(runner)
       })

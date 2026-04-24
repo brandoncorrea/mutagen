@@ -16,25 +16,13 @@ vi.mock('node:fs', async (importOriginal) => {
 vi.mock('../../../src/core/temp-copy.js')
 vi.mock('../../../src/core/git-changed.js')
 
-import { createManualRunner as _createManualRunner } from '../../../src/cli/manual.js'
 import { createTempCopy } from '../../../src/core/temp-copy.js'
 import { gitChangedFiles } from '../../../src/core/git-changed.js'
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs'
-import { testMutators, sourceCode, fakeRunner, mockFs as _mockFs, noop } from '../helpers.js'
+import { testMutators, sourceCode, fakeRunner, mockFs as _mockFs, noop, fakeWorktree, createTestRunner } from '../helpers.js'
 
 function mockFs(files) { _mockFs(readFileSync, files) }
-function createManualRunner(config) {
-  return _createManualRunner({ out: noop, ...config })
-}
 
-function fakeWorktree() {
-  const tempRoot = '/tmp/mutagen-test'
-  return {
-    root: tempRoot,
-    resolve: vi.fn((path) => path.replace(resolve('.'), tempRoot)),
-    cleanup: vi.fn()
-  }
-}
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -51,7 +39,7 @@ describe('--changed flag filters sources to git-changed files', () => {
       { passed: true }, { passed: false, killedBy: ['t.js'] }
     ])
 
-    const manual = createManualRunner({
+    const manual = createTestRunner({
       mutators: testMutators,
       include: ['src/**/*.js'],
       createRunner: vi.fn().mockResolvedValue(runner)
@@ -70,7 +58,7 @@ describe('--changed flag filters sources to git-changed files', () => {
       { passed: true }, { passed: false, killedBy: ['t.js'] }
     ])
 
-    const manual = createManualRunner({
+    const manual = createTestRunner({
       mutators: testMutators,
       include: ['src/**/*.js'],
       createRunner: vi.fn().mockResolvedValue(runner)
@@ -85,7 +73,7 @@ describe('--changed flag filters sources to git-changed files', () => {
     readdirSync.mockReturnValue(['src/a.js', 'src/b.js'])
     gitChangedFiles.mockReturnValue(['lib/unrelated.js'])
 
-    const manual = createManualRunner({
+    const manual = createTestRunner({
       mutators: testMutators,
       include: ['src/**/*.js'],
       createRunner: vi.fn()
@@ -102,7 +90,7 @@ describe('--changed flag filters sources to git-changed files', () => {
       { passed: true }, { passed: false, killedBy: ['t.js'] }
     ])
 
-    const manual = createManualRunner({
+    const manual = createTestRunner({
       mutators: testMutators,
       include: ['src/**/*.js'],
       createRunner: vi.fn().mockResolvedValue(runner)

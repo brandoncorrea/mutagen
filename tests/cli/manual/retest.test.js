@@ -15,26 +15,13 @@ vi.mock('node:fs', async (importOriginal) => {
 vi.mock('../../../src/core/temp-copy.js')
 vi.mock('../../../src/core/pool.js')
 
-import { createManualRunner as _createManualRunner } from '../../../src/cli/manual.js'
 import { createTempCopy } from '../../../src/core/temp-copy.js'
 import { createPool } from '../../../src/core/pool.js'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
-import { testMutators, sourceCode, fakeRunner, mockFs as _mockFs, noop } from '../helpers.js'
+import { testMutators, sourceCode, fakeRunner, mockFs as _mockFs, noop, fakeWorktree, createTestRunner } from '../helpers.js'
 
 function mockFs(files) { _mockFs(readFileSync, files) }
-function createManualRunner(config) {
-  return _createManualRunner({ out: noop, ...config })
-}
 
-function fakeWorktree() {
-  const tempRoot = '/tmp/mutagen-retest'
-  return {
-    root: tempRoot,
-    resolve: vi.fn((path) => path.replace(resolve('.'), tempRoot)),
-    mapPaths: vi.fn(paths => paths),
-    cleanup: vi.fn()
-  }
-}
 
 const survivorReport = JSON.stringify({
   score: 0,
@@ -87,7 +74,7 @@ describe('createManualRunner --retest', () => {
       { passed: false, killedBy: ['t.test.js'] }  // killed
     ])
 
-    const manual = createManualRunner({
+    const manual = createTestRunner({
       mutators: testMutators, sources: ['src/a.js'],
       createRunner: vi.fn().mockResolvedValue(runner)
     })
@@ -108,7 +95,7 @@ describe('createManualRunner --retest', () => {
       { passed: true }   // still surviving
     ])
 
-    const manual = createManualRunner({
+    const manual = createTestRunner({
       mutators: testMutators, sources: ['src/a.js'],
       createRunner: vi.fn().mockResolvedValue(runner)
     })
@@ -121,7 +108,7 @@ describe('createManualRunner --retest', () => {
     const reportPath = resolve('reports/latest.json')
     mockFs({ [reportPath]: noSurvivorReport })
 
-    const manual = createManualRunner({
+    const manual = createTestRunner({
       mutators: testMutators, sources: ['src/a.js'],
       createRunner: vi.fn()
     })
@@ -133,7 +120,7 @@ describe('createManualRunner --retest', () => {
   it('exits 1 when report file cannot be loaded', async () => {
     readFileSync.mockImplementation(() => { throw new Error('ENOENT') })
 
-    const manual = createManualRunner({
+    const manual = createTestRunner({
       mutators: testMutators, sources: ['src/a.js'],
       createRunner: vi.fn()
     })
@@ -150,7 +137,7 @@ describe('createManualRunner --retest', () => {
       [resolve('src/a.js')]: 'const x = 42'  // no === to match
     })
 
-    const manual = createManualRunner({
+    const manual = createTestRunner({
       mutators: testMutators, sources: ['src/a.js'],
       createRunner: vi.fn()
     })
@@ -171,7 +158,7 @@ describe('createManualRunner --retest', () => {
       { passed: false, killedBy: ['t.test.js'] }
     ])
 
-    const manual = createManualRunner({
+    const manual = createTestRunner({
       mutators: testMutators, sources: ['src/a.js'],
       createRunner: vi.fn().mockResolvedValue(runner)
     })
@@ -194,7 +181,7 @@ describe('createManualRunner --retest', () => {
     })
 
     const lines = []
-    const manual = _createManualRunner({
+    const manual = createTestRunner({
       out: { log: msg => lines.push(msg), error: () => {} },
       mutators: testMutators, sources: ['src/a.js'],
       createRunner: vi.fn()
@@ -216,7 +203,7 @@ describe('createManualRunner --retest', () => {
       { passed: false }  // preflight fails
     ])
 
-    const manual = createManualRunner({
+    const manual = createTestRunner({
       mutators: testMutators, sources: ['src/a.js'],
       createRunner: vi.fn().mockResolvedValue(runner)
     })
@@ -237,7 +224,7 @@ describe('createManualRunner --retest', () => {
       { passed: false, killedBy: ['t.test.js'] }
     ])
 
-    const manual = createManualRunner({
+    const manual = createTestRunner({
       mutators: testMutators, sources: ['src/a.js'],
       createRunner: vi.fn().mockResolvedValue(runner)
     })
@@ -264,7 +251,7 @@ describe('createManualRunner --retest', () => {
     })
     createPool.mockReturnValue({ run: poolRun, close: vi.fn().mockResolvedValue() })
 
-    const manual = createManualRunner({
+    const manual = createTestRunner({
       mutators: testMutators, sources: ['src/a.js'],
       createRunner: vi.fn().mockResolvedValue(preflightRunner)
     })
@@ -289,7 +276,7 @@ describe('createManualRunner --retest', () => {
     })
     createPool.mockReturnValue({ run: poolRun, close: vi.fn().mockResolvedValue() })
 
-    const manual = createManualRunner({
+    const manual = createTestRunner({
       mutators: testMutators, sources: ['src/a.js'],
       createRunner: vi.fn().mockResolvedValue(preflightRunner)
     })
@@ -309,7 +296,7 @@ describe('createManualRunner --retest', () => {
     runner.run.mockResolvedValueOnce({ passed: true })  // preflight
       .mockRejectedValue(new Error('Mutation timed out after 100ms'))
 
-    const manual = createManualRunner({
+    const manual = createTestRunner({
       mutators: testMutators, sources: ['src/a.js'],
       createRunner: vi.fn().mockResolvedValue(runner)
     })

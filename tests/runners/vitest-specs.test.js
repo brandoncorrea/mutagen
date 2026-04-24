@@ -197,7 +197,7 @@ describe('createVitestRunner', () => {
       mock.projects = [{
         _vite: {
           moduleGraph: {
-            getModuleById: vi.fn(() => null),
+            getModuleById: vi.fn(() => null)
           }
         }
       }]
