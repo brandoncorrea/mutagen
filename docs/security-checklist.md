@@ -1,94 +1,79 @@
 # Security Checklist
 
-Audit guide for web applications. Work through this checklist for every feature or module you review.
+Audit guide for mutagen. Work through this checklist when reviewing changes that touch file I/O, process spawning, config loading, or dependency updates.
 
 ## The Core Principle
 
-**Never trust external input.** Not from the browser. Not from a mobile client. Not from an external API. Not from a webhook. Any data that crosses a trust boundary must be validated before use. The backend is the source of truth — everything else is untrusted until proven otherwise.
+Mutagen is a CLI dev tool that runs in the developer's project directory with full filesystem access. It reads source files, spawns test processes, creates temp directories, and writes JSON reports. The trust boundary is the **config file** and **CLI arguments** — everything else is internal.
 
-## 1. Input Validation
+## 1. Config File Loading
 
-### The Frontend/Backend Contract
-- [ ] The frontend submits **only user input** — not fully-formed entities
-- [ ] The backend **builds the entity** from the submitted input, adding server-controlled fields (IDs, timestamps, ownership, status, computed values)
-- [ ] The backend validates **all input fields** independently, regardless of what the frontend does
-- [ ] Validation logic that can be shared between frontend and backend **is** shared (same language on both sides makes this possible — use it)
-- [ ] Backend validations **extend** shared validations with server-only concerns (uniqueness checks, authorization, database constraints)
-- [ ] Data from external services is validated the same way client data is — external APIs can return unexpected formats, missing fields, or malicious payloads
+The config file (`mutagen.config.js`) is loaded via dynamic `import()` and executed as JavaScript. This is intentional — the config defines mutators, runner factories, and glob patterns. But it means:
 
-### What to Check
-- [ ] No endpoint blindly saves a client-submitted object to the database
-- [ ] All string inputs are bounded (max length) and trimmed
-- [ ] Numeric inputs have range validation
-- [ ] Enum fields are validated against allowed values on the backend
-- [ ] Arrays and collections have size limits
-- [ ] Nested objects are validated — not just the top-level fields
-- [ ] File uploads are validated for type, size, and content (not just extension)
-- [ ] Invalid types and formats are coerced where reasonable (e.g., string `"3"` to number `3`) — but keep coercion light; don't write exhaustive format-guessing logic
+- [ ] Config path is resolved from cwd or `--config` flag — never from user input in a report or external source
+- [ ] Config loading failures produce a clear error message without leaking system paths beyond the config path itself
+- [ ] The config is loaded exactly once at startup — never re-evaluated during mutation runs
 
-### Red Flag
-If you see a route handler that does something like `db.save(req.body)` or the equivalent — that is a **critical finding**. An attacker can add any field they want: `role: "admin"`, `price: 0`, `verified: true`.
+### What NOT to worry about
 
-## 2. Authentication
+The config file runs arbitrary code by design. This is the same trust model as `jest.config.js`, `vite.config.js`, or any other JS config. The user controls their own config.
 
-- [ ] JWTs are validated on every protected request (signature, expiration, issuer)
-- [ ] JWT secrets are not hardcoded in source — they come from environment/config
-- [ ] Token expiration is set and enforced (short-lived access tokens, longer refresh tokens)
-- [ ] Session cookies use `HttpOnly`, `Secure`, and `SameSite` flags
-- [ ] Session invalidation works — logging out actually destroys the session server-side
-- [ ] Password reset tokens are single-use and time-limited
-- [ ] Authentication failures return generic messages (don't reveal whether a user exists)
+## 2. Child Process Spawning
 
-## 3. Authorization
+The Jest runner spawns `npx jest` as a child process. This is the primary process-execution boundary.
 
-- [ ] Every endpoint checks that the authenticated user has permission to perform the action
-- [ ] Users cannot access or modify other users' data by changing an ID in the URL or body
-- [ ] Admin/elevated routes have role checks — not just authentication checks
-- [ ] Authorization is checked on the **backend**, not just hidden in the frontend UI
-- [ ] Bulk operations verify permission for each item, not just the first
+- [ ] Arguments to `spawn` are passed as an array, not a shell string — no shell injection risk
+- [ ] `stdio` is set to `['ignore', 'pipe', 'pipe']` — stdin is not passed through
+- [ ] Output buffers are capped (`MAX_BUFFER`) to prevent memory exhaustion from malicious test output
+- [ ] The `cwd` option, when set, comes from the config's `root` field — not from external input
+- [ ] Active processes are tracked and killed on runner close
 
 ### Red Flag
-If authorization logic lives only in the frontend (hiding buttons, conditional rendering), any authenticated user can access any endpoint. Always verify server-side.
 
-## 4. Injection
+If any code path interpolates user-provided strings into a shell command or passes untrusted input to `exec`/`execSync` without an args array — that is a **critical finding**.
 
-- [ ] SQL/database queries use parameterized queries or your ORM's built-in escaping — never string concatenation
-- [ ] User input is never interpolated into shell commands
-- [ ] HTML output escapes user-provided content (XSS prevention)
-- [ ] URLs constructed from user input are validated (prevent open redirects, SSRF)
-- [ ] JSON responses set `Content-Type: application/json` (prevents browser sniffing)
+## 3. Temporary File Isolation
 
-## 5. Data Exposure
+Each mutation worker creates a temp copy of the project via `createTempCopy`. This is the crash-safety boundary — original source files are never modified.
 
-- [ ] API responses do not include fields the requesting user shouldn't see (passwords, tokens, other users' private data)
-- [ ] Error messages in production do not leak stack traces, SQL queries, or internal paths
-- [ ] Sensitive data (passwords, tokens, keys) is never logged
-- [ ] Database credentials and API keys are in environment variables, not in source code
-- [ ] `.env` files and secrets are in `.gitignore`
+- [ ] Temp directories are created in `os.tmpdir()` with `mkdtempSync` — unpredictable names
+- [ ] `node_modules` is symlinked, not copied — no risk of modifying dependencies
+- [ ] `.git` is excluded from the copy — no risk of corrupting git state
+- [ ] Temp directories are cleaned up in `finally` blocks and signal handlers
+- [ ] `rmSync` uses `{ recursive: true, force: true }` — cleanup doesn't throw on missing files
 
-## 6. Rate Limiting & Abuse
+### Red Flag
 
-- [ ] Authentication endpoints (login, register, password reset) have rate limiting
-- [ ] Expensive operations (search, file upload, export) have rate limiting
-- [ ] APIs that return lists have pagination with enforced max page sizes
+If mutation source is ever written to the original project directory instead of the temp copy — that is a **critical finding**. The invariant is: `writeFileSync` for mutation source always targets `tempSourceFile` (inside the temp copy), never the original path.
 
-## 7. CSRF / Cross-Origin
+## 4. Report File I/O
 
-- [ ] State-changing requests (POST, PUT, DELETE) have CSRF protection
-- [ ] CORS is configured to allow only expected origins — not `*` in production
-- [ ] Cookie-based auth uses `SameSite` attribute
+Mutagen reads previous reports (for incremental/retest/diff modes) and writes new reports (JSON).
 
-## 8. Dependencies
+- [ ] Report paths come from CLI args or config — not from report content
+- [ ] `tryLoadJson` handles parse failures gracefully — no crashes on malformed JSON
+- [ ] Report directories are created with `mkdirSync({ recursive: true })` — no symlink-following attacks in the report path
+- [ ] Report content is serialized via `JSON.stringify` — no code execution from report data
 
-- [ ] No known vulnerabilities in dependencies (run `npm audit` / check deps)
-- [ ] Dependencies are pinned to specific versions or ranges
-- [ ] Unused dependencies are removed
+## 5. Dependencies
+
+Mutagen has two runtime dependencies:
+
+| Package | Purpose | Risk |
+|---------|---------|------|
+| `@babel/parser` | AST parsing of source files | Parses untrusted source code — parser bugs could cause crashes but not code execution |
+| `picomatch` | Glob pattern matching for source/test file discovery | Matches file paths against user-defined patterns — regex DoS is theoretically possible with pathological patterns |
+
+- [ ] Run `npm audit` before each release
+- [ ] Dependencies use semver ranges (`^`) — patch/minor updates are accepted automatically
+- [ ] No unused dependencies in `package.json`
+- [ ] `vitest` and `@vitest/coverage-v8` are devDependencies only — not shipped to users
 
 ## Severity Levels
 
 When reporting findings, classify them:
 
-- **Critical** — Exploitable now with no authentication or trivial effort. Examples: unauthenticated admin endpoints, raw `db.save(req.body)`, SQL injection, hardcoded secrets in source.
-- **High** — Exploitable by an authenticated attacker or requires some knowledge. Examples: missing authorization checks, IDOR vulnerabilities, missing input validation on sensitive fields.
-- **Medium** — Defense-in-depth gaps. Examples: missing rate limiting, overly verbose error messages, missing security headers.
-- **Low** — Best practice improvements. Examples: missing `SameSite` cookie flag, dependency version pinning, unused dependencies.
+- **Critical** — Code execution or file corruption outside the temp copy. Examples: shell injection in process spawning, writing mutations to original source files, executing code from report JSON.
+- **High** — Data loss or denial of service. Examples: temp directory cleanup failure leaving gigabytes on disk, unbounded memory growth from test output, config loading from untrusted path.
+- **Medium** — Defense-in-depth gaps. Examples: missing buffer caps on process output, verbose error messages leaking filesystem structure, missing signal handler cleanup.
+- **Low** — Best practice improvements. Examples: dependency version pinning, temp directory naming predictability, missing error handling in edge cases.
