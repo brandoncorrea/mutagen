@@ -182,6 +182,39 @@ describe('incremental deltas', () => {
       expect(report.deltas.cachedFiles).toContain('src/a.js')
     })
 
+    it('writes structured report with cached files when all sources are cached', async () => {
+      const srcA = resolve('src/a.js')
+      const codeA = 'const a = 1'
+
+      existsSync.mockReturnValue(true)
+      mockFs({
+        [srcA]: codeA,
+        ['reports/out.json']: JSON.stringify({
+          files: {
+            'src/a.js': {
+              mutants: [{ id: 'x1', name: 'x', status: 'killed', killedBy: ['t.test.js'] }]
+            }
+          },
+          sourceHashes: { 'src/a.js': hashOf(codeA) },
+          testHashes: {}
+        })
+      })
+
+      const manual = createTestRunner({
+        mutators: testMutators, sources: ['src/a.js'],
+        createRunner: vi.fn()
+      })
+      await manual.runIncremental('reports/out.json', null)
+
+      const reportCalls = writeFileSync.mock.calls.filter(
+        ([path]) => path === resolve('reports/out.json')
+      )
+      expect(reportCalls).toHaveLength(1)
+      const report = JSON.parse(reportCalls[0][1])
+      expect(report.files['src/a.js']).toBeDefined()
+      expect(report.files['src/a.js'].mutants).toHaveLength(1)
+    })
+
     it('prints correct file count in score line when all sources are cached', async () => {
       const srcA = resolve('src/a.js')
       const codeA = 'const a = 1'
