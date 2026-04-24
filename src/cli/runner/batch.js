@@ -6,13 +6,13 @@
 import { resolve, relative } from 'node:path'
 
 import {
-  writeStructuredReportFile, tryLoadJson, HEADER_SEPARATOR
+  writeStructuredReportFile, tryLoadJson
 } from '../../core/report-data.js'
 import { runSingle } from './single.js'
 import { runParallel, createBatchPool } from './parallel.js'
 import { printScoreLine, printAutoDiffLine } from '../report.js'
 import { createProgressReporter } from '../progress.js'
-import { isString, parallelWorkerCount } from '../shared.js'
+import { isString, parallelWorkerCount, HEADER_SEPARATOR } from '../shared.js'
 import { autoDiffSummary } from '../auto-diff.js'
 
 /**

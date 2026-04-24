@@ -3,7 +3,7 @@
  */
 
 import { isKilled, isAlive, calculateScore } from '../core/mutation-status.js'
-import { HEADER_SEPARATOR } from '../core/report-data.js'
+import { HEADER_SEPARATOR } from './shared.js'
 
 export function printDiffReport(
   { beforeFile, afterFile, before, after },

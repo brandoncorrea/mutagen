@@ -9,9 +9,8 @@ import { writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 import { isKilled, isAlive } from '../core/mutation-status.js'
-import {
-  HEADER_SEPARATOR, writeStructuredReportFile
-} from '../core/report-data.js'
+import { writeStructuredReportFile } from '../core/report-data.js'
+import { HEADER_SEPARATOR } from './shared.js'
 import { mergeCachedFiles } from './incremental.js'
 
 export function printIncrementalSummary(

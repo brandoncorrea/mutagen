@@ -4,55 +4,41 @@
  */
 
 import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { resolve, relative } from 'node:path'
 
 import { generateMutations } from '../core/generate.js'
-import {
-  HEADER_SEPARATOR, tryLoadJson, writeStructuredReportFile
-} from '../core/report-data.js'
+import { assignMutationIds } from '../core/mutation-id.js'
+import { tryLoadJson, writeStructuredReportFile } from '../core/report-data.js'
 import { runSingle, runParallel } from './runner/index.js'
 import { printScoreLine } from './report.js'
-import { isString } from './shared.js'
+import { isString, HEADER_SEPARATOR } from './shared.js'
 
 /**
  * Extract retest targets from a structured report.
- * Returns the unique files and a Set of survivor keys for filtering.
+ * Returns the unique files and a Set of survivor IDs for filtering.
  */
 export function loadRetestTargets(report) {
   const survivors = report.survivors || []
-  const survivorKeys = new Set()
+  const survivorIds = new Set()
   const fileSet = new Set()
 
-  for (const { file, line, name } of survivors) {
+  for (const { id, file } of survivors) {
+    if (id) survivorIds.add(id)
     fileSet.add(file)
-    survivorKeys.add(survivorKey(file, line, name))
   }
 
-  return { files: [...fileSet], survivorKeys }
+  return { files: [...fileSet], survivorIds }
 }
 
 /**
  * Filter generated mutations to only those matching previous survivors.
+ * Mutations must have IDs assigned before calling this function.
  * Returns matched mutations and count of survivors that no longer exist.
  */
-export function filterMutationsToSurvivors(
-  mutations, filePath, survivorKeys
-) {
-  const prefix = `${filePath}:`
-  const fileSurvivors = [...survivorKeys].filter(
-    key => key.startsWith(prefix)
-  )
-  const matched = mutations.filter(mutation =>
-    survivorKeys.has(
-      survivorKey(filePath, mutation.line, mutation.name)
-    )
-  )
-  const matchedKeys = new Set(
-    matched.map(mutation => survivorKey(filePath, mutation.line, mutation.name))
-  )
-  const skipped = fileSurvivors.filter(
-    key => !matchedKeys.has(key)
-  ).length
+export function filterMutationsToSurvivors(mutations, survivorIds) {
+  const matched = mutations.filter(mutation => survivorIds.has(mutation.id))
+  const matchedIds = new Set(matched.map(mutation => mutation.id))
+  const skipped = [...survivorIds].filter(id => !matchedIds.has(id)).length
 
   return { matched, skipped }
 }
@@ -86,16 +72,16 @@ export async function runRetest(runContext, parsed) {
     }
   }
 
-  const { files, survivorKeys } = loadRetestTargets(report)
+  const { files, survivorIds } = loadRetestTargets(report)
 
   out.log(`\n${HEADER_SEPARATOR}`)
   out.log(`MUTAGEN — RETEST MODE`)
   out.log(`   Report: ${reportPath}`)
-  out.log(`   Survivors to retest: ${survivorKeys.size} across ${files.length} file(s)\n`)
+  out.log(`   Survivors to retest: ${survivorIds.size} across ${files.length} file(s)\n`)
 
   const result = await retestFiles(files, {
     mutationConfig, createRunner, timeout,
-    survivorKeys, parallel: parsed.parallel, out
+    survivorIds, parallel: parsed.parallel, out
   })
 
   writeRetestReport(
@@ -144,7 +130,7 @@ async function retestFiles(files, options) {
 }
 
 async function retestOneFile(file, options) {
-  const { survivorKeys, out } = options
+  const { survivorIds, out } = options
   const loaded = loadRetestMutations(file, options)
   if (loaded.done) return loaded.result
 
@@ -167,19 +153,21 @@ async function retestOneFile(file, options) {
   return toRetestResult(result, skipped)
 }
 
-function loadRetestMutations(file, { mutationConfig, survivorKeys, out }) {
+function loadRetestMutations(file, { mutationConfig, survivorIds, out }) {
   const absPath = resolve(file)
   let source
   try {
     source = readFileSync(absPath, 'utf-8')
   } catch {
     out.log(`  Skipping ${file} — file not found`)
-    return { done: true, result: toMissingFileResult(file, survivorKeys) }
+    return { done: true, result: toEmptyResult(0) }
   }
 
   const allMutations = generateMutations(source, mutationConfig)
+  const relPath = relative(process.cwd(), absPath)
+  assignMutationIds(allMutations, relPath)
   const { matched, skipped } = filterMutationsToSurvivors(
-    allMutations, file, survivorKeys
+    allMutations, survivorIds
   )
 
   if (skipped)
@@ -192,19 +180,13 @@ function loadRetestMutations(file, { mutationConfig, survivorKeys, out }) {
     out.log(
       `  ${file}: no matching mutations — all survivors gone`
     )
-    return {
-      done: true,
-      result: { skipped, killed: 0, survived: 0, timedOut: 0, error: false, fileResult: null }
-    }
+    return { done: true, result: toEmptyResult(skipped) }
   }
 
   return { done: false, matched, skipped, absPath }
 }
 
-function toMissingFileResult(file, survivorKeys) {
-  const skipped = [...survivorKeys].filter(
-    key => key.startsWith(`${file}:`)
-  ).length
+function toEmptyResult(skipped) {
   return {
     skipped, killed: 0, survived: 0,
     timedOut: 0, error: false, fileResult: null
@@ -264,11 +246,11 @@ function printRetestSummary(
   out.log(`RETEST SUMMARY`)
   out.log(HEADER_SEPARATOR)
   out.log(
-    `Retested: ${totalKilled + totalSurvived}` +
-    `  |  Killed: ${totalKilled}` +
-    `  |  Still surviving: ${totalSurvived}` +
-    `  |  Skipped: ${totalSkipped}` +
-    `  |  Errors: ${failures}`
+    `Retested: ${totalKilled + totalSurvived}`
+    + `  |  Killed: ${totalKilled}`
+    + `  |  Still surviving: ${totalSurvived}`
+    + `  |  Skipped: ${totalSkipped}`
+    + `  |  Errors: ${failures}`
   )
   if (totalTimedOut)
     out.log(`Timed out: ${totalTimedOut} (counted as killed)`)
@@ -279,12 +261,8 @@ function printRetestSummary(
     out.log(`\nAll previous survivors are now killed!`)
   else if (allKilled)
     out.log(
-      `\nAll retestable survivors are now killed.` +
-      ` ${totalSkipped} could not be retested (code changed).`
+      `\nAll retestable survivors are now killed.`
+      + ` ${totalSkipped} could not be retested (code changed).`
     )
   out.log('')
-}
-
-function survivorKey(file, line, name) {
-  return `${file}:${line}:${name}`
 }

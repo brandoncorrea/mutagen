@@ -18,6 +18,7 @@ vi.mock('../../../src/core/pool.js')
 import { createTempCopy } from '../../../src/core/temp-copy.js'
 import { createPool } from '../../../src/core/pool.js'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
+import { mutationId } from '../../../src/core/mutation-id.js'
 import { testMutators, sourceCode, fakeRunner, mockFs as _mockFs, noop, fakeWorktree, createTestRunner } from '../helpers.js'
 
 function mockFs(files) { _mockFs(readFileSync, files) }
@@ -34,11 +35,10 @@ const survivorReport = JSON.stringify({
   },
   survivors: [
     {
+      id: mutationId('src/a.js', 1, '=== → !=='),
       file: 'src/a.js',
       line: 1,
-      name: '=== → !==',
-      original: 'a === b',
-      mutated: 'a !== b'
+      name: '=== → !=='
     }
   ]
 })

@@ -11,11 +11,6 @@ import { resolve, relative, dirname } from 'node:path'
 import { mutationId } from './mutation-id.js'
 import { STATUS, isKilled, isAlive, calculateScore } from './mutation-status.js'
 
-const SEPARATOR_WIDTH = 60
-
-export const HEADER_SEPARATOR = '═'.repeat(SEPARATOR_WIDTH)
-export const SECTION_SEPARATOR = '─'.repeat(SEPARATOR_WIDTH)
-
 export function tryLoadJson(path, out) {
   try {
     return JSON.parse(readFileSync(path, 'utf-8'))

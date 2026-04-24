@@ -4,7 +4,7 @@
  */
 
 import { calculateScore } from '../core/mutation-status.js'
-import { HEADER_SEPARATOR, SECTION_SEPARATOR } from '../core/report-data.js'
+import { HEADER_SEPARATOR, SECTION_SEPARATOR } from './shared.js'
 
 export function printRunReport(mutations, results, out) {
   const { killed, survived, timedOut = [] } = results

@@ -2,7 +2,7 @@
  * Shared helpers for mutation runners.
  */
 
-import { HEADER_SEPARATOR } from '../../core/report-data.js'
+import { HEADER_SEPARATOR } from '../shared.js'
 
 export const PREFLIGHT_ABORT_MSG =
   '\nABORT: Tests already FAILING on original source. Fix the suite first.'

@@ -2,6 +2,11 @@
  * Shared helpers for CLI modules.
  */
 
+const SEPARATOR_WIDTH = 60
+
+export const HEADER_SEPARATOR = '═'.repeat(SEPARATOR_WIDTH)
+export const SECTION_SEPARATOR = '─'.repeat(SEPARATOR_WIDTH)
+
 /**
  * Create the default output channel object.
  * log  → stdout (console.log semantics, adds newline)
