@@ -9,9 +9,7 @@ import { writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 import { mutantKey } from '../core/mutation-id.js'
-import {
-  STATUS, isKilled, isAlive
-} from '../core/mutation-status.js'
+import { isKilled, isAlive } from '../core/mutation-status.js'
 import {
   HEADER_SEPARATOR, writeStructuredReportFile
 } from '../core/report-data.js'
@@ -74,7 +72,7 @@ function countCachedResult(results, report, relPath) {
 function countCachedMutation(results, mutation) {
   if (isKilled(mutation))
     results.killed++
-  else if (mutation.status === STATUS.SURVIVED)
+  else if (isAlive(mutation))
     results.survived++
 }
 
@@ -151,9 +149,8 @@ export function computeDeltas(
       const prevStatus = previousIndex.get(key)
       const entry = {
         file: filePath,
-        line: mutant.location?.start?.line || 0,
-        name: mutant.mutatorName,
-        description: mutant.description || ''
+        line: mutant.line || 0,
+        name: mutant.name
       }
 
       if (prevStatus && isAlive(prevStatus) && isKilled(mutant))

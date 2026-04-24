@@ -3,7 +3,7 @@
  * Data utilities live in core/report-data.js.
  */
 
-import { mutationScore, totalMutants } from '../core/mutation-status.js'
+import { calculateScore } from '../core/mutation-status.js'
 import { HEADER_SEPARATOR, SECTION_SEPARATOR } from '../core/report-data.js'
 
 export function printRunReport(mutations, results, out) {
@@ -11,7 +11,7 @@ export function printRunReport(mutations, results, out) {
   const allKilled = [...killed, ...timedOut]
 
   writeSummary(out, mutations, allKilled, survived)
-  writeScore(out, mutations, allKilled)
+  writeScore(out, mutations.length, allKilled.length)
   if (survived.length)
     writeSurvivors(out, survived)
   else
@@ -25,20 +25,14 @@ function writeSummary(out, mutations, killed, survived) {
   out.log(`MUTATION REPORT`)
   out.log(SECTION_SEPARATOR)
   out.log(
-    `Total: ${mutations.length}` +
-    `  |  Killed: ${killed.length}` +
-    `  |  Survived: ${survived.length}`
+    `Total: ${mutations.length}`
+    + `  |  Killed: ${killed.length}`
+    + `  |  Survived: ${survived.length}`
   )
 }
 
-function writeScore(out, mutations, killed) {
-  const counts = {
-    killed: killed.length,
-    survived: mutations.length - killed.length,
-    noCoverage: 0,
-    timeout: 0
-  }
-  out.log(`Mutation score: ${mutationScore(counts).toFixed(1)}%`)
+function writeScore(out, total, killed) {
+  out.log(`Mutation score: ${calculateScore(killed, total).toFixed(1)}%`)
 }
 
 function writeSurvivors(out, mutations) {
@@ -51,13 +45,10 @@ export function formatQuietSummary({
   killed, survived, timedOut, fileCount
 }) {
   const effectiveKilled = killed + timedOut
-  const counts = {
-    killed: effectiveKilled, survived, noCoverage: 0, timeout: 0
-  }
-  const total = totalMutants(counts)
-  const score = mutationScore(counts).toFixed(1)
-  return `Score: ${score}% (${effectiveKilled}/${total})` +
-    ` | ${survived} survivors | ${fileCount} files`
+  const total = effectiveKilled + survived
+  const score = calculateScore(effectiveKilled, total).toFixed(1)
+  return `Score: ${score}% (${effectiveKilled}/${total})`
+    + ` | ${survived} survivors | ${fileCount} files`
 }
 
 export function printScoreLine(
@@ -65,9 +56,9 @@ export function printScoreLine(
   fileCount, outputPath
 ) {
   out.error(
-    `Score: ${score}% (${killed}/${total})` +
-    ` | ${survived} survivors` +
-    ` | ${fileCount} files → ${outputPath}\n`
+    `Score: ${score}% (${killed}/${total})`
+    + ` | ${survived} survivors`
+    + ` | ${fileCount} files → ${outputPath}\n`
   )
 }
 

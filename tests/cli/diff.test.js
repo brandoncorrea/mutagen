@@ -164,15 +164,6 @@ describe('diffReports', () => {
     expect(output()).toContain('REMOVED')
   })
 
-  it('treats NoCoverage as alive for regression detection', () => {
-    const result = runDiff(
-      { 'a.js': { mutants: [makeMutant('m1', 'x', 'Killed')] } },
-      { 'a.js': { mutants: [makeMutant('m1', 'x', 'NoCoverage')] } }
-    )
-
-    expect(result.regressions).toBe(1)
-  })
-
   it('scores 100% when both reports have zero mutations', () => {
     runDiff(
       { 'a.js': { mutants: [] } },
@@ -251,7 +242,7 @@ describe('diffReports', () => {
   })
 
   it('handles mutants with no location object', () => {
-    const mutant = { id: 'm1', mutatorName: 'x', status: 'Killed', replacement: 'y' }
+    const mutant = { id: 'm1', name: 'x', status: 'Killed', replacement: 'y' }
     const result = runDiff(
       { 'a.js': { mutants: [mutant] } },
       { 'a.js': { mutants: [{ ...mutant, status: 'Survived' }] } }
@@ -323,9 +314,9 @@ describe('diffReports', () => {
 
   it('falls back to mutantKey when mutant has no id', () => {
     const mutantNoId = {
-      mutatorName: 'EqualityOperator',
+      name: 'EqualityOperator',
       status: 'Survived',
-      location: { start: { line: 5 } },
+      line: 5,
       replacement: '!=='
     }
     const result = runDiff(
@@ -382,7 +373,7 @@ describe('diffReports', () => {
   })
 
   it('uses line 0 for mutant with no location', () => {
-    const noLoc = { id: 'no-loc', mutatorName: 'X', status: 'Survived', replacement: '' }
+    const noLoc = { id: 'no-loc', name: 'X', status: 'Survived', replacement: '' }
 
     const result = runDiff(
       { 'a.js': { mutants: [noLoc] } },
@@ -394,7 +385,7 @@ describe('diffReports', () => {
   })
 
   it('handles mutant with location but missing start', () => {
-    const noStart = { id: 'no-start', mutatorName: 'X', status: 'Survived', location: {}, replacement: '' }
+    const noStart = { id: 'no-start', name: 'X', status: 'Survived', location: {}, replacement: '' }
 
     const result = runDiff(
       { 'a.js': { mutants: [noStart] } },
@@ -461,7 +452,7 @@ describe('diffReports', () => {
       expect(json.delta).toBe(50)
     })
 
-    it('includes newlyKilled mutants with file, line, and mutatorName', () => {
+    it('includes newlyKilled mutants with file, line, and name', () => {
       runDiffJson(
         { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Survived', 5)] } },
         { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Killed', 5)] } }
@@ -472,11 +463,11 @@ describe('diffReports', () => {
       expect(json.newlyKilled[0]).toMatchObject({
         file: 'a.js',
         line: 5,
-        mutatorName: 'EqualityOperator'
+        name: 'EqualityOperator'
       })
     })
 
-    it('includes regressions with file, line, and mutatorName', () => {
+    it('includes regressions with file, line, and name', () => {
       runDiffJson(
         { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Killed', 7)] } },
         { 'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Survived', 7)] } }
@@ -487,11 +478,11 @@ describe('diffReports', () => {
       expect(json.regressions[0]).toMatchObject({
         file: 'a.js',
         line: 7,
-        mutatorName: 'EqualityOperator'
+        name: 'EqualityOperator'
       })
     })
 
-    it('includes newMutants with file, line, mutatorName, and status', () => {
+    it('includes newMutants with file, line, name, and status', () => {
       runDiffJson(
         { 'a.js': { mutants: [] } },
         { 'a.js': { mutants: [makeMutant('m1', 'ArithmeticOperator', 'Survived', 3)] } }
@@ -502,7 +493,7 @@ describe('diffReports', () => {
       expect(json.newMutants[0]).toMatchObject({
         file: 'a.js',
         line: 3,
-        mutatorName: 'ArithmeticOperator',
+        name: 'ArithmeticOperator',
         status: 'Survived'
       })
     })
@@ -519,12 +510,12 @@ describe('diffReports', () => {
         id: 'm1',
         file: 'a.js',
         line: 3,
-        mutatorName: 'ArithmeticOperator',
+        name: 'ArithmeticOperator',
         status: 'Survived'
       })
     })
 
-    it('includes removedMutants with file, line, mutatorName, and status', () => {
+    it('includes removedMutants with file, line, name, and status', () => {
       runDiffJson(
         { 'a.js': { mutants: [makeMutant('m1', 'LogicalOperator', 'Killed', 9)] } },
         { 'a.js': { mutants: [] } }
@@ -535,7 +526,7 @@ describe('diffReports', () => {
       expect(json.removedMutants[0]).toMatchObject({
         file: 'a.js',
         line: 9,
-        mutatorName: 'LogicalOperator',
+        name: 'LogicalOperator',
         status: 'Killed'
       })
     })
@@ -552,7 +543,7 @@ describe('diffReports', () => {
         id: 'm1',
         file: 'a.js',
         line: 9,
-        mutatorName: 'LogicalOperator',
+        name: 'LogicalOperator',
         status: 'Killed'
       })
     })

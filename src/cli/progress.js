@@ -5,7 +5,7 @@
  * Legend: . killed  ! survived  T timeout
  */
 
-import { mutationScore, STATUS } from '../core/mutation-status.js'
+import { calculateScore, STATUS } from '../core/mutation-status.js'
 
 export function createProgressReporter(files, { write } = {}) {
   const maxWidth = files.reduce((max, file) => Math.max(max, file.length), 0)
@@ -28,13 +28,10 @@ export function formatProgressSummary({
 }) {
   const effectiveKilled = killed + timedOut
   const total = effectiveKilled + survived
-  const counts = {
-    killed: effectiveKilled, survived, noCoverage: 0, timeout: 0
-  }
-  const score = mutationScore(counts).toFixed(1)
-  return `\n  ${fileCount} files | ${total} mutations` +
-    ` | ${effectiveKilled} killed` +
-    ` | ${survived} survived | ${score}%`
+  const score = calculateScore(effectiveKilled, total).toFixed(1)
+  return `\n  ${fileCount} files | ${total} mutations`
+    + ` | ${effectiveKilled} killed`
+    + ` | ${survived} survived | ${score}%`
 }
 
 export function createOrderedBuffer(onDot) {

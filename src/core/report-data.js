@@ -75,11 +75,6 @@ export function buildStructuredReport(fileResults, deltas) {
 /**
  * Build a structured report from file results and write to outputPath.
  * Returns computed stats for callers that need to display a summary.
- *
- * @param {string} outputPath - path to write the JSON report
- * @param {Object} fileResults - { [path]: { mutants: [...] } }
- * @param {Object} [deltas] - incremental deltas
- * @returns {{ score, total, killed, survived, timedOut }}
  */
 export function writeStructuredReportFile(outputPath, fileResults, deltas, extra) {
   const { report, stats } = buildStructuredReport(fileResults, deltas)
@@ -159,17 +154,16 @@ function tallyMutant(tallies, path, mutant) {
   }
 }
 
-function toSurvivor(file, mutation) {
-  const { location, mutatorName, description, coveredBy } = mutation
-  const line = location?.start?.line || 0
+function toSurvivor(file, mutant) {
+  const line = mutant.line || 0
   return {
-    id: mutationId(file, line, mutatorName),
+    id: mutationId(file, line, mutant.name),
     file,
     line,
-    name: mutatorName,
-    original: extractDescription(description, 0),
-    mutated: extractDescription(description, 1),
-    ...(coveredBy?.length && { coveredBy })
+    name: mutant.name,
+    original: mutant.original,
+    mutated: mutant.mutated,
+    ...(mutant.coveredBy?.length && { coveredBy: mutant.coveredBy })
   }
 }
 
@@ -177,21 +171,15 @@ function roundToOneDecimal(n) {
   return parseFloat(n.toFixed(1))
 }
 
-function extractDescription(description, index) {
-  return description?.split(' → ')[index] || ''
-}
-
 function toMutant(relPath, mutation, status) {
   const { line, name, original, mutated, killedBy, coveredBy } = mutation
   return {
     id: mutationId(relPath, line, name),
-    mutatorName: name,
+    name,
     status,
-    location: {
-      start: { line, column: 0 },
-      end: { line, column: 0 }
-    },
-    description: `${original} → ${mutated}`,
+    line,
+    original,
+    mutated,
     ...(killedBy?.length && { killedBy }),
     ...(coveredBy?.length && { coveredBy })
   }

@@ -254,9 +254,9 @@ describe('runSingle vs runParallel result determinism', () => {
     // Every mutant has required fields
     for (const mutant of mutants) {
       expect(mutant).toHaveProperty('id')
-      expect(mutant).toHaveProperty('mutatorName')
+      expect(mutant).toHaveProperty('name')
       expect(mutant).toHaveProperty('status')
-      expect(mutant).toHaveProperty('location')
+      expect(mutant).toHaveProperty('line')
     }
   })
 })

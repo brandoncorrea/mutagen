@@ -20,7 +20,8 @@ export function assignMutationIds(mutations, filePath) {
   return mutations
 }
 
-export function mutantKey(path, { location, mutatorName, replacement }) {
-  const line = location?.start?.line || 0
-  return `${path}:${line}:${mutatorName || ''}:${replacement || ''}`
+export function mutantKey(path, mutant) {
+  const line = mutant.line || mutant.location?.start?.line || 0
+  const name = mutant.name || mutant.mutatorName || ''
+  return `${path}:${line}:${name}:${mutant.replacement || ''}`
 }

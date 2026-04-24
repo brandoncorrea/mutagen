@@ -12,7 +12,7 @@ vi.mock('node:fs', async (importOriginal) => {
 })
 
 import { mutantKey, mutationId, assignMutationIds } from '../../src/core/mutation-id.js'
-import { countStatuses, totalMutants, mutationScore } from '../../src/core/mutation-status.js'
+import { calculateScore } from '../../src/core/mutation-status.js'
 import {
   toJsonMutants, tryLoadJson,
   writeStructuredReportFile, buildStructuredReport
@@ -72,134 +72,43 @@ describe('assignMutationIds', () => {
 describe('mutantKey', () => {
   it('builds a key from path, line, mutator name, and replacement', () => {
     const m = {
-      location: { start: { line: 10 } },
-      mutatorName: '=== → !==',
+      line: 10,
+      name: '=== → !==',
       replacement: ' !== '
     }
     expect(mutantKey('src/foo.js', m)).toBe('src/foo.js:10:=== → !==: !== ')
   })
 
   it('defaults to line 0 when location is missing', () => {
-    const m = { mutatorName: 'test', replacement: 'r' }
+    const m = { name: 'test', replacement: 'r' }
     expect(mutantKey('file.js', m)).toBe('file.js:0:test:r')
   })
 
   it('handles missing mutatorName and replacement', () => {
-    const m = { location: { start: { line: 5 } } }
+    const m = { line: 5 }
     expect(mutantKey('file.js', m)).toBe('file.js:5::')
   })
 
   it('defaults to line 0 when location.start is null (optional chaining boundary)', () => {
     // location exists but start is null — location?.start?.line safely returns undefined
     // Without optional chaining on start (location?.start.line), this would throw TypeError
-    const m = { location: { start: null }, mutatorName: 'x', replacement: 'y' }
+    const m = { location: { start: null }, name: 'x', replacement: 'y' }
     expect(mutantKey('file.js', m)).toBe('file.js:0:x:y')
   })
 })
 
-describe('countStatuses', () => {
-  it('counts each status type across files', () => {
-    const report = {
-      files: {
-        'a.js': {
-          mutants: [
-            { status: 'Killed' },
-            { status: 'Survived' }
-          ]
-        },
-        'b.js': {
-          mutants: [
-            { status: 'NoCoverage' },
-            { status: 'Timeout' },
-            { status: 'Killed' }
-          ]
-        }
-      }
-    }
-    expect(countStatuses(report)).toEqual({
-      killed: 2,
-      survived: 1,
-      noCoverage: 1,
-      timeout: 1
-    })
-  })
-
-  it('returns zeros when no mutants exist', () => {
-    const report = { files: {} }
-    expect(countStatuses(report)).toEqual({
-      killed: 0,
-      survived: 0,
-      noCoverage: 0,
-      timeout: 0
-    })
-  })
-
-  it('ignores unrecognized statuses', () => {
-    const report = {
-      files: {
-        'a.js': {
-          mutants: [
-            { status: 'Killed' },
-            { status: 'CompileError' }
-          ]
-        }
-      }
-    }
-    expect(countStatuses(report)).toEqual({
-      killed: 1,
-      survived: 0,
-      noCoverage: 0,
-      timeout: 0
-    })
-  })
-
-  it('skips file entries without mutants arrays', () => {
-    const report = {
-      files: {
-        'a.js': { score: 100, killed: 3, total: 3 },
-        'b.js': { mutants: [{ status: 'Killed' }] }
-      }
-    }
-    expect(countStatuses(report)).toEqual({
-      killed: 1,
-      survived: 0,
-      noCoverage: 0,
-      timeout: 0
-    })
-  })
-})
-
-describe('totalMutants', () => {
-  it('sums all four status counts', () => {
-    const counts = { killed: 3, survived: 2, noCoverage: 1, timeout: 4 }
-    expect(totalMutants(counts)).toBe(10)
-  })
-
-  it('returns zero when all counts are zero', () => {
-    const counts = { killed: 0, survived: 0, noCoverage: 0, timeout: 0 }
-    expect(totalMutants(counts)).toBe(0)
-  })
-})
-
-describe('mutationScore', () => {
-  it('computes (killed + timeout) / total * 100', () => {
-    const counts = { killed: 3, survived: 1, noCoverage: 0, timeout: 1 }
-    expect(mutationScore(counts)).toBeCloseTo(80.0)
+describe('calculateScore', () => {
+  it('computes killed / total * 100', () => {
+    expect(calculateScore(4, 5)).toBeCloseTo(80.0)
   })
 
   it('returns 100 when total is zero', () => {
-    const counts = { killed: 0, survived: 0, noCoverage: 0, timeout: 0 }
-    expect(mutationScore(counts)).toBe(100)
-  })
-
-  it('counts timeout as killed for scoring', () => {
-    const counts = { killed: 0, survived: 1, noCoverage: 0, timeout: 1 }
-    expect(mutationScore(counts)).toBeCloseTo(50.0)
+    expect(calculateScore(0, 0)).toBe(100)
   })
 })
 
 describe('toJsonMutants', () => {
-  it('converts killed and survived results to Stryker-compatible format', () => {
+  it('converts killed and survived results to mutant format', () => {
     const results = {
       killed: [
         {
@@ -224,12 +133,12 @@ describe('toJsonMutants', () => {
     expect(output.mutants).toHaveLength(2)
 
     const killed = output.mutants.find(mutant => mutant.status === 'Killed')
-    expect(killed.mutatorName).toBe('=== → !==')
-    expect(killed.location.start.line).toBe(5)
+    expect(killed.name).toBe('=== → !==')
+    expect(killed.line).toBe(5)
     expect(killed.killedBy).toEqual(['/tests/a.test.js'])
 
     const survived = output.mutants.find(mutant => mutant.status === 'Survived')
-    expect(survived.mutatorName).toBe('+ → -')
+    expect(survived.name).toBe('+ → -')
     expect(survived.killedBy).toBeUndefined()
   })
 
@@ -244,17 +153,6 @@ describe('toJsonMutants', () => {
     const expectedId = mutationId(relPath, 5, '=== → !==')
     expect(output.mutants[0].id).toBe(expectedId)
     expect(output.mutants[0].id).toMatch(/^[0-9a-f]{8}$/)
-  })
-
-  it('sets column to 0 in start and end locations', () => {
-    const results = {
-      killed: [{ line: 7, name: 'x', original: 'a', mutated: 'b', killedBy: ['t.js'] }],
-      survived: []
-    }
-    const output = toJsonMutants('/project/src/foo.js', results)
-    const m = output.mutants[0]
-    expect(m.location.start.column).toBe(0)
-    expect(m.location.end.column).toBe(0)
   })
 
   it('excludes killedBy when it is an empty array', () => {
@@ -278,7 +176,7 @@ describe('toJsonMutants', () => {
     const output = toJsonMutants('/project/src/foo.js', results)
     expect(output.mutants).toHaveLength(1)
     expect(output.mutants[0].status).toBe('Timeout')
-    expect(output.mutants[0].mutatorName).toBe('&& → ||')
+    expect(output.mutants[0].name).toBe('&& → ||')
   })
 
   it('includes coveredBy on survived mutations when present', () => {
@@ -345,7 +243,7 @@ describe('toJsonMutants', () => {
     const output = toJsonMutants('/project/src/foo.js', results, { survivorsOnly: true })
     expect(output.mutants).toHaveLength(1)
     expect(output.mutants[0].status).toBe('Survived')
-    expect(output.mutants[0].mutatorName).toBe('+ → -')
+    expect(output.mutants[0].name).toBe('+ → -')
   })
 
   it('includes all mutants when survivorsOnly is false', () => {
@@ -409,7 +307,7 @@ describe('tryLoadJson', () => {
 describe('buildStructuredReport', () => {
   it('returns report and stats from file results', () => {
     const { report, stats } = buildStructuredReport({
-      'a.js': { mutants: [{ status: 'Killed', mutatorName: 'x', description: 'a → b' }] }
+      'a.js': { mutants: [{ status: 'Killed', name: 'x', original: 'a', mutated: 'b' }] }
     })
 
     expect(stats.killed).toBe(1)
@@ -422,8 +320,8 @@ describe('buildStructuredReport', () => {
   it('computes score as percentage of killed over total', () => {
     const { report, stats } = buildStructuredReport({
       'a.js': { mutants: [
-        { status: 'Killed', mutatorName: 'x' },
-        { status: 'Survived', mutatorName: 'y' }
+        { status: 'Killed', name: 'x' },
+        { status: 'Survived', name: 'y' }
       ]}
     })
 
@@ -435,8 +333,8 @@ describe('buildStructuredReport', () => {
   it('rounds score without floating-point artifacts', () => {
     // 6 killed out of 7 = 85.714...% → should round to 85.7
     const mutants = [
-      ...Array.from({ length: 6 }, () => ({ status: 'Killed', mutatorName: 'x' })),
-      { status: 'Survived', mutatorName: 'y' }
+      ...Array.from({ length: 6 }, () => ({ status: 'Killed', name: 'x' })),
+      { status: 'Survived', name: 'y' }
     ]
     const { stats } = buildStructuredReport({ 'a.js': { mutants } })
     expect(stats.score).toBe(85.7)
@@ -465,7 +363,7 @@ describe('buildStructuredReport', () => {
 
   it('collects survivors with stable mutation IDs', () => {
     const { report } = buildStructuredReport({
-      'a.js': { mutants: [{ status: 'Survived', mutatorName: 'x', location: { start: { line: 5 } } }] }
+      'a.js': { mutants: [{ status: 'Survived', name: 'x', line: 5 }] }
     })
 
     expect(report.survivors).toHaveLength(1)
@@ -474,7 +372,7 @@ describe('buildStructuredReport', () => {
 
   it('counts timeout mutants as killed and tracks timedOut separately', () => {
     const { stats } = buildStructuredReport({
-      'a.js': { mutants: [{ status: 'Timeout', mutatorName: 'x' }] }
+      'a.js': { mutants: [{ status: 'Timeout', name: 'x' }] }
     })
 
     expect(stats.killed).toBe(1)
@@ -492,7 +390,7 @@ describe('buildStructuredReport', () => {
   it('handles file entries without mutants arrays (old structured format)', () => {
     const { report, stats } = buildStructuredReport({
       'a.js': { score: 66.7, killed: 2, total: 3 },
-      'b.js': { mutants: [{ status: 'Killed', mutatorName: 'x' }] }
+      'b.js': { mutants: [{ status: 'Killed', name: 'x' }] }
     })
 
     expect(stats.killed).toBe(3)
@@ -514,7 +412,7 @@ describe('buildStructuredReport', () => {
 
   it('is pure — does not perform I/O', () => {
     vi.clearAllMocks()
-    buildStructuredReport({ 'a.js': { mutants: [{ status: 'Killed', mutatorName: 'x' }] } })
+    buildStructuredReport({ 'a.js': { mutants: [{ status: 'Killed', name: 'x' }] } })
 
     expect(writeFileSync).not.toHaveBeenCalled()
     expect(mkdirSync).not.toHaveBeenCalled()
@@ -528,7 +426,7 @@ describe('writeStructuredReportFile', () => {
 
   it('counts killed mutants and writes report', () => {
     writeStructuredReportFile('out.json', {
-      'a.js': { mutants: [{ status: 'Killed', mutatorName: 'x', description: 'a → b' }] }
+      'a.js': { mutants: [{ status: 'Killed', name: 'x', original: 'a', mutated: 'b' }] }
     })
 
     const written = JSON.parse(writeFileSync.mock.calls[0][1])
@@ -538,7 +436,7 @@ describe('writeStructuredReportFile', () => {
 
   it('counts survived mutants and includes them in survivors', () => {
     writeStructuredReportFile('out.json', {
-      'a.js': { mutants: [{ status: 'Survived', mutatorName: 'x', description: 'a → b' }] }
+      'a.js': { mutants: [{ status: 'Survived', name: 'x', original: 'a', mutated: 'b' }] }
     })
 
     const written = JSON.parse(writeFileSync.mock.calls[0][1])
@@ -548,7 +446,7 @@ describe('writeStructuredReportFile', () => {
 
   it('includes stable mutation ID in each survivor', () => {
     writeStructuredReportFile('out.json', {
-      'a.js': { mutants: [{ status: 'Survived', mutatorName: 'x', location: { start: { line: 5 } } }] }
+      'a.js': { mutants: [{ status: 'Survived', name: 'x', line: 5 }] }
     })
 
     const written = JSON.parse(writeFileSync.mock.calls[0][1])
@@ -558,7 +456,7 @@ describe('writeStructuredReportFile', () => {
 
   it('counts timeout mutants as killed', () => {
     writeStructuredReportFile('out.json', {
-      'a.js': { mutants: [{ status: 'Timeout', mutatorName: 'x' }] }
+      'a.js': { mutants: [{ status: 'Timeout', name: 'x' }] }
     })
 
     const written = JSON.parse(writeFileSync.mock.calls[0][1])
@@ -568,7 +466,7 @@ describe('writeStructuredReportFile', () => {
 
   it('handles survived mutants without coveredBy', () => {
     writeStructuredReportFile('out.json', {
-      'a.js': { mutants: [{ status: 'Survived', mutatorName: 'x' }] }
+      'a.js': { mutants: [{ status: 'Survived', name: 'x' }] }
     })
 
     const written = JSON.parse(writeFileSync.mock.calls[0][1])
@@ -577,31 +475,21 @@ describe('writeStructuredReportFile', () => {
 
   it('includes coveredBy when present on survived mutants', () => {
     writeStructuredReportFile('out.json', {
-      'a.js': { mutants: [{ status: 'Survived', mutatorName: 'x', coveredBy: ['t.js'] }] }
+      'a.js': { mutants: [{ status: 'Survived', name: 'x', coveredBy: ['t.js'] }] }
     })
 
     const written = JSON.parse(writeFileSync.mock.calls[0][1])
     expect(written.survivors[0].coveredBy).toEqual(['t.js'])
   })
 
-  it('handles mutants without description', () => {
+  it('handles mutants without original/mutated fields', () => {
     writeStructuredReportFile('out.json', {
-      'a.js': { mutants: [{ status: 'Survived', mutatorName: 'x' }] }
+      'a.js': { mutants: [{ status: 'Survived', name: 'x' }] }
     })
 
     const written = JSON.parse(writeFileSync.mock.calls[0][1])
-    expect(written.survivors[0].original).toBe('')
-    expect(written.survivors[0].mutated).toBe('')
-  })
-
-  it('handles description without arrow separator', () => {
-    writeStructuredReportFile('out.json', {
-      'a.js': { mutants: [{ status: 'Survived', mutatorName: 'x', description: 'noarrow' }] }
-    })
-
-    const written = JSON.parse(writeFileSync.mock.calls[0][1])
-    expect(written.survivors[0].original).toBe('noarrow')
-    expect(written.survivors[0].mutated).toBe('')
+    expect(written.survivors[0].original).toBeUndefined()
+    expect(written.survivors[0].mutated).toBeUndefined()
   })
 
   it('defaults score to 100% when no mutants exist', () => {
@@ -632,7 +520,7 @@ describe('writeStructuredReportFile', () => {
       testHashes: { 't.js': 'def456' }
     }
     writeStructuredReportFile('out.json', {
-      'a.js': { mutants: [{ status: 'Killed', mutatorName: 'x' }] }
+      'a.js': { mutants: [{ status: 'Killed', name: 'x' }] }
     }, undefined, extra)
 
     const written = JSON.parse(writeFileSync.mock.calls[0][1])
@@ -643,7 +531,7 @@ describe('writeStructuredReportFile', () => {
 
   it('omits extra fields when not provided', () => {
     writeStructuredReportFile('out.json', {
-      'a.js': { mutants: [{ status: 'Killed', mutatorName: 'x' }] }
+      'a.js': { mutants: [{ status: 'Killed', name: 'x' }] }
     })
 
     const written = JSON.parse(writeFileSync.mock.calls[0][1])
@@ -653,7 +541,7 @@ describe('writeStructuredReportFile', () => {
 
   it('handles mutants without location', () => {
     writeStructuredReportFile('out.json', {
-      'a.js': { mutants: [{ status: 'Survived', mutatorName: 'x' }] }
+      'a.js': { mutants: [{ status: 'Survived', name: 'x' }] }
     })
 
     const written = JSON.parse(writeFileSync.mock.calls[0][1])
@@ -662,7 +550,7 @@ describe('writeStructuredReportFile', () => {
 
   it('skips mutants with unrecognized status (neither killed nor alive)', () => {
     writeStructuredReportFile('out.json', {
-      'a.js': { mutants: [{ status: 'CompileError', mutatorName: 'x' }] }
+      'a.js': { mutants: [{ status: 'CompileError', name: 'x' }] }
     })
 
     const written = JSON.parse(writeFileSync.mock.calls[0][1])

@@ -4,9 +4,7 @@
  */
 
 import { mutantKey } from '../core/mutation-id.js'
-import {
-  isKilled, isAlive, countStatuses, mutationScore, calculateScore
-} from '../core/mutation-status.js'
+import { isKilled, isAlive, calculateScore } from '../core/mutation-status.js'
 import { tryLoadJson } from '../core/report-data.js'
 import { printDiffReport } from './diff-print.js'
 
@@ -47,10 +45,8 @@ export function diffReports(
 }
 
 function printJsonDiff(before, after, changes, fileDeltas, out) {
-  const bCounts = countStatuses(before)
-  const aCounts = countStatuses(after)
-  const beforeScore = mutationScore(bCounts)
-  const afterScore = mutationScore(aCounts)
+  const beforeScore = reportScore(before)
+  const afterScore = reportScore(after)
 
   const fileDeltaMap = {}
   for (const delta of fileDeltas)
@@ -72,8 +68,30 @@ function printJsonDiff(before, after, changes, fileDeltas, out) {
   }, null, 2))
 }
 
-function toMutantSummary({ id, file, line, mutatorName, status }) {
-  return { id, file, line, mutatorName, status }
+function toMutantSummary({ id, file, line, name, status }) {
+  return { id, file, line, name, status }
+}
+
+function reportScore(report) {
+  if (report.score != null) return report.score
+  const { killed, total } = countFromFiles(report)
+  return calculateScore(killed, total)
+}
+
+function countFromFiles(report) {
+  let killed = 0
+  let total = 0
+  for (const fileData of Object.values(report.files)) {
+    if (fileData.mutants) {
+      const k = fileData.mutants.filter(isKilled).length
+      killed += k
+      total += fileData.mutants.length
+    } else {
+      killed += fileData.killed || 0
+      total += fileData.total || 0
+    }
+  }
+  return { killed, total }
 }
 
 function classifyChanges(beforeData, afterData) {
@@ -156,7 +174,7 @@ function setMutant(map, path, mutant) {
   map[key] = {
     ...mutant,
     file: path,
-    line: mutant.location?.start?.line || 0
+    line: mutant.line || mutant.location?.start?.line || 0
   }
 }
 

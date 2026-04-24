@@ -59,8 +59,8 @@ export const killedMutation = {
   mutated: 'a !== b', source: 'if (a !== b) {}', killedBy: ['t.js']
 }
 
-export function makeMutant(id, mutatorName, status, line = 1) {
-  return { id, mutatorName, status, location: { start: { line } }, replacement: '' }
+export function makeMutant(id, name, status, line = 1) {
+  return { id, name, status, line, replacement: '' }
 }
 
 export function capture() {

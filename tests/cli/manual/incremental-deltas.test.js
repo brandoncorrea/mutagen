@@ -396,12 +396,12 @@ describe('computeDeltas', () => {
     }
     const newFileResults = {
       'a.js': {
-        mutants: [{ location: { start: { line: 1 } }, mutatorName: 'x', replacement: 'y', status: 'Killed' }]
+        mutants: [{ line: 1, name: 'x', replacement: 'y', status: 'Killed' }]
       }
     }
     const classification = { changedSources: ['a.js'], unchangedSources: [] }
 
     const deltas = computeDeltas(previousReport, newFileResults, classification)
-    expect(deltas.fixes[0].description).toBe('')
+    expect(deltas.fixes[0].name).toBe('x')
   })
 })

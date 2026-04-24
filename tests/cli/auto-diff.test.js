@@ -122,17 +122,6 @@ describe('autoDiffSummary', () => {
       expect(result).toContain('+1 newly killed')
     })
 
-    it('treats NoCoverage as alive', () => {
-      const previous = legacyReport({
-        'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Killed')] }
-      })
-      const current = {
-        'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'NoCoverage')] }
-      }
-
-      const result = autoDiffSummary(previous, current)
-      expect(result).toContain('1 regression')
-    })
   })
 
   describe('with structured report (survivors array)', () => {
