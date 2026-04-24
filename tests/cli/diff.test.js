@@ -339,7 +339,7 @@ describe('diffReports', () => {
     expect(output()).not.toContain('REMOVED MUTANTS')
   })
 
-  it('falls back to mutantKey when mutant has no id', () => {
+  it('matches mutants without id by key fields', () => {
     const mutantNoId = {
       name: 'EqualityOperator',
       status: 'survived',

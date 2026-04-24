@@ -35,8 +35,8 @@ describe('createManualRunner', () => {
         files: {
           'a.js': {
             mutants: [{
-              id: 'm1', mutatorName: 'x', status: 'killed',
-              location: { start: { line: 1 } }, replacement: 'y'
+              id: 'm1', name: 'x', status: 'killed',
+              line: 1
             }]
           }
         }
@@ -59,8 +59,8 @@ describe('createManualRunner', () => {
         files: {
           'a.js': {
             mutants: [{
-              id: 'm1', mutatorName: 'x', status: 'killed',
-              location: { start: { line: 1 } }, replacement: 'y'
+              id: 'm1', name: 'x', status: 'killed',
+              line: 1
             }]
           }
         }
@@ -69,8 +69,8 @@ describe('createManualRunner', () => {
         files: {
           'a.js': {
             mutants: [{
-              id: 'm1', mutatorName: 'x', status: 'survived',
-              location: { start: { line: 1 } }, replacement: 'y'
+              id: 'm1', name: 'x', status: 'survived',
+              line: 1
             }]
           }
         }
@@ -104,8 +104,8 @@ describe('createManualRunner', () => {
         files: {
           'a.js': {
             mutants: [
-              { id: 'm1', mutatorName: 'x', status: 'killed', location: { start: { line: 1 } }, replacement: 'y' },
-              { id: 'm2', mutatorName: 'x', status: 'killed', location: { start: { line: 2 } }, replacement: 'z' }
+              { id: 'm1', name: 'x', status: 'killed', line: 1 },
+              { id: 'm2', name: 'x', status: 'killed', line: 2 }
             ]
           }
         }
@@ -114,8 +114,8 @@ describe('createManualRunner', () => {
         files: {
           'a.js': {
             mutants: [
-              { id: 'm1', mutatorName: 'x', status: 'survived', location: { start: { line: 1 } }, replacement: 'y' },
-              { id: 'm2', mutatorName: 'x', status: 'survived', location: { start: { line: 2 } }, replacement: 'z' }
+              { id: 'm1', name: 'x', status: 'survived', line: 1 },
+              { id: 'm2', name: 'x', status: 'survived', line: 2 }
             ]
           }
         }

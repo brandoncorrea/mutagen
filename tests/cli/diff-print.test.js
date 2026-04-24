@@ -7,8 +7,8 @@ describe('printDiffReport', () => {
     const { out, lines } = capture()
     const changes = {
       newlyKilled: [
-        { after: { file: 'a.js', line: 1, mutatorName: '=== → !==' } },
-        { after: { file: 'b.js', line: 5, mutatorName: '+ → -' } }
+        { after: { file: 'a.js', line: 1, name: '=== → !==' } },
+        { after: { file: 'b.js', line: 5, name: '+ → -' } }
       ],
       regressions: [],
       newMutants: [],
