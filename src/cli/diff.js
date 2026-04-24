@@ -3,7 +3,6 @@
  * Compare two reports to find regressions, improvements, and new mutants.
  */
 
-import { mutantKey } from '../core/mutation-id.js'
 import { isKilled, isAlive, calculateScore } from '../core/mutation-status.js'
 import { tryLoadJson } from '../core/report-data.js'
 import { printDiffReport } from './diff-print.js'
@@ -170,11 +169,11 @@ function buildMutantMap(report) {
 }
 
 function setMutant(map, path, mutant) {
-  const key = mutant.id || mutantKey(path, mutant)
+  const key = mutant.id
   map[key] = {
     ...mutant,
     file: path,
-    line: mutant.line || mutant.location?.start?.line || 0
+    line: mutant.line || 0
   }
 }
 

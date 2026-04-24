@@ -310,19 +310,16 @@ describe('createManualRunner', () => {
       expect(errorOutput).not.toContain('Δ')
     })
 
-    it('prints auto-diff for legacy report format (--json without path)', async () => {
+    it('prints auto-diff for default report path (--json without path)', async () => {
       const id = mutationId('src/a.js', 1, '=== → !==')
       const previousReport = JSON.stringify({
-        schemaVersion: '1',
-        thresholds: { high: 80, low: 60 },
+        score: 0, total: 1, killed: 0, survived: 1, timedOut: 0,
         files: {
           'src/a.js': {
-            mutants: [{
-              id, mutatorName: '=== → !==',
-              status: 'Survived', location: { start: { line: 1 } }
-            }]
+            mutants: [{ id, name: '=== → !==', status: 'Survived', line: 1 }]
           }
-        }
+        },
+        survivors: [{ id, file: 'src/a.js', line: 1, name: '=== → !==' }]
       })
       mockFs({
         [resolve('src/a.js')]: sourceCode,

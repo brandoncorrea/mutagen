@@ -53,7 +53,7 @@ describe('createProgressReporter', () => {
     const reporter = createProgressReporter(['a.js'], { write })
 
     reporter.startFile('a.js')
-    reporter.dot(STATUS.KILLED_ERROR)
+    reporter.dot(STATUS.KILLED)
 
     expect(output()).toBe('a.js .')
   })

@@ -22,28 +22,12 @@ export function autoDiffSummary(previousReport, currentFileResults) {
   return formatSummary(summary)
 }
 
-function buildPreviousIdMap(report) {
-  return buildFromSurvivorsArray(report)
-    || buildFromFileMutants(report)
-}
-
-function buildFromSurvivorsArray({ survivors }) {
+function buildPreviousIdMap({ survivors }) {
   if (!survivors) return null
   const map = new Map()
   for (const { id } of survivors)
     if (id)
       map.set(id, 'survived')
-  if (map.size) return map
-}
-
-function buildFromFileMutants({ files }) {
-  if (!files) return
-  const map = new Map()
-  for (const { mutants } of Object.values(files))
-    if (Array.isArray(mutants))
-      for (const mutant of mutants)
-        if (mutant.id)
-          map.set(mutant.id, isAlive(mutant) ? 'survived' : 'killed')
   if (map.size) return map
 }
 

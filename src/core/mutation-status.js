@@ -6,7 +6,6 @@
 export const STATUS = {
   SURVIVED: 'Survived',
   KILLED: 'Killed',
-  KILLED_ERROR: 'Killed',
   TIMEOUT: 'Timeout'
 }
 

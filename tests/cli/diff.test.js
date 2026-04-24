@@ -18,11 +18,7 @@ describe('diffReports', () => {
   })
 
   function makeReport(files) {
-    return {
-      files,
-      schemaVersion: '1',
-      thresholds: { high: 80, low: 60 }
-    }
+    return { files }
   }
 
   function output() { return lines.join('\n') }

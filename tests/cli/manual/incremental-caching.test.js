@@ -291,37 +291,6 @@ describe('createManualRunner', () => {
       expect(report.files['src/c.js']).toBeDefined()
     })
 
-    it('counts NoCoverage mutants as neither killed nor survived in cache', async () => {
-      const src = resolve('src/a.js')
-      const hash = hashOf(sourceCode)
-
-      existsSync.mockReturnValue(true)
-      mockFs({
-        [src]: sourceCode,
-        [reportPath]: JSON.stringify({
-          files: {
-            'src/a.js': {
-              mutants: [
-                { status: 'Killed' },
-                { status: 'NoCoverage' }
-              ]
-            }
-          },
-          sourceHashes: { 'src/a.js': hash },
-          testHashes: {}
-        })
-      })
-
-      const createRunner = vi.fn()
-      const manual = createTestRunner({
-        mutators: testMutators, sources: ['src/a.js'], createRunner
-      })
-      const result = await manual.runIncremental(false, null)
-
-      expect(result.totalKilled).toBe(1)
-      expect(result.totalSurvived).toBe(0)
-    })
-
     it('counts Timeout mutants as killed in cache', async () => {
       const src = resolve('src/a.js')
       const hash = hashOf(sourceCode)
@@ -566,10 +535,9 @@ describe('createManualRunner', () => {
         [srcA]: sourceCode,
         [srcB]: 'const y = 1',
         ['reports/custom.json']: JSON.stringify({
-          schemaVersion: '1',
           files: {
             'src/a.js': {
-              mutants: [{ location: { start: { line: 1 } }, mutatorName: '=== → !==', replacement: ' !== ', status: 'Killed' }]
+              mutants: [{ id: 'x1', line: 1, name: '=== → !==', status: 'Killed' }]
             }
             // src/b.js intentionally absent from previous report files
           },
@@ -603,10 +571,9 @@ describe('createManualRunner', () => {
       mockFs({
         [src]: sourceCode,
         ['reports/custom.json']: JSON.stringify({
-          schemaVersion: '1',
           files: {
             'src/a.js': {
-              mutants: [{ location: { start: { line: 1 } }, mutatorName: '=== → !==', replacement: ' !== ', status: 'Killed' }]
+              mutants: [{ id: 'x1', line: 1, name: '=== → !==', status: 'Killed' }]
             }
           },
           sourceHashes: { 'src/a.js': hash },

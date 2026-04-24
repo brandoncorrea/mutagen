@@ -11,7 +11,7 @@ vi.mock('node:fs', async (importOriginal) => {
   }
 })
 
-import { mutantKey, mutationId, assignMutationIds } from '../../src/core/mutation-id.js'
+import { mutationId, assignMutationIds } from '../../src/core/mutation-id.js'
 import { calculateScore } from '../../src/core/mutation-status.js'
 import {
   toJsonMutants, tryLoadJson,
@@ -69,33 +69,6 @@ describe('assignMutationIds', () => {
   })
 })
 
-describe('mutantKey', () => {
-  it('builds a key from path, line, mutator name, and replacement', () => {
-    const m = {
-      line: 10,
-      name: '=== → !==',
-      replacement: ' !== '
-    }
-    expect(mutantKey('src/foo.js', m)).toBe('src/foo.js:10:=== → !==: !== ')
-  })
-
-  it('defaults to line 0 when location is missing', () => {
-    const m = { name: 'test', replacement: 'r' }
-    expect(mutantKey('file.js', m)).toBe('file.js:0:test:r')
-  })
-
-  it('handles missing mutatorName and replacement', () => {
-    const m = { line: 5 }
-    expect(mutantKey('file.js', m)).toBe('file.js:5::')
-  })
-
-  it('defaults to line 0 when location.start is null (optional chaining boundary)', () => {
-    // location exists but start is null — location?.start?.line safely returns undefined
-    // Without optional chaining on start (location?.start.line), this would throw TypeError
-    const m = { location: { start: null }, name: 'x', replacement: 'y' }
-    expect(mutantKey('file.js', m)).toBe('file.js:0:x:y')
-  })
-})
 
 describe('calculateScore', () => {
   it('computes killed / total * 100', () => {
@@ -265,7 +238,7 @@ describe('tryLoadJson', () => {
   })
 
   it('parses valid JSON from a file', () => {
-    const data = { files: {}, schemaVersion: '1' }
+    const data = { files: {}, score: 100 }
     readFileSync.mockReturnValue(JSON.stringify(data))
 
     const result = tryLoadJson('/tmp/report.json')

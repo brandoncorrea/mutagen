@@ -8,7 +8,6 @@
 import { writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-import { mutantKey } from '../core/mutation-id.js'
 import { isKilled, isAlive } from '../core/mutation-status.js'
 import {
   HEADER_SEPARATOR, writeStructuredReportFile
@@ -145,7 +144,7 @@ export function computeDeltas(
   for (const [filePath, fileData] of Object.entries(newFileResults)) {
     if (!fileData.mutants) continue
     for (const mutant of fileData.mutants) {
-      const key = mutantKey(filePath, mutant)
+      const key = mutant.id
       const prevStatus = previousIndex.get(key)
       const entry = {
         file: filePath,
@@ -171,7 +170,7 @@ function buildMutantIndex(report) {
   for (const [filePath, fileData] of Object.entries(report.files))
     if (fileData.mutants)
       for (const mutant of fileData.mutants)
-        index.set(mutantKey(filePath, mutant), mutant)
+        index.set(mutant.id, mutant)
   return index
 }
 

@@ -125,7 +125,7 @@ async function runMutation(runOptions, total, outcomes, mutation) {
       maybeReportMutation(runOptions, total, mutation, STATUS.TIMEOUT)
     } else {
       outcomes.killed.push(mutation)
-      maybeReportMutation(runOptions, total, mutation, STATUS.KILLED_ERROR)
+      maybeReportMutation(runOptions, total, mutation, STATUS.KILLED)
     }
   }
 }

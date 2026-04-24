@@ -60,7 +60,7 @@ export const killedMutation = {
 }
 
 export function makeMutant(id, name, status, line = 1) {
-  return { id, name, status, line, replacement: '' }
+  return { id, name, status, line }
 }
 
 export function capture() {
