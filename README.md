@@ -159,7 +159,7 @@ skipNodes: [{ type: 'CallExpression', callee: { object: { name: 'console' } } }]
 --parallel [N]                  Run mutations in parallel (default: 2 workers, max 32)
 --quiet                         Suppress verbose output, one-line summary to stderr
 --survivors-only                Only report surviving mutations
---changed                       Only mutate files with uncommitted git changes
+--changed                       Only mutate files changed in git (--all and --incremental)
 --progress                      Show compact per-file dot notation progress on stderr
 --min-score N                   Exit 1 if mutation score is below N%
 --retest <report.json>          Re-run only previously-surviving mutations
@@ -168,7 +168,7 @@ skipNodes: [{ type: 'CallExpression', callee: { object: { name: 'console' } } }]
 --help, -h                      Show usage information
 ```
 
-`--json`, `--timeout`, `--parallel`, `--quiet`, `--progress`, `--survivors-only`, and `--changed` work across single-file, `--all`, and `--incremental` modes.
+`--json`, `--timeout`, `--parallel`, `--quiet`, `--progress`, and `--survivors-only` work across single-file, `--all`, and `--incremental` modes. `--changed` works with `--all` and `--incremental` only.
 
 ## Programmatic API
 
