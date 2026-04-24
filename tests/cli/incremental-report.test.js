@@ -135,7 +135,7 @@ describe('printAllCachedSummary', () => {
   })
 })
 
-describe('structured report compatibility', () => {
+describe('files without mutants arrays', () => {
   it('printIncrementalSummary handles files without mutants arrays', () => {
     const { out } = capture()
     const batchResult = { totalSurvived: 0, totalKilled: 1, failures: 0 }
@@ -162,7 +162,7 @@ describe('structured report compatibility', () => {
       files: {
         'a.js': {
           mutants: [
-            { id: 'm1', mutatorName: 'x', status: 'Killed', location: { start: { line: 1 } } }
+            { id: 'm1', name: 'x', status: 'Killed', line: 1 }
           ]
         }
       }
@@ -186,7 +186,7 @@ describe('structured report compatibility', () => {
     const newFileResults = {
       'a.js': {
         mutants: [
-          { id: 'm1', mutatorName: 'x', status: 'Killed', location: { start: { line: 1 } } }
+          { id: 'm1', name: 'x', status: 'Killed', line: 1 }
         ]
       }
     }
