@@ -1,8 +1,7 @@
-import { javascript } from './src/core/ast-mutators.js'
-import { createVitestRunner } from './src/runners/vitest.js'
+import { mutators, createVitestRunner } from './src/index.js'
 
 export default {
-  mutators: javascript,
+  mutators: mutators.javascript,
   include: ['src/**/*.js'],
   testInclude: ['tests/**/*.test.js'],
   createRunner: (sourceFile, opts = {}) => createVitestRunner(sourceFile, {
