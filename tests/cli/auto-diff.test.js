@@ -140,17 +140,6 @@ describe('autoDiffSummary', () => {
   })
 
   describe('format', () => {
-    it('uses singular "regression" for count of 1', () => {
-      const previous = reportWithSurvivors({
-        'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Survived')] }
-      })
-      const current = {
-        'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Survived')] }
-      }
-
-      expect(autoDiffSummary(previous, current)).toContain('0 regressions,')
-    })
-
     it('uses singular "survivor" for count of 1', () => {
       const previous = reportWithSurvivors({
         'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Survived')] }
@@ -178,7 +167,7 @@ describe('autoDiffSummary', () => {
       }
 
       expect(autoDiffSummary(previous, current)).toBe(
-        '+7 newly killed, 0 regressions, 15 unchanged survivors'
+        '+7 newly killed, 15 unchanged survivors'
       )
     })
   })

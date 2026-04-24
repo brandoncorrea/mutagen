@@ -34,7 +34,6 @@ function buildPreviousIdMap({ survivors }) {
 function compileSummary(prevIds, currentFileResults) {
   const summary = {
     newlyKilled: 0,
-    regressions: 0,
     unchangedSurvivors: 0
   }
 
@@ -57,14 +56,12 @@ function summarizeMutant(summary, prevIds, mutant) {
 
 function isUnchanged(summary) {
   return !summary.newlyKilled
-    && !summary.regressions
     && !summary.unchangedSurvivors
 }
 
-function formatSummary({ newlyKilled, regressions, unchangedSurvivors }) {
+function formatSummary({ newlyKilled, unchangedSurvivors }) {
   return [
     `+${newlyKilled} newly killed`,
-    `${regressions} regression${regressions !== 1 ? 's' : ''}`,
     `${unchangedSurvivors} unchanged` +
     ` survivor${unchangedSurvivors !== 1 ? 's' : ''}`
   ].join(', ')
