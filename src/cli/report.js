@@ -55,10 +55,11 @@ export function printScoreLine(
   out, { score, killed, total, survived },
   fileCount, outputPath
 ) {
+  const dest = outputPath === '-' ? 'stdout' : outputPath
   out.error(
     `Score: ${score}% (${killed}/${total})`
     + ` | ${survived} survivors`
-    + ` | ${fileCount} files → ${outputPath}\n`
+    + ` | ${fileCount} files → ${dest}\n`
   )
 }
 

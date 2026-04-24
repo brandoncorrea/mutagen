@@ -19,7 +19,7 @@ Modes:
 
 Options:
   --line N           Only mutate the specified line number (single-file mode)
-  --json [path]      Output JSON report (to stdout, or to path if given)
+  --json [path]      Output JSON report (file path, or - for stdout)
   --dry-run          List mutations without running tests
   --timeout N        Per-mutation timeout in ms
   --parallel [N]     Run mutations in parallel (default: 2 workers, max 32)

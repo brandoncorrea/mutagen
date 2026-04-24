@@ -540,4 +540,20 @@ describe('writeStructuredReportFile', () => {
     const written = JSON.parse(writeFileSync.mock.calls[0][1])
     expect(written.files['a.js'].score).toBe(100)
   })
+
+  it('writes JSON to stdout when outputPath is -', () => {
+    const stdoutSpy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true)
+
+    const stats = writeStructuredReportFile('-', {
+      'a.js': { mutants: [{ status: 'killed', name: 'x' }] }
+    })
+
+    expect(writeFileSync).not.toHaveBeenCalled()
+    expect(mkdirSync).not.toHaveBeenCalled()
+    expect(stdoutSpy).toHaveBeenCalledTimes(1)
+    const written = JSON.parse(stdoutSpy.mock.calls[0][0])
+    expect(written.killed).toBe(1)
+    expect(stats.killed).toBe(1)
+    stdoutSpy.mockRestore()
+  })
 })

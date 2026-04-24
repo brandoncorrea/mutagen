@@ -212,7 +212,7 @@ function writeStructuredIncrementalReport(
 }
 
 function buildProgressWriter(jsonOutput, config, previous, classification) {
-  if (!jsonOutput) return undefined
+  if (!jsonOutput || jsonOutput === '-') return undefined
 
   const { currentHashes, currentTestHashes } = classification
   const hashes = {
@@ -220,16 +220,11 @@ function buildProgressWriter(jsonOutput, config, previous, classification) {
     testHashes: currentTestHashes
   }
   const cached = mergeCachedFiles({}, previous, classification)
-
-  if (isString(jsonOutput))
-    return (freshFileResults) =>
-      writeStructuredReportFile(
-        jsonOutput, { ...cached, ...freshFileResults }, undefined, hashes
-      )
+  const outputPath = isString(jsonOutput) ? jsonOutput : config.reportPath
 
   return (freshFileResults) =>
     writeStructuredReportFile(
-      config.reportPath, { ...cached, ...freshFileResults }, undefined, hashes
+      outputPath, { ...cached, ...freshFileResults }, undefined, hashes
     )
 }
 

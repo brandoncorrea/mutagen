@@ -73,10 +73,17 @@ export function buildStructuredReport(fileResults, deltas) {
  */
 export function writeStructuredReportFile(outputPath, fileResults, deltas, extra) {
   const { report, stats } = buildStructuredReport(fileResults, deltas)
-  const absPath = resolve(outputPath)
-  mkdirSync(dirname(absPath), { recursive: true })
   const output = extra ? { ...report, ...extra } : report
-  writeFileSync(absPath, JSON.stringify(output, null, 2))
+  const json = JSON.stringify(output, null, 2)
+
+  if (outputPath === '-') {
+    process.stdout.write(`${json}\n`)
+  } else {
+    const absPath = resolve(outputPath)
+    mkdirSync(dirname(absPath), { recursive: true })
+    writeFileSync(absPath, json)
+  }
+
   return stats
 }
 

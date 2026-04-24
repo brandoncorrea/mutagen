@@ -56,6 +56,9 @@ npx mutagen --all --quiet --min-score 80
 # Compare reports for regressions (exit code 1 = regressions found)
 npx mutagen --diff before.json after.json --json
 
+# JSON report to stdout (for piping)
+npx mutagen --all --quiet --json - | jq '.survivors'
+
 # Only show surviving mutations on stdout (what to fix)
 npx mutagen --all --survivors-only
 ```
@@ -138,7 +141,7 @@ skipNodes: [{ type: 'CallExpression', callee: { object: { name: 'console' } } }]
 <source>                        Mutate a single file
 <source> --line 42              Target a single line
 <source> --dry-run              List mutations without running
-<source> --json [path]          Structured JSON report (optional file path)
+<source> --json [path]          Structured JSON report (file path, or - for stdout)
 <source> --timeout 10000        10s timeout per mutation
 --all                           Batch all configured sources
 --all --dry-run                 Preview across all sources
