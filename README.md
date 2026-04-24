@@ -83,14 +83,25 @@ When `--json [path]` is used, a structured report is written:
   "timedOut": 0,
   "files": {
     "src/foo.js": {
-      "score": 100, "killed": 8, "total": 8,
-      "mutants": [
-        { "id": "a1b2c3d4", "name": "=== → !==", "status": "killed", "line": 10,
-          "original": "if (a === b) {}", "mutated": "if (a !== b) {}",
-          "killedBy": ["tests/foo.test.js"] }
-      ]
+      "score": 100,
+      "killed": 8,
+      "total": 8,
+      "mutants": [{
+        "id": "a1b2c3d4",
+        "name": "=== → !==",
+        "status": "killed",
+        "line": 10,
+        "original": "if (a === b) {}",
+        "mutated": "if (a !== b) {}",
+        "killedBy": ["tests/foo.test.js"]
+      }]
     },
-    "src/bar.js": { "score": 66.7, "killed": 4, "total": 6, "mutants": [] }
+    "src/bar.js": {
+      "score": 66.7,
+      "killed": 4,
+      "total": 6,
+      "mutants": []
+    }
   },
   "survivors": [
     {
@@ -104,7 +115,11 @@ When `--json [path]` is used, a structured report is written:
     }
   ],
   "deltas": {
-    "fixes": [{ "file": "src/bar.js", "line": 10, "name": "+ → -" }],
+    "fixes": [{
+      "file": "src/bar.js",
+      "line": 10,
+      "name": "+ → -"
+    }],
     "regressions": [],
     "rerunFiles": ["src/bar.js"],
     "cachedFiles": ["src/foo.js"]
