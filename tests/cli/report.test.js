@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { printRunReport, formatQuietSummary } from '../../src/cli/report.js'
+import { printRunReport, formatQuietSummary, printScoreLine } from '../../src/cli/report.js'
 
 describe('formatQuietSummary', () => {
   it('formats single-line score summary', () => {
@@ -36,6 +36,30 @@ describe('formatQuietSummary', () => {
       killed: 0, survived: 10, timedOut: 0, fileCount: 2
     })
     expect(result).toBe('Score: 0.0% (0/10) | 10 survivors | 2 files')
+  })
+})
+
+describe('printScoreLine', () => {
+  it('prints score summary to stderr', () => {
+    const errors = []
+    const out = { log: () => {}, error: msg => errors.push(msg) }
+    printScoreLine(out, { score: 85.7, killed: 6, total: 7, survived: 1 }, 3, 'report.json')
+
+    const output = errors.join('\n')
+    expect(output).toContain('85.7%')
+    expect(output).toContain('6/7')
+    expect(output).toContain('1 survivors')
+    expect(output).toContain('3 files')
+    expect(output).toContain('report.json')
+  })
+
+  it('displays "stdout" when outputPath is "-"', () => {
+    const errors = []
+    const out = { log: () => {}, error: msg => errors.push(msg) }
+    printScoreLine(out, { score: 100, killed: 5, total: 5, survived: 0 }, 1, '-')
+
+    expect(errors.join('\n')).toContain('stdout')
+    expect(errors.join('\n')).not.toContain(' -')
   })
 })
 
