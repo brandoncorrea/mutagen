@@ -108,7 +108,7 @@ describe('createManualRunner', () => {
       const result = await manual.runIncremental(true, null)
 
       expect(result.totalSurvived).toBe(1)
-      const reportCalls = writeFileSync.mock.calls.filter(([path]) => path === reportPath)
+      const reportCalls = writeFileSync.mock.calls.filter(([path]) => path === resolve(reportPath))
       expect(reportCalls.length).toBeGreaterThanOrEqual(1)
       const report = JSON.parse(reportCalls.at(-1)[1])
       expect(report.files['src/a.js']).toBeDefined()
@@ -135,7 +135,7 @@ describe('createManualRunner', () => {
       })
       await manual.runIncremental(true, null)
 
-      const reportCalls = writeFileSync.mock.calls.filter(([path]) => path === reportPath)
+      const reportCalls = writeFileSync.mock.calls.filter(([path]) => path === resolve(reportPath))
       expect(reportCalls).toHaveLength(1)
 
       const report = JSON.parse(reportCalls[0][1])
@@ -163,7 +163,7 @@ describe('createManualRunner', () => {
       })
       await manual.runIncremental(false, null)
 
-      const reportCalls = writeFileSync.mock.calls.filter(([path]) => path === reportPath)
+      const reportCalls = writeFileSync.mock.calls.filter(([path]) => path === resolve(reportPath))
       expect(reportCalls).toHaveLength(0)
     })
 
@@ -194,7 +194,7 @@ describe('createManualRunner', () => {
       })
       await manual.runIncremental(true, null)
 
-      const reportCalls = writeFileSync.mock.calls.filter(([path]) => path === reportPath)
+      const reportCalls = writeFileSync.mock.calls.filter(([path]) => path === resolve(reportPath))
       const report = JSON.parse(reportCalls[0][1])
 
       expect(report.files['src/a.js']).toBeDefined()
@@ -235,7 +235,7 @@ describe('createManualRunner', () => {
       await manual.runIncremental(true, null)
 
       const reportCalls = writeFileSync.mock.calls.filter(
-        ([path]) => path === reportPath
+        ([path]) => path === resolve(reportPath)
       )
       expect(reportCalls.length).toBeGreaterThanOrEqual(1)
 
@@ -284,7 +284,7 @@ describe('createManualRunner', () => {
       })
       await manual.runIncremental(true, null)
 
-      const reportCalls = writeFileSync.mock.calls.filter(([path]) => path === reportPath)
+      const reportCalls = writeFileSync.mock.calls.filter(([path]) => path === resolve(reportPath))
       const report = JSON.parse(reportCalls[0][1])
       expect(report.files['src/a.js']).toBeDefined()
       expect(report.files['src/b.js']).toBeUndefined()
@@ -451,7 +451,7 @@ describe('createManualRunner', () => {
 
       // Should not write to default report path
       const defaultCalls = writeFileSync.mock.calls.filter(
-        ([path]) => path === reportPath
+        ([path]) => path === resolve(reportPath)
       )
       expect(defaultCalls).toHaveLength(0)
 
@@ -548,7 +548,7 @@ describe('createManualRunner', () => {
       })
       await manual.runIncremental(true, null)
 
-      const reportCalls = writeFileSync.mock.calls.filter(([path]) => path === reportPath)
+      const reportCalls = writeFileSync.mock.calls.filter(([path]) => path === resolve(reportPath))
       const report = JSON.parse(reportCalls[0][1])
       expect(report.files['src/a.js']).toBeDefined()
       expect(report.files['src/b.js']).toBeDefined()

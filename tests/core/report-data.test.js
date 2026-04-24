@@ -14,7 +14,7 @@ vi.mock('node:fs', async (importOriginal) => {
 import { mutantKey, mutationId, assignMutationIds } from '../../src/core/mutation-id.js'
 import { countStatuses, totalMutants, mutationScore } from '../../src/core/mutation-status.js'
 import {
-  toJsonMutants, createReport, writeReportFile, tryLoadJson,
+  toJsonMutants, tryLoadJson,
   combineReportData, writeStructuredReportFile, buildStructuredReport
 } from '../../src/core/report-data.js'
 
@@ -360,65 +360,6 @@ describe('toJsonMutants', () => {
   })
 })
 
-describe('createReport', () => {
-  it('builds a report with schemaVersion, thresholds, and files', () => {
-    const files = { 'a.js': { mutants: [{ status: 'Killed' }] } }
-    const report = createReport(files)
-
-    expect(report).toEqual({
-      schemaVersion: '1',
-      thresholds: { high: 80, low: 60 },
-      files
-    })
-  })
-
-  it('merges extra properties into the report', () => {
-    const files = { 'a.js': { mutants: [] } }
-    const report = createReport(files, { sourceHashes: { 'a.js': 'abc' }, testHashes: { 't.js': 'def' } })
-
-    expect(report.schemaVersion).toBe('1')
-    expect(report.thresholds).toEqual({ high: 80, low: 60 })
-    expect(report.files).toBe(files)
-    expect(report.sourceHashes).toEqual({ 'a.js': 'abc' })
-    expect(report.testHashes).toEqual({ 't.js': 'def' })
-  })
-
-  it('returns empty files when given an empty object', () => {
-    const report = createReport({})
-    expect(report.files).toEqual({})
-    expect(report.schemaVersion).toBe('1')
-  })
-})
-
-describe('writeReportFile', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it('creates the directory, writes JSON, and logs the path', () => {
-    const report = { schemaVersion: '1', thresholds: { high: 80, low: 60 }, files: {} }
-    const out = { log: vi.fn(), error: vi.fn() }
-
-    writeReportFile('reports/mutation', 'reports/mutation/report.json', report, out)
-
-    expect(mkdirSync).toHaveBeenCalledWith('reports/mutation', { recursive: true })
-    expect(writeFileSync).toHaveBeenCalledWith(
-      'reports/mutation/report.json',
-      JSON.stringify(report, null, 2)
-    )
-    expect(out.log).toHaveBeenCalledWith('JSON report: reports/mutation/report.json')
-  })
-
-  it('does not throw when out is omitted', () => {
-    const report = { schemaVersion: '1', files: {} }
-
-    expect(() =>
-      writeReportFile('reports', 'reports/report.json', report)
-    ).not.toThrow()
-
-    expect(writeFileSync).toHaveBeenCalled()
-  })
-})
 
 describe('tryLoadJson', () => {
   afterEach(() => {
@@ -509,8 +450,9 @@ describe('combineReportData', () => {
     expect(Object.keys(merged.files)).toEqual(['a.js', 'b.js'])
     expect(merged.files['a.js'].mutants).toHaveLength(1)
     expect(merged.files['b.js'].mutants).toHaveLength(1)
-    expect(merged.schemaVersion).toBe('1')
-    expect(merged.thresholds).toEqual({ high: 80, low: 60 })
+    expect(merged.killed).toBe(1)
+    expect(merged.survived).toBe(1)
+    expect(merged.survivors).toHaveLength(1)
   })
 
   it('deduplicates mutants with the same key', () => {

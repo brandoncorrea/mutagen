@@ -9,7 +9,7 @@ import { resolve, relative } from 'node:path'
 
 import { STATUS } from '../core/mutation-status.js'
 import {
-  createReport, writeReportFile, tryLoadJson, writeStructuredReportFile
+  tryLoadJson, writeStructuredReportFile
 } from '../core/report-data.js'
 import {
   printIncrementalHeader, updateCachedReportHashes,
@@ -227,12 +227,10 @@ function buildProgressWriter(jsonOutput, config, previous, classification) {
         jsonOutput, { ...cached, ...freshFileResults }, undefined, hashes
       )
 
-  return (freshFileResults) => {
-    const report = createReport(
-      { ...cached, ...freshFileResults }, hashes
+  return (freshFileResults) =>
+    writeStructuredReportFile(
+      config.reportPath, { ...cached, ...freshFileResults }, undefined, hashes
     )
-    writeReportFile(config.reportDir, config.reportPath, report)
-  }
 }
 
 export function mergeCachedFiles(freshFileResults, previous, classification) {

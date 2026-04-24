@@ -101,7 +101,7 @@ describe('createManualRunner', () => {
       expect(reportCalls).toHaveLength(1)
 
       const report = JSON.parse(reportCalls[0][1])
-      expect(report.schemaVersion).toBe('1')
+      expect(report.killed).toBe(1)
       expect(Object.keys(report.files)).toHaveLength(1)
     })
 

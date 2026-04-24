@@ -17,21 +17,6 @@ const SEPARATOR_WIDTH = 60
 export const HEADER_SEPARATOR = '═'.repeat(SEPARATOR_WIDTH)
 export const SECTION_SEPARATOR = '─'.repeat(SEPARATOR_WIDTH)
 
-export function createReport(files, extra) {
-  return {
-    schemaVersion: '1',
-    thresholds: { high: 80, low: 60 },
-    files,
-    ...extra
-  }
-}
-
-export function writeReportFile(reportDir, reportPath, report, out) {
-  mkdirSync(reportDir, { recursive: true })
-  writeFileSync(reportPath, JSON.stringify(report, null, 2))
-  out?.log(`JSON report: ${reportPath}`)
-}
-
 export function tryLoadJson(path, out) {
   try {
     return JSON.parse(readFileSync(path, 'utf-8'))
@@ -48,7 +33,8 @@ export function combineReportData(reports, out) {
   if (duplicates)
     out.log(`  Deduplicated: ${duplicates} duplicate mutant(s) removed`)
 
-  return createReport(mergedFiles)
+  const { report } = buildStructuredReport(mergedFiles)
+  return report
 }
 
 export function toJsonMutants(sourceFile, results, { survivorsOnly } = {}) {

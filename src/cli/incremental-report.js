@@ -6,13 +6,14 @@
  */
 
 import { writeFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 
 import { mutantKey } from '../core/mutation-id.js'
 import {
   STATUS, isKilled, isAlive
 } from '../core/mutation-status.js'
 import {
-  HEADER_SEPARATOR, createReport, writeReportFile
+  HEADER_SEPARATOR, writeStructuredReportFile
 } from '../core/report-data.js'
 import { mergeCachedFiles } from './incremental.js'
 
@@ -103,7 +104,7 @@ export function updateCachedReportHashes(
   const { currentHashes, currentTestHashes } = classification
   previousReport.sourceHashes = currentHashes
   previousReport.testHashes = currentTestHashes
-  writeFileSync(reportPath, JSON.stringify(previousReport, null, 2))
+  writeFileSync(resolve(reportPath), JSON.stringify(previousReport, null, 2))
 }
 
 export function printAllCachedSummary(
@@ -180,19 +181,15 @@ function buildMutantIndex(report) {
 export function writeMergedReport(
   out, { config, previous, classification, fileResults }
 ) {
-  const { reportDir, reportPath } = config
+  const { reportPath } = config
   const { currentHashes, currentTestHashes } = classification
   const mergedFiles = mergeCachedFiles(fileResults, previous, classification)
-
-  const extra = {
-    sourceHashes: currentHashes,
-    testHashes: currentTestHashes
-  }
   const deltas = computeDeltas(
     previous.previousReport, fileResults, classification
   )
-  if (deltas) extra.deltas = deltas
-
-  const report = createReport(mergedFiles, extra)
-  writeReportFile(reportDir, reportPath, report, out)
+  const hashes = {
+    sourceHashes: currentHashes,
+    testHashes: currentTestHashes
+  }
+  writeStructuredReportFile(reportPath, mergedFiles, deltas, hashes)
 }

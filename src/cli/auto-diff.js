@@ -23,11 +23,20 @@ export function autoDiffSummary(previousReport, currentFileResults) {
 }
 
 function buildPreviousIdMap(report) {
-  return buildFromLegacyFormat(report)
-    || buildFromStructuredFormat(report)
+  return buildFromSurvivorsArray(report)
+    || buildFromFileMutants(report)
 }
 
-function buildFromLegacyFormat({ files }) {
+function buildFromSurvivorsArray({ survivors }) {
+  if (!survivors) return null
+  const map = new Map()
+  for (const { id } of survivors)
+    if (id)
+      map.set(id, 'survived')
+  if (map.size) return map
+}
+
+function buildFromFileMutants({ files }) {
   if (!files) return
   const map = new Map()
   for (const { mutants } of Object.values(files))
@@ -35,15 +44,6 @@ function buildFromLegacyFormat({ files }) {
       for (const mutant of mutants)
         if (mutant.id)
           map.set(mutant.id, isAlive(mutant) ? 'survived' : 'killed')
-  if (map.size) return map
-}
-
-function buildFromStructuredFormat({ survivors }) {
-  if (!survivors) return null
-  const map = new Map()
-  for (const { id } of survivors)
-    if (id)
-      map.set(id, 'survived')
   if (map.size) return map
 }
 

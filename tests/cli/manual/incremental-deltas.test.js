@@ -320,7 +320,7 @@ describe('incremental deltas', () => {
       })
       await manual.runIncremental(true, null)
 
-      const calls = writeFileSync.mock.calls.filter(([path]) => path === reportPath)
+      const calls = writeFileSync.mock.calls.filter(([path]) => path === resolve(reportPath))
       expect(calls.length).toBeGreaterThanOrEqual(1)
       const report = JSON.parse(calls.at(-1)[1])
 

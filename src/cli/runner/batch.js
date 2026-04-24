@@ -6,8 +6,7 @@
 import { resolve, relative } from 'node:path'
 
 import {
-  createReport, writeReportFile, writeStructuredReportFile,
-  tryLoadJson, HEADER_SEPARATOR
+  writeStructuredReportFile, tryLoadJson, HEADER_SEPARATOR
 } from '../../core/report-data.js'
 import { runSingle } from './single.js'
 import { runParallel, createBatchPool } from './parallel.js'
@@ -37,21 +36,13 @@ export async function runBatch(runContext, jsonOutput, timeout, sourcesToRun) {
     onFileComplete
   })
 
-  if (isString(jsonOutput)) {
-    const previous = tryLoadJson(resolve(jsonOutput))
+  if (jsonOutput) {
+    const outputPath = isString(jsonOutput) ? jsonOutput : reportPath
+    const previous = tryLoadJson(resolve(outputPath))
     const stats = writeStructuredReportFile(
-      jsonOutput, result.fileResults
+      outputPath, result.fileResults
     )
-    printScoreLine(out, stats, filesToRun.length, jsonOutput)
-    printAutoDiffLine(
-      out, autoDiffSummary(previous, result.fileResults)
-    )
-  } else if (jsonOutput) {
-    const previous = tryLoadJson(resolve(reportPath))
-    writeReportFile(
-      reportDir, reportPath,
-      createReport(result.fileResults), out
-    )
+    printScoreLine(out, stats, filesToRun.length, outputPath)
     printAutoDiffLine(
       out, autoDiffSummary(previous, result.fileResults)
     )
