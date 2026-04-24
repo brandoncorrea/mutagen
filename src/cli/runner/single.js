@@ -10,11 +10,11 @@ import { relative } from 'node:path'
 import { generateMutations } from '../../core/generate.js'
 import { withTimeout } from '../../core/timeout.js'
 import { assignMutationIds } from '../../core/mutation-id.js'
+import { STATUS } from '../../core/mutation-status.js'
 import { toJsonMutants } from '../../core/report-data.js'
 import { createTempCopy } from '../../core/temp-copy.js'
 import { printRunReport } from '../report.js'
 import { runPreflightTests, reportMutation, printBanner } from './shared.js'
-import { STATUS } from '../shared.js'
 
 /**
  * @returns {{

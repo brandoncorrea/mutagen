@@ -11,9 +11,7 @@ import { resolveGlobs } from '../core/resolve-globs.js'
 import { runBatch } from './runner/index.js'
 import { runIncremental } from './incremental.js'
 import { defaultOut, isString } from './shared.js'
-import { run, scoreExitCode } from './dispatch.js'
-
-export { scoreExitCode }
+import { run } from './dispatch.js'
 
 /**
  * Create a manual mutation runner with project-specific config.

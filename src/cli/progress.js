@@ -5,8 +5,7 @@
  * Legend: . killed  ! survived  T timeout
  */
 
-import { mutationScore } from '../core/mutation-status.js'
-import { STATUS } from './shared.js'
+import { mutationScore, STATUS } from '../core/mutation-status.js'
 
 export function createProgressReporter(files, { write } = {}) {
   const maxWidth = files.reduce((max, file) => Math.max(max, file.length), 0)

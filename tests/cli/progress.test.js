@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { createProgressReporter, formatProgressSummary, createOrderedBuffer } from '../../src/cli/progress.js'
-import { STATUS } from '../../src/cli/shared.js'
+import { STATUS } from '../../src/core/mutation-status.js'
 
 describe('createProgressReporter', () => {
   function capture() {

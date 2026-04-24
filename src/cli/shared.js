@@ -2,8 +2,6 @@
  * Shared helpers for CLI modules.
  */
 
-export { STATUS } from '../core/mutation-status.js'
-
 /**
  * Create the default output channel object.
  * log  → stdout (console.log semantics, adds newline)

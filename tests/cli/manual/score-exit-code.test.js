@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { scoreExitCode } from '../../../src/cli/manual.js'
+import { scoreExitCode } from '../../../src/cli/dispatch.js'
 
 describe('scoreExitCode', () => {
   it('returns 1 when score is below minScore (50% < 60%)', () => {

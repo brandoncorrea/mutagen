@@ -15,7 +15,8 @@ import { createTempCopy } from '../../core/temp-copy.js'
 import { printRunReport } from '../report.js'
 import { createOrderedBuffer } from '../progress.js'
 import { runPreflightTests, reportMutation, printBanner } from './shared.js'
-import { STATUS, DEFAULT_WORKER_COUNT } from '../shared.js'
+import { STATUS } from '../../core/mutation-status.js'
+import { DEFAULT_WORKER_COUNT } from '../shared.js'
 
 export function createBatchPool({
   workerCount = DEFAULT_WORKER_COUNT, sourceFile, createRunner
