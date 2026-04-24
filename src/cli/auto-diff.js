@@ -48,14 +48,11 @@ function compileSummary(prevIds, currentFileResults) {
 
 function summarizeMutant(summary, prevIds, mutant) {
   const prev = prevIds.get(mutant.id)
-  if (prev === 'survived') {
-    if (isKilled(mutant))
-      summary.newlyKilled += 1
-    else if (isAlive(mutant))
-      summary.unchangedSurvivors += 1
-  } else if (prev === 'killed' && isAlive(mutant)) {
-    summary.regressions += 1
-  }
+  if (prev !== 'survived') return
+  if (isKilled(mutant))
+    summary.newlyKilled += 1
+  else if (isAlive(mutant))
+    summary.unchangedSurvivors += 1
 }
 
 function isUnchanged(summary) {

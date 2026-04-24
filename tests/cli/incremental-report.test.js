@@ -117,6 +117,31 @@ describe('printAllCachedSummary', () => {
     expect(filesLine).toContain('Survived: 1')
   })
 
+  it('skips mutants with unrecognized status in cached counts', () => {
+    const { out, lines } = capture()
+    const sources = ['a.js']
+    const previous = {
+      previousReport: {
+        files: {
+          'a.js': {
+            mutants: [
+              { status: 'Killed' },
+              { status: 'Survived' },
+              { status: 'CompileError' }
+            ]
+          }
+        }
+      }
+    }
+    const classification = { unchangedSources: ['a.js'] }
+
+    printAllCachedSummary(out, sources, previous, classification)
+
+    const filesLine = lines.find(line => line.startsWith('Files:'))
+    expect(filesLine).toContain('Killed: 1')
+    expect(filesLine).toContain('Survived: 1')
+  })
+
   it('handles structured report format without mutants arrays', () => {
     const { out, lines } = capture()
     const sources = ['a.js']

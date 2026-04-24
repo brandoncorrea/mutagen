@@ -211,6 +211,25 @@ describe('autoDiffSummary', () => {
     expect(result).toContain('+1 newly killed')
   })
 
+  it('ignores previously survived mutant with unrecognized current status', () => {
+    const previous = reportWithSurvivors({
+      'a.js': { mutants: [
+        makeMutant('m1', 'EqualityOperator', 'Survived'),
+        makeMutant('m2', 'EqualityOperator', 'Survived')
+      ] }
+    })
+    const current = {
+      'a.js': { mutants: [
+        makeMutant('m1', 'EqualityOperator', 'Killed'),
+        makeMutant('m2', 'EqualityOperator', 'CompileError')
+      ] }
+    }
+
+    const result = autoDiffSummary(previous, current)
+    expect(result).toContain('+1 newly killed')
+    expect(result).toContain('0 unchanged survivor')
+  })
+
   it('handles current file entries without mutants array', () => {
     const previous = reportWithSurvivors({
       'a.js': { mutants: [makeMutant('m1', 'EqualityOperator', 'Survived')] }
