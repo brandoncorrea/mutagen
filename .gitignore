@@ -6,6 +6,7 @@ reports/
 .runtime/
 CLAUDE.md
 state.json
+.DS_Store
 
 # Beads / Dolt files (added by bd init)
 .dolt/
