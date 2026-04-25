@@ -326,6 +326,44 @@ npx mutagen --diff before.json after.json --json   # Machine-readable diff
 
 Returns exit code 1 if regressions are found.
 
+## Development
+
+### Setup
+
+    # Install Node
+    brew install node
+
+    # Install Dependencies
+    npm install
+
+### Useful Commands
+
+    # Run tests once
+    npm run test
+
+    # Run tests (auto)
+    npm run test:watch
+
+    # Run test coverage
+    npm run test:coverage
+
+    # Run mutation tests
+    npm run mutate
+
+    # Dry Run mutation tests
+    npm run mutate:dry
+
+
+### Release
+
+1. Run tests: `npm test`
+2. Run mutation tests: `npm run mutate`
+3. Update version in `package.json`
+4. Update `CHANGELOG.md`
+5. Tag: `git tag vx.x.x`
+6. Push: `git push && git push --tags`
+7. Publish: `npm publish --access public`
+
 ## License
 
 MIT
